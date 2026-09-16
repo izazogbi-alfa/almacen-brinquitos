@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1", "localhost", "*.trycloudflare.com"],
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "*.trycloudflare.com",
+    "*.lhr.life",
+    "*.localhost.run",
+    "*.tunnelmole.net",
+    "*.loca.lt",
+  ],
 };
 
 export default nextConfig;
