@@ -240,7 +240,7 @@ export function CapturaArticulo({
                   <table className="min-w-max border-collapse text-center text-xs">
                     <thead>
                       <tr className="bg-muted/70">
-                        <th className="sticky left-0 z-20 w-36 min-w-36 max-w-36 border bg-muted px-2 py-2 text-left font-semibold leading-tight">
+                        <th className="w-36 min-w-36 max-w-36 border bg-muted px-2 py-2 text-left font-semibold leading-tight">
                           {mostrado.sku} {mostrado.nombre}
                         </th>
                         <th className="min-w-16 border bg-muted px-1 py-2 font-semibold">
