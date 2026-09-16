@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Search } from "lucide-react";
+import { Minus, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -41,11 +41,20 @@ export type CapturaPayload = {
   celdas: CeldaCaptura[];
 };
 
-const SUCURSAL_KEY = "almacen_sucursal";
+type ParTalla = { talla: string; cantidad: number };
 
-function clave(color: string, talla: string) {
-  return `${color}::${talla}`;
-}
+export type LineaTabla = {
+  key: string;
+  productoId: string;
+  sku: string;
+  nombre: string;
+  color: string;
+  sucursalId: string;
+  sucursalNombre: string;
+  pares: ParTalla[];
+};
+
+const SUCURSAL_KEY = "almacen_sucursal";
 
 export function CapturaArticulo({
   productos,
@@ -53,6 +62,7 @@ export function CapturaArticulo({
   acento,
   usuarioNombre,
   onCommit,
+  onTablaChange,
   guardando,
   extraAfter,
 }: {
@@ -61,6 +71,7 @@ export function CapturaArticulo({
   acento: "azul" | "verde";
   usuarioNombre?: string;
   onCommit: (payload: CapturaPayload) => Promise<void> | void;
+  onTablaChange?: (lineas: LineaTabla[]) => void;
   guardando?: boolean;
   extraAfter?: ReactNode;
 }) {
@@ -69,7 +80,11 @@ export function CapturaArticulo({
   const [consulta, setConsulta] = useState("");
   const [buscado, setBuscado] = useState(false);
   const [activo, setActivo] = useState<Producto | null>(null);
-  const [valores, setValores] = useState<Record<string, string>>({});
+  const [color, setColor] = useState("");
+  const [talla, setTalla] = useState("");
+  const [cantidad, setCantidad] = useState("1");
+  const [borrador, setBorrador] = useState<ParTalla[]>([]);
+  const [lineas, setLineas] = useState<LineaTabla[]>([]);
   const [confirmar, setConfirmar] = useState(false);
 
   const sucursal = sucursalPorId(sucursalId);
@@ -96,26 +111,28 @@ export function CapturaArticulo({
 
   const colores = mostrado ? coloresProducto(mostrado) : [];
   const encabezados = mostrado ? encabezadosTalla(mostrado) : [];
+  const colorActivo = color || colores[0] || "Único";
+  const tallaActiva = talla || encabezados[0] || "";
 
-  function initGrid(producto: Producto, sucId: string) {
-    const next: Record<string, string> = {};
-    for (const color of coloresProducto(producto)) {
-      for (const talla of encabezadosTalla(producto)) {
-        const k = clave(color, talla);
-        if (modo === "contar" && sucId) {
-          next[k] = String(cantidadEn(producto, sucId, talla, color));
-        } else {
-          next[k] = "";
-        }
-      }
+  function preparar(producto: Producto, sucId = sucursalId) {
+    const cols = coloresProducto(producto);
+    const heads = encabezadosTalla(producto);
+    const c0 = cols[0] ?? "Único";
+    const t0 = heads[0] ?? "";
+    setColor(c0);
+    setTalla(t0);
+    setBorrador([]);
+    if (modo === "contar" && sucId) {
+      setCantidad(String(cantidadEn(producto, sucId, t0, c0)));
+    } else {
+      setCantidad("1");
     }
-    setValores(next);
   }
 
   function elegirSucursal(id: string) {
     setSucursalId(id);
     localStorage.setItem(SUCURSAL_KEY, id);
-    if (mostrado) initGrid(mostrado, id);
+    if (mostrado) preparar(mostrado, id);
   }
 
   function buscar(e?: React.FormEvent) {
@@ -131,46 +148,118 @@ export function CapturaArticulo({
         p.nombre.toLowerCase().includes(t) || p.sku.toLowerCase().includes(t)
       );
     });
-    if (hits.length === 1) initGrid(hits[0], sucursalId);
-    else setValores({});
-  }
-
-  const celdas: CeldaCaptura[] = [];
-  if (mostrado) {
-    for (const color of colores) {
-      for (const talla of encabezados) {
-        const raw = valores[clave(color, talla)] ?? "";
-        if (raw.trim() === "") continue;
-        const n = Number(raw);
-        if (!Number.isFinite(n) || n < 0) continue;
-        if (modo !== "contar" && n === 0) continue;
-        celdas.push({ talla, color, cantidad: n });
-      }
+    if (hits.length === 1) preparar(hits[0]);
+    else {
+      setColor("");
+      setTalla("");
+      setBorrador([]);
     }
   }
 
+  function cambiarColor(c: string) {
+    setColor(c);
+    setBorrador([]);
+    if (mostrado && sucursalId && modo === "contar") {
+      setCantidad(String(cantidadEn(mostrado, sucursalId, tallaActiva, c)));
+    } else {
+      setCantidad("1");
+    }
+  }
+
+  function cambiarTalla(t: string) {
+    setTalla(t);
+    if (mostrado && sucursalId && modo === "contar") {
+      setCantidad(String(cantidadEn(mostrado, sucursalId, t, colorActivo)));
+    }
+  }
+
+  function paresListos(): ParTalla[] {
+    const n = Number(cantidad);
+    const vigente =
+      Number.isFinite(n) && n >= 0 && (modo === "contar" || n > 0)
+        ? { talla: tallaActiva, cantidad: n }
+        : null;
+    const base = [...borrador];
+    if (vigente && !base.some((p) => p.talla === vigente.talla)) {
+      base.push(vigente);
+    } else if (vigente) {
+      return base.map((p) => (p.talla === vigente.talla ? vigente : p));
+    }
+    return base;
+  }
+
+  function agregarTalla() {
+    const n = Number(cantidad);
+    if (!Number.isFinite(n) || n < 0) return;
+    if (modo !== "contar" && n <= 0) return;
+    setBorrador((prev) => {
+      const resto = prev.filter((p) => p.talla !== tallaActiva);
+      return [...resto, { talla: tallaActiva, cantidad: n }];
+    });
+  }
+
+  const paresConfirmables = paresListos();
   const payload: CapturaPayload | null =
-    mostrado && sucursal && celdas.length > 0
+    mostrado && sucursal && paresConfirmables.length > 0
       ? {
           producto: mostrado,
           sucursalId: sucursal.id,
           sucursalNombre: sucursal.nombre,
-          celdas,
+          celdas: paresConfirmables.map((p) => ({
+            talla: p.talla,
+            color: colorActivo,
+            cantidad: p.cantidad,
+          })),
         }
       : null;
 
-  const verbos: Record<ModoCaptura, string> = {
-    contar: "el conteo",
-    sacar: "la salida",
-    entrada: "la entrada",
-    pedido: "agregar al pedido",
-  };
+  function publicarTabla(next: LineaTabla[]) {
+    setLineas(next);
+    onTablaChange?.(next);
+  }
 
   async function aceptar() {
-    if (!payload) return;
+    if (!payload || !mostrado || !sucursal) return;
+    const pares = paresConfirmables;
     await onCommit(payload);
+    publicarTabla(
+      (() => {
+        const idx = lineas.findIndex(
+          (x) =>
+            x.productoId === mostrado.id &&
+            x.color === colorActivo &&
+            x.sucursalId === sucursal.id,
+        );
+        if (idx >= 0) {
+          const next = [...lineas];
+          const prevPares = next[idx].pares;
+          const merged = [...prevPares];
+          for (const p of pares) {
+            const i = merged.findIndex((m) => m.talla === p.talla);
+            if (i >= 0) merged[i] = p;
+            else merged.push(p);
+          }
+          next[idx] = { ...next[idx], pares: merged };
+          return next;
+        }
+        return [
+          ...lineas,
+          {
+            key: `ln-${Date.now()}`,
+            productoId: mostrado.id,
+            sku: mostrado.sku,
+            nombre: mostrado.nombre,
+            color: colorActivo,
+            sucursalId: sucursal.id,
+            sucursalNombre: sucursal.nombre,
+            pares,
+          },
+        ];
+      })(),
+    );
+    setBorrador([]);
     setConfirmar(false);
-    if (modo !== "contar" && mostrado) initGrid(mostrado, sucursalId);
+    setCantidad(modo === "contar" ? "0" : "1");
   }
 
   return (
@@ -221,7 +310,7 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Escribe el código (XC1092) o el nombre (camisa, chaleco, vela)."
+              detalle="Elige color y tallas. Cada color confirmado baja a la tabla."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -232,75 +321,129 @@ export function CapturaArticulo({
             <Card className={verde ? "border-emerald-700/40" : undefined}>
               <CardContent className="space-y-3">
                 <FotoProducto src={mostrado.foto} alt={mostrado.nombre} />
-                <p className="text-sm text-muted-foreground">
-                  Llena la fila de un color (todas sus tallas) y baja a la siguiente.
-                  {usuarioNombre ? ` · ${usuarioNombre}` : ""}
-                </p>
-                <div className="-mx-1 overflow-x-auto">
-                  <table className="min-w-max border-collapse text-center text-xs">
-                    <thead>
-                      <tr className="bg-muted/70">
-                        <th className="w-36 min-w-36 max-w-36 border bg-muted px-2 py-2 text-left font-semibold leading-tight">
-                          {mostrado.sku} {mostrado.nombre}
-                        </th>
-                        <th className="min-w-16 border bg-muted px-1 py-2 font-semibold">
-                          COLOR
-                        </th>
-                        {encabezados.map((t) => (
-                          <th
-                            key={t || "cant"}
-                            className="min-w-10 border px-1 py-2 font-medium"
-                          >
-                            {t || "Cant."}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {colores.map((color, idx) => (
-                        <tr key={color}>
-                          {idx === 0 ? (
-                            <td
-                              rowSpan={colores.length}
-                              className="sticky left-0 z-10 w-36 min-w-36 max-w-36 border bg-background px-2 py-2 text-left align-middle font-heading text-sm font-semibold leading-tight"
-                            >
-                              {mostrado.sku} {mostrado.nombre}
-                            </td>
-                          ) : null}
-                          <td className="border bg-background px-1 py-1 font-medium capitalize">
-                            {color}
-                          </td>
-                          {encabezados.map((talla) => {
-                            const k = clave(color, talla);
-                            return (
-                              <td key={k} className="border p-0">
-                                <input
-                                  inputMode="numeric"
-                                  aria-label={`${color} ${talla || "cantidad"}`}
-                                  className="h-9 w-10 bg-transparent text-center text-sm outline-none focus:bg-teal-50"
-                                  value={valores[k] ?? ""}
-                                  onChange={(e) =>
-                                    setValores((prev) => ({
-                                      ...prev,
-                                      [k]: e.target.value,
-                                    }))
-                                  }
-                                />
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  <p className="font-heading text-lg font-semibold">
+                    {mostrado.sku}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{mostrado.nombre}</p>
+                  {usuarioNombre ? (
+                    <p className="text-xs text-muted-foreground">{usuarioNombre}</p>
+                  ) : null}
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Color</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {colores.map((c) => (
+                      <Button
+                        key={c}
+                        type="button"
+                        variant={c === colorActivo ? "default" : "outline"}
+                        className={cn("h-10 capitalize", c === colorActivo && btn)}
+                        onClick={() => cambiarColor(c)}
+                      >
+                        {c}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                {encabezados.some((t) => t !== "") ? (
+                  <div className="space-y-1.5">
+                    <Label>Talla</Label>
+                    <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+                      {encabezados.map((t) => (
+                        <Button
+                          key={t}
+                          type="button"
+                          variant={t === tallaActiva ? "default" : "outline"}
+                          className={cn(
+                            "h-10 min-w-11 px-2.5 text-xs",
+                            t === tallaActiva && btn,
+                          )}
+                          onClick={() => cambiarTalla(t)}
+                        >
+                          {t}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Este artículo no usa talla: solo cantidad y color.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  <Label>
+                    {modo === "contar"
+                      ? "Piezas contadas"
+                      : modo === "sacar"
+                        ? "Piezas a sacar"
+                        : modo === "entrada"
+                          ? "Piezas de entrada"
+                          : "Cantidad"}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="size-11"
+                      onClick={() =>
+                        setCantidad(String(Math.max(0, Number(cantidad) - 1)))
+                      }
+                    >
+                      <Minus />
+                    </Button>
+                    <Input
+                      inputMode="numeric"
+                      className="h-11 text-center text-lg"
+                      value={cantidad}
+                      onChange={(e) => setCantidad(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="size-11"
+                      onClick={() =>
+                        setCantidad(String(Number(cantidad || 0) + 1))
+                      }
+                    >
+                      <Plus />
+                    </Button>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={agregarTalla}
+                >
+                  {encabezados.some((t) => t !== "")
+                    ? `Agregar talla ${tallaActiva || ""}`
+                    : "Agregar cantidad"}
+                </Button>
+                {paresConfirmables.length > 0 ? (
+                  <p className="text-sm">
+                    {colorActivo}:{" "}
+                    {paresConfirmables
+                      .map((p) =>
+                        p.talla ? `${p.talla} → ${p.cantidad}` : String(p.cantidad),
+                      )
+                      .join(" · ")}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Elige color, talla y cantidad. Confirma el color (o la línea)
+                    para bajarlo a la tabla.
+                  </p>
+                )}
                 <Button
                   type="button"
                   className={cn("h-11 w-full", btn)}
                   disabled={!payload}
                   onClick={() => setConfirmar(true)}
                 >
-                  Revisar y confirmar
+                  Confirmar este color
                 </Button>
                 {coincidencias.length > 1 ? (
                   <Button
@@ -323,7 +466,7 @@ export function CapturaArticulo({
                     className="flex w-full items-center gap-3 rounded-xl border p-2 text-left"
                     onClick={() => {
                       setActivo(producto);
-                      initGrid(producto, sucursalId);
+                      preparar(producto);
                     }}
                   >
                     <FotoProducto
@@ -335,17 +478,69 @@ export function CapturaArticulo({
                       <p className="font-medium">
                         {producto.sku} {producto.nombre}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {coloresProducto(producto).length} colores ·{" "}
-                        {encabezadosTalla(producto).filter(Boolean).length || 1}{" "}
-                        columnas de talla
-                      </p>
                     </div>
                   </button>
                 </li>
               ))}
             </ul>
           )}
+
+          <div>
+            <h3 className="mb-2 text-sm font-medium">Tabla</h3>
+            {lineas.length === 0 ? (
+              <EmptyView
+                titulo="Todavía no hay líneas"
+                detalle="Confirma un color para que la fila aparezca aquí."
+              />
+            ) : (
+              <div className="-mx-1 overflow-x-auto rounded-xl border">
+                <table className="min-w-max border-collapse text-sm">
+                  <tbody>
+                    {lineas.map((ln) => (
+                      <tr key={ln.key} className="border-b last:border-0">
+                        <td className="w-32 min-w-32 border-r px-2 py-2 align-top">
+                          <p className="font-semibold leading-tight">{ln.sku}</p>
+                          <p className="text-xs text-muted-foreground leading-tight">
+                            {ln.nombre}
+                          </p>
+                        </td>
+                        <td className="border-r px-2 py-2 capitalize">{ln.color}</td>
+                        {ln.pares.flatMap((p) => [
+                          <td
+                            key={`${ln.key}-${p.talla}-t`}
+                            className="border-r bg-muted/50 px-2 py-2 text-center font-medium"
+                          >
+                            {p.talla || "Cant."}
+                          </td>,
+                          <td
+                            key={`${ln.key}-${p.talla}-q`}
+                            className="border-r px-2 py-2 text-center"
+                          >
+                            {p.cantidad}
+                          </td>,
+                        ])}
+                        <td className="px-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Quitar línea"
+                            onClick={() =>
+                              publicarTabla(
+                                lineas.filter((x) => x.key !== ln.key),
+                              )
+                            }
+                          >
+                            <Trash2 />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
           {extraAfter}
         </>
       )}
@@ -356,7 +551,7 @@ export function CapturaArticulo({
             <DialogTitle>Confirmar</DialogTitle>
             <DialogDescription>
               {payload
-                ? `¿Confirmas ${verbos[modo]} de ${payload.producto.sku} ${payload.producto.nombre} en ${payload.sucursalNombre}? ${payload.celdas.length} celdas.`
+                ? `¿Confirmas ${colorActivo} de ${payload.producto.sku} ${payload.producto.nombre} en ${payload.sucursalNombre}? ${paresConfirmables.map((p) => (p.talla ? `${p.talla}→${p.cantidad}` : p.cantidad)).join(", ")}`
                 : ""}
             </DialogDescription>
           </DialogHeader>

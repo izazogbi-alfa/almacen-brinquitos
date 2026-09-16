@@ -14,16 +14,16 @@ Iza puede cambiar existencias/recepción de cada operador en **Usuarios**.
 
 ## Cómo probar
 
-**Como Iza:** entra → **Pedidos** Nuevo → sucursal → busca `XC1092` → llena la cuadrícula color × talla → confirma → Autorizar + PDF. **Artículos** sigue definiendo colores y encabezados.
+**Como Iza:** entra → **Pedidos** Nuevo → sucursal → busca `XC1092` → color, tallas y cantidades → confirma el color → la tabla crece abajo. Autorizar + PDF. **Artículos** define colores y encabezados (CHICO/MEDIANO… o 1, 1X, 2…).
 
-**Como operador:** `almacen1` → sucursal → busca `XC1092` o `camisa` → misma cuadrícula para contar/sacar. Recepción verde usa el mismo formato.
+**Como operador:** `almacen1` → sucursal → busca `XC1092` o `camisa` → misma captura (no una matriz vacía). Recepción verde usa el mismo formato.
 
 ## Existencias
 
 1. Elige sucursal.
-2. Busca código o nombre (ej. `XC1092`, `camisa`). Primera celda = artículo.
-3. Filas = colores del admin. Columnas = tallas de ese artículo (1, 1X, 2, 4…60, o CHICO/MEDIANO…, o solo cantidad).
-4. Llena la fila de un color y baja a la siguiente. Confirma al terminar.
+2. Busca código o nombre (ej. `XC1092`, `camisa`).
+3. Elige color, talla y cantidad. Agrega tallas de ese color.
+4. Confirma el color (o la línea). Abajo crece una tabla: código arriba / nombre abajo, luego color, luego talla y cantidad (solo las que capturaste).
 5. PDF del día.
 
 ## Recepción
@@ -32,7 +32,7 @@ Misma captura, título **Entrada de mercancía**, color verde.
 
 ## Pedidos
 
-Solo admin. Captura como existencias, tabla ordenada, estado *Por autorizar* hasta que Iza autoriza. PDF del folio.
+Solo admin. Misma captura y misma tabla que existencias. Estado *Por autorizar* hasta que Iza autoriza. PDF del folio.
 
 ## Cómo correrlo
 

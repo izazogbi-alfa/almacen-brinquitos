@@ -70,7 +70,7 @@ function ExistenciasContent() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Contar o sacar en la cuadrícula del artículo (color × talla). Elige sucursal y confirma.
+            Color, talla y cantidad. Cada color confirmado baja a la tabla.
           </p>
         )}
       </div>
