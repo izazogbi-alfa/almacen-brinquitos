@@ -240,10 +240,10 @@ export function CapturaArticulo({
                   <table className="min-w-max border-collapse text-center text-xs">
                     <thead>
                       <tr className="bg-muted/70">
-                        <th className="sticky left-0 z-20 min-w-28 border bg-muted px-2 py-2 text-left font-semibold">
-                          Artículo
+                        <th className="sticky left-0 z-20 w-36 min-w-36 max-w-36 border bg-muted px-2 py-2 text-left font-semibold leading-tight">
+                          {mostrado.sku} {mostrado.nombre}
                         </th>
-                        <th className="sticky left-28 z-20 min-w-16 border bg-muted px-1 py-2 font-semibold">
+                        <th className="min-w-16 border bg-muted px-1 py-2 font-semibold">
                           COLOR
                         </th>
                         {encabezados.map((t) => (
@@ -262,15 +262,12 @@ export function CapturaArticulo({
                           {idx === 0 ? (
                             <td
                               rowSpan={colores.length}
-                              className="sticky left-0 z-10 max-w-28 border bg-background px-2 py-2 text-left align-top"
+                              className="sticky left-0 z-10 w-36 min-w-36 max-w-36 border bg-background px-2 py-2 text-left align-middle font-heading text-sm font-semibold leading-tight"
                             >
-                              <p className="font-heading text-sm font-semibold leading-tight">
-                                {mostrado.sku}
-                              </p>
-                              <p className="text-xs leading-tight">{mostrado.nombre}</p>
+                              {mostrado.sku} {mostrado.nombre}
                             </td>
                           ) : null}
-                          <td className="sticky left-28 z-10 border bg-background px-1 py-1 font-medium capitalize">
+                          <td className="border bg-background px-1 py-1 font-medium capitalize">
                             {color}
                           </td>
                           {encabezados.map((talla) => {
