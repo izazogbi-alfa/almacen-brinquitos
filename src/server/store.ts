@@ -1,10 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import {
-  pedidosIniciales,
-  productosIniciales,
-  recepcionesIniciales,
-} from "@/lib/mock-data";
+import { pedidosIniciales, recepcionesIniciales } from "@/lib/mock-data";
+import { leerCatalogoIza } from "@/server/parse-catalogo";
 import type {
   CierreDia,
   Guardado,
@@ -38,7 +35,10 @@ export type AppStore = {
   movimientos: Movimiento[];
   cierres: CierreDia[];
   ultimoGuardado: Guardado | null;
+  catalogOrigen?: string;
 };
+
+const CATALOG_ORIGEN = "iza-csv-v1";
 
 const DATA_DIR = join(process.cwd(), "data");
 const STORE_PATH = join(DATA_DIR, "store.json");
@@ -84,7 +84,8 @@ function seedStore(): AppStore {
       modulos: modulosDe(u),
     })),
     sessions: [],
-    productos: productosIniciales,
+    productos: leerCatalogoIza(),
+    catalogOrigen: CATALOG_ORIGEN,
     pedidos: pedidosIniciales.map((p) => ({
       ...p,
       userId: "seed",
@@ -117,71 +118,37 @@ function loadRaw(): AppStore {
     extra = true;
     return { ...u, modulos: modulosDe(u) };
   });
-  const fotos = new Map(
-    productosIniciales.map((p) => [p.id, p.foto] as const),
-  );
-  parsed.productos = parsed.productos.map((p) => ({
-    ...p,
-    foto: p.foto || fotos.get(p.id),
-  }));
-  const porId = new Map(parsed.productos.map((p) => [p.id, p]));
-  for (const seed of productosIniciales) {
-    const prev = porId.get(seed.id);
-    if (!prev) {
-      parsed.productos.push(seed);
-      extra = true;
-      continue;
-    }
-    if (seed.variantes?.length && !prev.variantes?.length) {
-      prev.variantes = seed.variantes.map((v) => ({ ...v }));
-      prev.existencia = seed.existencia;
-      prev.foto = prev.foto || seed.foto;
-      prev.categoria = seed.categoria;
-      extra = true;
-    }
-    if (seed.esquemaConteo && prev.esquemaConteo !== seed.esquemaConteo) {
-      prev.esquemaConteo = seed.esquemaConteo;
-      extra = true;
-    }
-    if (seed.colores?.length && !prev.colores?.length) {
-      prev.colores = [...seed.colores];
-      extra = true;
-    }
-    if (seed.tallas?.length && !prev.tallas?.length) {
-      prev.tallas = [...seed.tallas];
-      extra = true;
-    }
-    if (seed.foto && !prev.foto) {
-      prev.foto = seed.foto;
-      extra = true;
-    }
-    if (!prev.existenciasSucursal?.length) {
-      if (seed.existenciasSucursal?.length) {
-        prev.existenciasSucursal = seed.existenciasSucursal.map((c) => ({
-          ...c,
-        }));
-        prev.existencia = seed.existencia;
+  const catalogo = leerCatalogoIza();
+  const yaImportado = parsed.catalogOrigen === CATALOG_ORIGEN;
+  if (!yaImportado) {
+    parsed.productos = catalogo;
+    parsed.pedidos = [];
+    parsed.recepciones = [];
+    parsed.movimientos = [];
+    parsed.cierres = [];
+    parsed.catalogOrigen = CATALOG_ORIGEN;
+    extra = true;
+  } else {
+    const prevPorSku = new Map(
+      parsed.productos.map((p) => [p.sku.toUpperCase(), p] as const),
+    );
+    parsed.productos = catalogo.map((c) => {
+      const prev = prevPorSku.get(c.sku.toUpperCase());
+      if (!prev) {
         extra = true;
-      } else if (prev.variantes?.length) {
-        prev.existenciasSucursal = prev.variantes.map((v) => ({
-          sucursalId: "s-gloria",
-          talla: v.talla,
-          color: v.color,
-          cantidad: v.existencia,
-        }));
-        extra = true;
-      } else {
-        prev.existenciasSucursal = [
-          {
-            sucursalId: "s-gloria",
-            talla: "",
-            color: prev.colores?.[0] ?? "Único",
-            cantidad: prev.existencia,
-          },
-        ];
-        extra = true;
+        return c;
       }
-    }
+      return {
+        ...c,
+        id: prev.id,
+        esquemaConteo: prev.esquemaConteo ?? c.esquemaConteo,
+        tallas: prev.tallas?.length ? prev.tallas : c.tallas,
+        colores: prev.colores?.length ? prev.colores : c.colores,
+        existenciasSucursal: prev.existenciasSucursal ?? [],
+        existencia: prev.existencia,
+        variantes: prev.variantes,
+      };
+    });
   }
   if (extra) saveRaw(parsed);
   return parsed;
