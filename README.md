@@ -1,29 +1,38 @@
 # Almacén — existencias, pedidos y recepción
 
-App web **móvil primero** para Brinquitos. Hay que entrar con usuario y contraseña; la sesión se ve en el encabezado.
+App **móvil primero** para Brinquitos. Español. Sesión con usuario y contraseña.
 
-## Cuentas de prueba
+## Cuentas
 
-| Rol | Usuario | Contraseña | Nombre |
+| Rol | Usuario | Contraseña | Acceso |
 | --- | --- | --- | --- |
-| Administradora | `iza` | `iza` | Iza Zogbi |
-| Operador | `almacen1` | `almacen1` | Ana López |
-| Operador | `almacen2` | `almacen2` | Carlos Méndez |
+| Administradora | `iza` | `iza` | Artículos, usuarios, pedidos (autoriza), existencias, recepción |
+| Operador | `almacen1` | `almacen1` | Existencias + recepción |
+| Operador | `almacen2` | `almacen2` | Solo existencias |
 
-Usuarios, conteos y existencias se guardan en `data/store.json` en el servidor.
+Iza puede cambiar existencias/recepción de cada operador en **Usuarios**.
 
-## Cómo contar
+## Cómo probar
 
-1. Entra como operador (ej. `almacen1` / `almacen1`).
-2. Elige **sucursal**: La Gloria, El Modelo o El Ángel.
-3. En **Existencias**, busca por código o nombre (no se lista el catálogo completo). Ejemplos: `ropón`, `trajecito`, `chaleco`, `vela`, `BRI-1001`.
-4. El formulario sale **según el producto**:
-   - Ropón y trajecito: tallas pares 0–60 y color.
-   - Chaleco adulto: EXCHICO, CHICO, MEDIANO, GRANDE, EXGRANDE, ADULTO y color.
-   - Kit vela: cantidad y color (o Único), sin talla.
-5. Ajusta las piezas en anaquel y toca **Guardar conteo**. Queda tu nombre, la sucursal y la hora.
-6. Verás el total de esa sucursal y el **total de las tres sucursales**.
-7. Al terminar, toca **Cerrar el día**.
+**Como Iza:** entra → **Artículos** (busca `ropón`, cambia colores o esquema) → **Usuarios** (quita o da recepción a Ana) → **Pedidos** Nuevo (sucursal → busca artículo → confirma → tabla → Guardar) → **Autorizar** y PDF.
+
+**Como operador:** entra `almacen1` → elige sucursal → **Contar** o **Sacar** (azul) y confirma → **Recepción** entrada verde, misma captura. `almacen2` no ve Recepción ni Pedidos.
+
+## Existencias
+
+1. Elige sucursal (La Gloria / El Modelo / El Ángel).
+2. Busca el código (no se lista el catálogo).
+3. El formulario usa las propiedades del artículo.
+4. Confirma antes de contar o sacar.
+5. PDF al cerrar el día o con Descargar PDF.
+
+## Recepción
+
+Misma captura, título **Entrada de mercancía**, color verde.
+
+## Pedidos
+
+Solo admin. Captura como existencias, tabla ordenada, estado *Por autorizar* hasta que Iza autoriza. PDF del folio.
 
 ## Cómo correrlo
 

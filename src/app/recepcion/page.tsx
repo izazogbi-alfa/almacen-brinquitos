@@ -1,69 +1,89 @@
 "use client";
 
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { AsyncGate, EmptyView } from "@/components/status-views";
-import { formatoFecha } from "@/lib/format";
-import { pendienteDeLinea, progresoRecepcion } from "@/lib/mock-data";
+import { CapturaArticulo } from "@/components/captura-articulo";
+import { fechaClave, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
+import { descargarPdf } from "@/lib/pdf";
+import { puede } from "@/lib/modulos";
 
-function RecepcionListaContent() {
-  const { pedidos } = useInventory();
-  const pendientes = pedidos.filter(
-    (p) => p.estado === "enviado" || p.estado === "parcial",
+function RecepcionContent() {
+  const { productos, movimientos, user, entrada } = useInventory();
+  const [guardando, setGuardando] = useState(false);
+  const hoy = fechaClave();
+  const delDia = movimientos.filter(
+    (m) =>
+      fechaClave(new Date(m.timestamp)) === hoy && m.tipo === "recepcion",
   );
+
+  if (!puede(user, "recepcion")) {
+    return (
+      <EmptyView
+        titulo="Sin acceso a recepción"
+        detalle="Pide a Iza que te asigne el módulo de recepción."
+      />
+    );
+  }
+
+  function pdf() {
+    descargarPdf(`entrada-${hoy}.pdf`, `Brinquitos · Entrada ${hoy}`, [
+      `Quien recibe: ${user?.nombre ?? "—"}`,
+      ...delDia.map(
+        (m) =>
+          `${formatoFechaHora(m.timestamp)} · ${m.productoNombre ?? ""} · ${m.sucursalNombre ?? ""} · ${m.talla ?? "—"} ${m.color ?? ""} · +${m.cantidad} · ${m.userName}`,
+      ),
+    ]);
+  }
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          Recepción de mercancía
+        <h2 className="font-heading text-2xl font-semibold tracking-tight text-emerald-800">
+          Entrada de mercancía
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Captura lo que llegó contra el pedido original
+        <p className="text-sm text-emerald-800/80">
+          Misma captura que existencias, en verde. Elige sucursal y confirma.
         </p>
       </div>
-
-      {pendientes.length === 0 ? (
-        <EmptyView
-          titulo="Nada por recibir"
-          detalle="No hay pedidos abiertos. Cuando envíes una orden, aparecerá aquí para andén."
-        />
-      ) : (
-        <ul className="space-y-3">
-          {pendientes.map((pedido) => {
-            const prog = progresoRecepcion(pedido);
-            const lineasPend = pedido.lineas.filter((l) => pendienteDeLinea(l) > 0)
-              .length;
-            return (
-              <li key={pedido.id}>
-                <Link href={`/recepcion/${pedido.id}`}>
-                  <Card className="transition-colors hover:bg-muted/40">
-                    <CardContent className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{pedido.folio}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {pedido.proveedor}
-                          </p>
-                        </div>
-                        <Badge variant={pedido.estado === "parcial" ? "destructive" : "outline"}>
-                          {pedido.estado === "parcial" ? "Parcial" : "Por recibir"}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {formatoFecha(pedido.fecha)} · {lineasPend} líneas con
-                        pendiente · {prog.pendiente} pzas
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </li>
+      <CapturaArticulo
+        productos={productos}
+        modo="entrada"
+        acento="verde"
+        usuarioNombre={user?.nombre}
+        guardando={guardando}
+        extraAfter={
+          delDia.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-emerald-700 text-emerald-800"
+              onClick={pdf}
+            >
+              Descargar PDF de entradas
+            </Button>
+          ) : null
+        }
+        onCommit={async (p) => {
+          setGuardando(true);
+            try {
+            await entrada(
+              p.producto.id,
+              p.cantidad,
+              p.sucursalId,
+              p.talla || undefined,
+              p.color,
             );
-          })}
-        </ul>
-      )}
+            toast.success(`Entrada en ${p.sucursalNombre}`);
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
+            } finally {
+            setGuardando(false);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -71,7 +91,7 @@ function RecepcionListaContent() {
 export default function RecepcionPage() {
   return (
     <AsyncGate>
-      <RecepcionListaContent />
+      <RecepcionContent />
     </AsyncGate>
   );
 }

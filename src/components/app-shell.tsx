@@ -2,16 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Package, Truck } from "lucide-react";
+import { ClipboardList, Package, Settings2, Truck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInventory } from "@/lib/inventory-context";
+import { puede } from "@/lib/modulos";
 import { Button } from "@/components/ui/button";
-
-const NAV = [
-  { href: "/", label: "Existencias", icon: Package },
-  { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
-  { href: "/recepcion", label: "Recepción", icon: Truck },
-];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,6 +15,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/login") {
     return <>{children}</>;
   }
+
+  const nav = [
+    puede(user, "existencias")
+      ? { href: "/", label: "Existencias", icon: Package }
+      : null,
+    puede(user, "pedidos")
+      ? { href: "/pedidos", label: "Pedidos", icon: ClipboardList }
+      : null,
+    puede(user, "recepcion")
+      ? { href: "/recepcion", label: "Recepción", icon: Truck }
+      : null,
+    user?.rol === "admin"
+      ? { href: "/admin/articulos", label: "Artículos", icon: Settings2 }
+      : null,
+    user?.rol === "admin"
+      ? { href: "/admin/usuarios", label: "Usuarios", icon: Users }
+      : null,
+  ].filter(Boolean) as {
+    href: string;
+    label: string;
+    icon: typeof Package;
+  }[];
+
+    const cols =
+      nav.length <= 1
+        ? "grid-cols-1"
+        : nav.length === 2
+          ? "grid-cols-2"
+          : nav.length === 4
+            ? "grid-cols-4"
+            : nav.length >= 5
+              ? "grid-cols-5"
+              : "grid-cols-3";
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col bg-background md:max-w-5xl">
@@ -57,8 +85,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 px-4 py-4 pb-28">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
-        <div className="mx-auto grid max-w-3xl grid-cols-3 md:max-w-5xl">
-          {NAV.map((item) => {
+        <div className={cn("mx-auto grid max-w-3xl md:max-w-5xl", cols)}>
+          {nav.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
@@ -69,8 +97,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-xs font-medium",
-                  active ? "text-teal-800" : "text-muted-foreground",
+                  "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium sm:text-xs",
+                  active
+                    ? item.href.startsWith("/recepcion")
+                      ? "text-emerald-800"
+                      : "text-teal-800"
+                    : "text-muted-foreground",
                 )}
               >
                 <Icon className={cn("size-5", active && "stroke-[2.4]")} />

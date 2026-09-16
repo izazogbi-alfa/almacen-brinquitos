@@ -37,7 +37,7 @@ export function fechaClave(iso = new Date()) {
 export function etiquetaEstado(estado: EstadoPedido) {
   switch (estado) {
     case "borrador":
-      return "Borrador";
+      return "Por autorizar";
     case "enviado":
       return "Enviado";
     case "parcial":

@@ -8,6 +8,7 @@ import {
 import type {
   CierreDia,
   Guardado,
+  ModulosUsuario,
   Movimiento,
   Pedido,
   Producto,
@@ -15,6 +16,7 @@ import type {
   RolUsuario,
 } from "@/lib/types";
 import { hashPassword, nuevoToken, verifyPassword } from "@/server/passwords";
+import { modulosDe } from "@/lib/modulos";
 
 export type UsuarioInterno = {
   id: string;
@@ -22,6 +24,7 @@ export type UsuarioInterno = {
   nombre: string;
   rol: RolUsuario;
   passwordHash: string;
+  modulos: ModulosUsuario;
 };
 
 type Sesion = { token: string; userId: string; createdAt: string };
@@ -78,6 +81,7 @@ function seedStore(): AppStore {
       nombre: u.nombre,
       rol: u.rol,
       passwordHash: hashPassword(u.password),
+      modulos: modulosDe(u),
     })),
     sessions: [],
     productos: productosIniciales,
@@ -107,6 +111,12 @@ function loadRaw(): AppStore {
   const parsed = JSON.parse(readFileSync(STORE_PATH, "utf8")) as AppStore;
   if (!parsed.cierres) parsed.cierres = [];
   if (!parsed.movimientos) parsed.movimientos = [];
+  let extra = false;
+  parsed.users = (parsed.users ?? []).map((u) => {
+    if (u.modulos) return u;
+    extra = true;
+    return { ...u, modulos: modulosDe(u) };
+  });
   const fotos = new Map(
     productosIniciales.map((p) => [p.id, p.foto] as const),
   );
@@ -115,7 +125,6 @@ function loadRaw(): AppStore {
     foto: p.foto || fotos.get(p.id),
   }));
   const porId = new Map(parsed.productos.map((p) => [p.id, p]));
-  let extra = false;
   for (const seed of productosIniciales) {
     const prev = porId.get(seed.id);
     if (!prev) {
@@ -200,6 +209,7 @@ export function publicoDe(user: UsuarioInterno) {
     username: user.username,
     nombre: user.nombre,
     rol: user.rol,
+    modulos: modulosDe(user),
   };
 }
 

@@ -2,18 +2,15 @@ import { NextResponse } from "next/server";
 import { fechaClave } from "@/lib/format";
 import { pendienteDeLinea } from "@/lib/mock-data";
 import {
+  ajustarCantidad,
   cantidadEn,
   coloresProducto,
   esquemaDe,
   fijarConteo,
   sucursalPorId,
 } from "@/lib/sucursales";
-import {
-  sincronizarExistencia,
-  tieneVariantes,
-  varianteDe,
-} from "@/lib/variantes";
 import { exigirUsuario } from "@/server/auth";
+import { modulosDe } from "@/lib/modulos";
 import {
   agregarMovimiento,
   marcarGuardado,
@@ -41,7 +38,15 @@ export async function POST(request: Request) {
     nota?: string;
     proveedor?: string;
     notas?: string;
-    lineas?: { productoId: string; cantidad: number; costoUnitario?: number }[];
+    lineas?: {
+      productoId: string;
+      cantidad: number;
+      costoUnitario?: number;
+      talla?: string;
+      color?: string;
+      sucursalId?: string;
+      sucursalNombre?: string;
+    }[];
     pedidoId?: string;
   } | null;
 
@@ -51,66 +56,54 @@ export async function POST(request: Request) {
   }
 
   try {
+    const mods = modulosDe(user);
     const result = withStore((store) => {
       if (accion === "retirar") {
+        if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
         const producto = store.productos.find((p) => p.id === body?.productoId);
         if (!producto) throw new Error("Producto no encontrado.");
         const cantidad = Number(body?.cantidad);
         if (!Number.isFinite(cantidad) || cantidad <= 0) {
           throw new Error("Indica cuántas piezas se sacan.");
         }
-        const talla = body?.talla?.trim() || undefined;
-        const color = body?.color?.trim() || undefined;
-        if (tieneVariantes(producto)) {
-          if (!talla || !color) {
-            throw new Error("Elige talla y color.");
-          }
-          const variante = varianteDe(producto, talla, color);
-          if (!variante) {
-            throw new Error("Esa talla y color no existen.");
-          }
-          if (cantidad > variante.existencia) {
-            throw new Error(
-              `Solo hay ${variante.existencia} pzas en talla ${talla} color ${color}.`,
-            );
-          }
-          const antes = variante.existencia;
-          variante.existencia -= cantidad;
-          sincronizarExistencia(producto);
-          agregarMovimiento(store, user, {
-            tipo: "retiro",
-            productoId: producto.id,
-            productoNombre: producto.nombre,
-            cantidad,
-            existenciaAntes: antes,
-            existenciaDespues: variante.existencia,
-            talla,
-            color,
-            nota: `Salida ${talla} / ${color}`,
-          });
-        } else {
-          if (cantidad > producto.existencia) {
-            throw new Error(
-              `Solo hay ${producto.existencia} ${producto.unidad} de ${producto.nombre}.`,
-            );
-          }
-          const antes = producto.existencia;
-          producto.existencia -= cantidad;
-          agregarMovimiento(store, user, {
-            tipo: "retiro",
-            productoId: producto.id,
-            productoNombre: producto.nombre,
-            cantidad,
-            existenciaAntes: antes,
-            existenciaDespues: producto.existencia,
-            nota: body?.nota?.trim() || "Salida de piso",
-          });
+        const sucursalId = body?.sucursalId?.trim();
+        const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
+        if (!sucursal) {
+          throw new Error("Elige la sucursal.");
         }
+        const esquema = esquemaDe(producto);
+        const talla = esquema === "accesorio" ? "" : body?.talla?.trim() || "";
+        const color =
+          body?.color?.trim() || coloresProducto(producto)[0] || "Único";
+        if (esquema !== "accesorio" && !talla) {
+          throw new Error("Elige la talla.");
+        }
+        const { antes, despues } = ajustarCantidad(
+          producto,
+          sucursal.id,
+          talla,
+          color,
+          -cantidad,
+        );
+        agregarMovimiento(store, user, {
+          tipo: "retiro",
+          productoId: producto.id,
+          productoNombre: producto.nombre,
+          cantidad,
+          existenciaAntes: antes,
+          existenciaDespues: despues,
+          talla: talla || undefined,
+          color,
+          sucursalId: sucursal.id,
+          sucursalNombre: sucursal.nombre,
+          nota: `Salida ${sucursal.nombre}${talla ? ` · ${talla}` : ""} · ${color}`,
+        });
         marcarGuardado(store, user);
         return { ok: true };
       }
 
       if (accion === "contar") {
+        if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
         const producto = store.productos.find((p) => p.id === body?.productoId);
         if (!producto) throw new Error("Producto no encontrado.");
         const existencia = Number(body?.existencia);
@@ -151,7 +144,52 @@ export async function POST(request: Request) {
         return { ok: true };
       }
 
+      if (accion === "entrada") {
+        if (!mods.recepcion) throw new Error("No tienes módulo de recepción.");
+        const producto = store.productos.find((p) => p.id === body?.productoId);
+        if (!producto) throw new Error("Producto no encontrado.");
+        const cantidad = Number(body?.cantidad);
+        if (!Number.isFinite(cantidad) || cantidad <= 0) {
+          throw new Error("Indica cuántas piezas entran.");
+        }
+        const sucursalId = body?.sucursalId?.trim();
+        const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
+        if (!sucursal) {
+          throw new Error("Elige la sucursal.");
+        }
+        const esquema = esquemaDe(producto);
+        const talla = esquema === "accesorio" ? "" : body?.talla?.trim() || "";
+        const color =
+          body?.color?.trim() || coloresProducto(producto)[0] || "Único";
+        if (esquema !== "accesorio" && !talla) {
+          throw new Error("Elige la talla.");
+        }
+        const { antes, despues } = ajustarCantidad(
+          producto,
+          sucursal.id,
+          talla,
+          color,
+          cantidad,
+        );
+        agregarMovimiento(store, user, {
+          tipo: "recepcion",
+          productoId: producto.id,
+          productoNombre: producto.nombre,
+          cantidad,
+          existenciaAntes: antes,
+          existenciaDespues: despues,
+          talla: talla || undefined,
+          color,
+          sucursalId: sucursal.id,
+          sucursalNombre: sucursal.nombre,
+          nota: `Entrada ${sucursal.nombre}${talla ? ` · ${talla}` : ""} · ${color}`,
+        });
+        marcarGuardado(store, user);
+        return { ok: true };
+      }
+
       if (accion === "cerrar-dia") {
+        if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
         const fecha = fechaClave();
         const delDia = store.movimientos.filter(
           (m) =>
@@ -178,6 +216,9 @@ export async function POST(request: Request) {
       }
 
       if (accion === "pedido") {
+        if (user.rol !== "admin") {
+          throw new Error("Solo la administradora arma y autoriza pedidos.");
+        }
         const lineas = (body?.lineas ?? []).filter((l) => l.cantidad > 0);
         if (!body?.proveedor || lineas.length === 0) {
           throw new Error("Elige proveedor y al menos una línea.");
@@ -187,13 +228,17 @@ export async function POST(request: Request) {
           folio: siguienteFolio(store.pedidos),
           proveedor: body.proveedor,
           fecha: new Date().toISOString(),
-          estado: "enviado" as const,
+          estado: "borrador" as const,
           notas: body.notas?.trim() ?? "",
           lineas: lineas.map((l) => ({
             productoId: l.productoId,
             cantidad: l.cantidad,
             recibido: 0,
             costoUnitario: l.costoUnitario ?? 22,
+            talla: l.talla,
+            color: l.color,
+            sucursalId: l.sucursalId,
+            sucursalNombre: l.sucursalNombre,
           })),
           userId: user.id,
           userName: user.nombre,
@@ -203,13 +248,37 @@ export async function POST(request: Request) {
           tipo: "pedido",
           cantidad: lineas.reduce((a, l) => a + l.cantidad, 0),
           pedidoId: pedido.id,
-          nota: `Pedido ${pedido.folio}`,
+          nota: `Pedido ${pedido.folio} (por autorizar)`,
+        });
+        marcarGuardado(store, user);
+        return { pedido };
+      }
+
+      if (accion === "autorizar-pedido") {
+        if (user.rol !== "admin") {
+          throw new Error("Solo la administradora autoriza pedidos.");
+        }
+        const pedido = store.pedidos.find((p) => p.id === body?.pedidoId);
+        if (!pedido) throw new Error("No encontramos ese pedido.");
+        if (pedido.estado !== "borrador") {
+          throw new Error("Ese pedido ya no está por autorizar.");
+        }
+        pedido.estado = "enviado";
+        pedido.autorizadoPorId = user.id;
+        pedido.autorizadoPorNombre = user.nombre;
+        pedido.autorizadoEn = new Date().toISOString();
+        agregarMovimiento(store, user, {
+          tipo: "pedido",
+          cantidad: pedido.lineas.reduce((a, l) => a + l.cantidad, 0),
+          pedidoId: pedido.id,
+          nota: `Autorizó ${pedido.folio}`,
         });
         marcarGuardado(store, user);
         return { pedido };
       }
 
       if (accion === "recepcion") {
+        if (!mods.recepcion) throw new Error("No tienes módulo de recepción.");
         const pedido = store.pedidos.find((p) => p.id === body?.pedidoId);
         if (!pedido) throw new Error("No encontramos ese pedido.");
         const aplicadas = (body?.lineas ?? []).filter((l) => l.cantidad > 0);

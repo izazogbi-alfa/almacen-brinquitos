@@ -106,3 +106,21 @@ export function fijarConteo(
   }
   sincronizarTotalProducto(producto);
 }
+
+export function ajustarCantidad(
+  producto: Producto,
+  sucursalId: string,
+  talla: string,
+  color: string,
+  delta: number,
+) {
+  const antes = cantidadEn(producto, sucursalId, talla, color);
+  const despues = antes + delta;
+  if (despues < 0) {
+    throw new Error(
+      `Solo hay ${antes} pzas en esa sucursal / talla / color.`,
+    );
+  }
+  fijarConteo(producto, sucursalId, talla, color, despues);
+  return { antes, despues };
+}

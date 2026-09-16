@@ -24,6 +24,10 @@ type NuevaLinea = {
   productoId: string;
   cantidad: number;
   costoUnitario: number;
+  talla?: string;
+  color?: string;
+  sucursalId?: string;
+  sucursalNombre?: string;
 };
 
 type InventoryValue = {
@@ -39,6 +43,7 @@ type InventoryValue = {
   retirar: (
     productoId: string,
     cantidad: number,
+    sucursalId: string,
     talla?: string,
     color?: string,
   ) => Promise<void>;
@@ -49,16 +54,29 @@ type InventoryValue = {
     talla?: string,
     color?: string,
   ) => Promise<void>;
+  entrada: (
+    productoId: string,
+    cantidad: number,
+    sucursalId: string,
+    talla?: string,
+    color?: string,
+  ) => Promise<void>;
   cerrarDia: () => Promise<void>;
   crearPedido: (input: {
     proveedor: string;
     notas: string;
     lineas: NuevaLinea[];
   }) => Promise<Pedido>;
-  registrarRecepcion: (
-    pedidoId: string,
-    lineas: { productoId: string; cantidad: number }[],
-  ) => Promise<void>;
+  autorizarPedido: (pedidoId: string) => Promise<Pedido>;
+  guardarArticulo: (input: {
+    id: string;
+    nombre: string;
+    sku: string;
+    categoria: string;
+    esquemaConteo: Producto["esquemaConteo"];
+    colores: string;
+    tallas: string;
+  }) => Promise<void>;
 };
 
 const InventoryContext = createContext<InventoryValue | null>(null);
@@ -147,10 +165,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     async (
       productoId: string,
       cantidad: number,
+      sucursalId: string,
       talla?: string,
       color?: string,
     ) => {
-      await postAccion({ accion: "retirar", productoId, cantidad, talla, color });
+      await postAccion({
+        accion: "retirar",
+        productoId,
+        cantidad,
+        sucursalId,
+        talla,
+        color,
+      });
     },
     [postAccion],
   );
@@ -175,6 +201,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [postAccion],
   );
 
+  const entrada = useCallback(
+    async (
+      productoId: string,
+      cantidad: number,
+      sucursalId: string,
+      talla?: string,
+      color?: string,
+    ) => {
+      await postAccion({
+        accion: "entrada",
+        productoId,
+        cantidad,
+        sucursalId,
+        talla,
+        color,
+      });
+    },
+    [postAccion],
+  );
+
   const cerrarDia = useCallback(async () => {
     await postAccion({ accion: "cerrar-dia" });
   }, [postAccion]);
@@ -191,14 +237,34 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [postAccion],
   );
 
-  const registrarRecepcion = useCallback(
-    async (
-      pedidoId: string,
-      lineas: { productoId: string; cantidad: number }[],
-    ) => {
-      await postAccion({ accion: "recepcion", pedidoId, lineas });
+  const autorizarPedido = useCallback(
+    async (pedidoId: string) => {
+      const data = await postAccion({ accion: "autorizar-pedido", pedidoId });
+      return data.pedido as Pedido;
     },
     [postAccion],
+  );
+
+  const guardarArticulo = useCallback(
+    async (input: {
+      id: string;
+      nombre: string;
+      sku: string;
+      categoria: string;
+      esquemaConteo: Producto["esquemaConteo"];
+      colores: string;
+      tallas: string;
+    }) => {
+      const res = await fetch("/api/admin/articulos", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      await recargar();
+    },
+    [recargar],
   );
 
   const value = useMemo(
@@ -214,9 +280,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       logout,
       retirar,
       contar,
+      entrada,
       cerrarDia,
       crearPedido,
-      registrarRecepcion,
+      autorizarPedido,
+      guardarArticulo,
     }),
     [
       status,
@@ -230,9 +298,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       logout,
       retirar,
       contar,
+      entrada,
       cerrarDia,
       crearPedido,
-      registrarRecepcion,
+      autorizarPedido,
+      guardarArticulo,
     ],
   );
 

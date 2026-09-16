@@ -7,6 +7,12 @@ export type EstadoPedido =
 
 export type RolUsuario = "admin" | "operador";
 
+export type ModulosUsuario = {
+  existencias: boolean;
+  recepcion: boolean;
+  pedidos: boolean;
+};
+
 export type EsquemaConteo = "nino" | "letra" | "accesorio";
 
 export type Sucursal = {
@@ -49,6 +55,10 @@ export type LineaPedido = {
   cantidad: number;
   recibido: number;
   costoUnitario: number;
+  talla?: string;
+  color?: string;
+  sucursalId?: string;
+  sucursalNombre?: string;
 };
 
 export type Pedido = {
@@ -61,6 +71,9 @@ export type Pedido = {
   lineas: LineaPedido[];
   userId: string;
   userName: string;
+  autorizadoPorId?: string;
+  autorizadoPorNombre?: string;
+  autorizadoEn?: string;
 };
 
 export type Recepcion = {
@@ -77,6 +90,7 @@ export type UsuarioPublico = {
   username: string;
   nombre: string;
   rol: RolUsuario;
+  modulos: ModulosUsuario;
 };
 
 export type TipoMovimiento =

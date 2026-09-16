@@ -11,22 +11,25 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { etiquetaEstado, formatoFecha, formatoMoneda } from "@/lib/format";
 import { progresoRecepcion, totalPedido } from "@/lib/mock-data";
 import { useInventory } from "@/lib/inventory-context";
+import { puede } from "@/lib/modulos";
 import { cn } from "@/lib/utils";
 
 const FILTROS = [
   { value: "todos", label: "Todos" },
-  { value: "abiertos", label: "Abiertos" },
+  { value: "por_autorizar", label: "Por autorizar" },
+  { value: "abiertos", label: "Autorizados" },
   { value: "recibido", label: "Recibidos" },
 ] as const;
 
 function PedidosContent() {
-  const { pedidos } = useInventory();
+  const { pedidos, user } = useInventory();
   const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["value"]>(
     "todos",
   );
 
   const lista = useMemo(() => {
     return pedidos.filter((p) => {
+      if (filtro === "por_autorizar") return p.estado === "borrador";
       if (filtro === "abiertos") {
         return p.estado === "enviado" || p.estado === "parcial";
       }
@@ -34,6 +37,15 @@ function PedidosContent() {
       return true;
     });
   }, [pedidos, filtro]);
+
+  if (!puede(user, "pedidos")) {
+    return (
+      <EmptyView
+        titulo="Solo Iza ve pedidos"
+        detalle="Los operadores trabajan existencias y/o recepción."
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -43,9 +55,10 @@ function PedidosContent() {
             Pedidos
           </h2>
           <p className="text-sm text-muted-foreground">
-            Órdenes de compra a proveedores
+            Captura en tabla; solo Iza autoriza
           </p>
         </div>
+        {puede(user, "pedidos") ? (
         <Link
           href="/pedidos/nuevo"
           className={cn(buttonVariants(), "h-10 gap-1.5 px-3")}
@@ -53,6 +66,7 @@ function PedidosContent() {
           <Plus className="size-4" />
           Nuevo
         </Link>
+        ) : null}
       </div>
 
       <Tabs value={filtro} onValueChange={(v) => setFiltro(v as typeof filtro)}>
