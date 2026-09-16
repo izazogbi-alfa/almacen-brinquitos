@@ -45,6 +45,7 @@ type InventoryValue = {
   contar: (
     productoId: string,
     existencia: number,
+    sucursalId: string,
     talla?: string,
     color?: string,
   ) => Promise<void>;
@@ -158,6 +159,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     async (
       productoId: string,
       existencia: number,
+      sucursalId: string,
       talla?: string,
       color?: string,
     ) => {
@@ -165,6 +167,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         accion: "contar",
         productoId,
         existencia,
+        sucursalId,
         talla,
         color,
       });

@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-medium tracking-wide text-teal-800 uppercase">
-              Bodega Central
+              Brinquitos
             </p>
             <h1 className="font-heading text-lg leading-tight font-semibold">
               Almacén

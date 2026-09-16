@@ -5,6 +5,9 @@ export function tieneVariantes(producto: Producto) {
 }
 
 export function existenciaTotal(producto: Producto) {
+  if (producto.existenciasSucursal?.length) {
+    return producto.existenciasSucursal.reduce((acc, v) => acc + v.cantidad, 0);
+  }
   if (!tieneVariantes(producto)) return producto.existencia;
   return producto.variantes!.reduce((acc, v) => acc + v.existencia, 0);
 }

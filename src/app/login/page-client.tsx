@@ -39,11 +39,11 @@ export default function LoginPage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5">
       <p className="text-[11px] font-medium tracking-wide text-teal-800 uppercase">
-        Bodega Central
+        Brinquitos
       </p>
       <h1 className="font-heading mt-1 text-3xl font-semibold">Almacén</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Entra con tu usuario. Cada retiro y conteo queda a tu nombre.
+        Entra con tu usuario. Cada conteo queda a tu nombre, con sucursal y hora.
       </p>
       <form onSubmit={entrar} className="mt-8 space-y-4">
         <div className="space-y-2">

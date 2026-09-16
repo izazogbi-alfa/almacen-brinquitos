@@ -1,6 +1,6 @@
 # Almacén — existencias, pedidos y recepción
 
-App web **móvil primero** para bodega. Hay que entrar con usuario y contraseña; la sesión se ve en el encabezado.
+App web **móvil primero** para Brinquitos. Hay que entrar con usuario y contraseña; la sesión se ve en el encabezado.
 
 ## Cuentas de prueba
 
@@ -10,16 +10,20 @@ App web **móvil primero** para bodega. Hay que entrar con usuario y contraseña
 | Operador | `almacen1` | `almacen1` | Ana López |
 | Operador | `almacen2` | `almacen2` | Carlos Méndez |
 
-Usuarios y sesiones se guardan en `data/store.json` en el servidor.
+Usuarios, conteos y existencias se guardan en `data/store.json` en el servidor.
 
-## Día de existencias
+## Cómo contar
 
-1. Entra como operador.
-2. En **Existencias**, busca por código o nombre (ej. `playera` o `ROP-5001`).
-3. Si el producto tiene **talla** y **color**, elige ambos y luego la cantidad. El stock es por variante. Si no aplica, verás “Talla y color: no aplica”.
-4. Al terminar, toca **Cerrar el día**.
-
-Ropa de prueba: playera (S/M/L · Negro/Blanco) y pantalón (28/30/32 · Azul/Negro).
+1. Entra como operador (ej. `almacen1` / `almacen1`).
+2. Elige **sucursal**: La Gloria, El Modelo o El Ángel.
+3. En **Existencias**, busca por código o nombre (no se lista el catálogo completo). Ejemplos: `ropón`, `trajecito`, `chaleco`, `vela`, `BRI-1001`.
+4. El formulario sale **según el producto**:
+   - Ropón y trajecito: tallas pares 0–60 y color.
+   - Chaleco adulto: EXCHICO, CHICO, MEDIANO, GRANDE, EXGRANDE, ADULTO y color.
+   - Kit vela: cantidad y color (o Único), sin talla.
+5. Ajusta las piezas en anaquel y toca **Guardar conteo**. Queda tu nombre, la sucursal y la hora.
+6. Verás el total de esa sucursal y el **total de las tres sucursales**.
+7. Al terminar, toca **Cerrar el día**.
 
 ## Cómo correrlo
 

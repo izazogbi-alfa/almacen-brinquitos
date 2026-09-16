@@ -130,6 +130,49 @@ function loadRaw(): AppStore {
       prev.categoria = seed.categoria;
       extra = true;
     }
+    if (seed.esquemaConteo && prev.esquemaConteo !== seed.esquemaConteo) {
+      prev.esquemaConteo = seed.esquemaConteo;
+      extra = true;
+    }
+    if (seed.colores?.length && !prev.colores?.length) {
+      prev.colores = [...seed.colores];
+      extra = true;
+    }
+    if (seed.tallas?.length && !prev.tallas?.length) {
+      prev.tallas = [...seed.tallas];
+      extra = true;
+    }
+    if (seed.foto && !prev.foto) {
+      prev.foto = seed.foto;
+      extra = true;
+    }
+    if (!prev.existenciasSucursal?.length) {
+      if (seed.existenciasSucursal?.length) {
+        prev.existenciasSucursal = seed.existenciasSucursal.map((c) => ({
+          ...c,
+        }));
+        prev.existencia = seed.existencia;
+        extra = true;
+      } else if (prev.variantes?.length) {
+        prev.existenciasSucursal = prev.variantes.map((v) => ({
+          sucursalId: "s-gloria",
+          talla: v.talla,
+          color: v.color,
+          cantidad: v.existencia,
+        }));
+        extra = true;
+      } else {
+        prev.existenciasSucursal = [
+          {
+            sucursalId: "s-gloria",
+            talla: "",
+            color: prev.colores?.[0] ?? "Único",
+            cantidad: prev.existencia,
+          },
+        ];
+        extra = true;
+      }
+    }
   }
   if (extra) saveRaw(parsed);
   return parsed;

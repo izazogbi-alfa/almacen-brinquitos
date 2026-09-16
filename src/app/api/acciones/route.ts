@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { fechaClave } from "@/lib/format";
 import { pendienteDeLinea } from "@/lib/mock-data";
 import {
+  cantidadEn,
+  coloresProducto,
+  esquemaDe,
+  fijarConteo,
+  sucursalPorId,
+} from "@/lib/sucursales";
+import {
   sincronizarExistencia,
   tieneVariantes,
   varianteDe,
@@ -30,6 +37,7 @@ export async function POST(request: Request) {
     existencia?: number;
     talla?: string;
     color?: string;
+    sucursalId?: string;
     nota?: string;
     proveedor?: string;
     notas?: string;
@@ -109,43 +117,36 @@ export async function POST(request: Request) {
         if (!Number.isFinite(existencia) || existencia < 0) {
           throw new Error("La existencia contada no es válida.");
         }
-        const talla = body?.talla?.trim() || undefined;
-        const color = body?.color?.trim() || undefined;
-        if (tieneVariantes(producto)) {
-          if (!talla || !color) {
-            throw new Error("Elige talla y color para el conteo.");
-          }
-          const variante = varianteDe(producto, talla, color);
-          if (!variante) {
-            throw new Error("Esa talla y color no existen.");
-          }
-          const antes = variante.existencia;
-          variante.existencia = existencia;
-          sincronizarExistencia(producto);
-          agregarMovimiento(store, user, {
-            tipo: "conteo",
-            productoId: producto.id,
-            productoNombre: producto.nombre,
-            cantidad: existencia - antes,
-            existenciaAntes: antes,
-            existenciaDespues: variante.existencia,
-            talla,
-            color,
-            nota: `Conteo ${talla} / ${color}`,
-          });
-        } else {
-          const antes = producto.existencia;
-          producto.existencia = existencia;
-          agregarMovimiento(store, user, {
-            tipo: "conteo",
-            productoId: producto.id,
-            productoNombre: producto.nombre,
-            cantidad: existencia - antes,
-            existenciaAntes: antes,
-            existenciaDespues: producto.existencia,
-            nota: "Conteo de existencias",
-          });
+        const sucursalId = body?.sucursalId?.trim();
+        const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
+        if (!sucursal) {
+          throw new Error("Elige la sucursal donde estás contando.");
         }
+        const esquema = esquemaDe(producto);
+        const talla =
+          esquema === "accesorio" ? "" : body?.talla?.trim() || "";
+        const color = body?.color?.trim() || coloresProducto(producto)[0] || "Único";
+        if (esquema !== "accesorio" && !talla) {
+          throw new Error("Elige la talla de este producto.");
+        }
+        if (!color) {
+          throw new Error("Elige el color.");
+        }
+        const antes = cantidadEn(producto, sucursal.id, talla, color);
+        fijarConteo(producto, sucursal.id, talla, color, existencia);
+        agregarMovimiento(store, user, {
+          tipo: "conteo",
+          productoId: producto.id,
+          productoNombre: producto.nombre,
+          cantidad: existencia - antes,
+          existenciaAntes: antes,
+          existenciaDespues: existencia,
+          talla: talla || undefined,
+          color,
+          sucursalId: sucursal.id,
+          sucursalNombre: sucursal.nombre,
+          nota: `Conteo ${sucursal.nombre}${talla ? ` · ${talla}` : ""} · ${color}`,
+        });
         marcarGuardado(store, user);
         return { ok: true };
       }

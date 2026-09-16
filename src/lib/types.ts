@@ -7,6 +7,20 @@ export type EstadoPedido =
 
 export type RolUsuario = "admin" | "operador";
 
+export type EsquemaConteo = "nino" | "letra" | "accesorio";
+
+export type Sucursal = {
+  id: string;
+  nombre: string;
+};
+
+export type ExistenciaSucursal = {
+  sucursalId: string;
+  talla: string;
+  color: string;
+  cantidad: number;
+};
+
 export type Producto = {
   id: string;
   sku: string;
@@ -18,6 +32,10 @@ export type Producto = {
   ubicacion: string;
   foto?: string;
   variantes?: Variante[];
+  esquemaConteo?: EsquemaConteo;
+  tallas?: string[];
+  colores?: string[];
+  existenciasSucursal?: ExistenciaSucursal[];
 };
 
 export type Variante = {
@@ -83,6 +101,8 @@ export type Movimiento = {
   nota: string;
   talla?: string;
   color?: string;
+  sucursalId?: string;
+  sucursalNombre?: string;
 };
 
 export type Guardado = {

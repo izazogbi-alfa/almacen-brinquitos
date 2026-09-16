@@ -1,4 +1,22 @@
-import type { Pedido, Producto, Recepcion } from "@/lib/types";
+import type { ExistenciaSucursal, Pedido, Producto, Recepcion } from "@/lib/types";
+import { SUCURSALES } from "@/lib/sucursales";
+
+export { SUCURSALES };
+
+function celdas(
+  rows: [string, string, string, number][],
+): ExistenciaSucursal[] {
+  return rows.map(([sucursalId, talla, color, cantidad]) => ({
+    sucursalId,
+    talla,
+    color,
+    cantidad,
+  }));
+}
+
+function suma(celdas: ExistenciaSucursal[]) {
+  return celdas.reduce((acc, c) => acc + c.cantidad, 0);
+}
 
 export const PROVEEDORES = [
   "Distribuidora del Valle",
@@ -18,6 +36,8 @@ export const productosIniciales: Producto[] = [
     minimo: 24,
     ubicacion: "Pasillo A · Anaquel 2",
     foto: "/productos/harina.png",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-aceite",
@@ -29,6 +49,8 @@ export const productosIniciales: Producto[] = [
     minimo: 18,
     ubicacion: "Pasillo A · Anaquel 4",
     foto: "/productos/aceite.png",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-azucar",
@@ -39,6 +61,8 @@ export const productosIniciales: Producto[] = [
     existencia: 16,
     minimo: 20,
     ubicacion: "Pasillo A · Anaquel 1",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-frijol",
@@ -49,6 +73,8 @@ export const productosIniciales: Producto[] = [
     existencia: 55,
     minimo: 30,
     ubicacion: "Pasillo B · Anaquel 1",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-arroz",
@@ -60,6 +86,8 @@ export const productosIniciales: Producto[] = [
     minimo: 24,
     ubicacion: "Pasillo B · Anaquel 2",
     foto: "/productos/arroz.png",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-leche",
@@ -71,6 +99,8 @@ export const productosIniciales: Producto[] = [
     minimo: 36,
     ubicacion: "Cámara 1 · Nivel 2",
     foto: "/productos/leche.png",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-papel",
@@ -81,6 +111,8 @@ export const productosIniciales: Producto[] = [
     existencia: 21,
     minimo: 12,
     ubicacion: "Pasillo C · Anaquel 3",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-detergente",
@@ -91,6 +123,8 @@ export const productosIniciales: Producto[] = [
     existencia: 4,
     minimo: 15,
     ubicacion: "Pasillo C · Anaquel 1",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-cafe",
@@ -102,6 +136,8 @@ export const productosIniciales: Producto[] = [
     minimo: 10,
     ubicacion: "Pasillo A · Anaquel 6",
     foto: "/productos/cafe.png",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-jugo",
@@ -112,6 +148,8 @@ export const productosIniciales: Producto[] = [
     existencia: 28,
     minimo: 16,
     ubicacion: "Cámara 2 · Nivel 1",
+    esquemaConteo: "accesorio",
+    colores: ["Único"],
   },
   {
     id: "p-playera",
@@ -123,6 +161,9 @@ export const productosIniciales: Producto[] = [
     minimo: 12,
     ubicacion: "Pasillo D · Anaquel 1",
     foto: "/productos/playera.png",
+    esquemaConteo: "letra",
+    tallas: ["S", "M", "L"],
+    colores: ["Negro", "Blanco"],
     variantes: [
       { talla: "S", color: "Negro", existencia: 8 },
       { talla: "S", color: "Blanco", existencia: 6 },
@@ -142,6 +183,9 @@ export const productosIniciales: Producto[] = [
     minimo: 8,
     ubicacion: "Pasillo D · Anaquel 2",
     foto: "/productos/pantalon.png",
+    esquemaConteo: "nino",
+    tallas: ["28", "30", "32"],
+    colores: ["Azul", "Negro"],
     variantes: [
       { talla: "28", color: "Azul", existencia: 5 },
       { talla: "28", color: "Negro", existencia: 4 },
@@ -151,6 +195,100 @@ export const productosIniciales: Producto[] = [
       { talla: "32", color: "Negro", existencia: 3 },
     ],
   },
+  ...(() => {
+    const ropon = celdas([
+      ["s-gloria", "6", "Blanco", 5],
+      ["s-gloria", "8", "Blanco", 4],
+      ["s-gloria", "10", "Marfil", 3],
+      ["s-modelo", "6", "Blanco", 2],
+      ["s-modelo", "12", "Rosa", 3],
+      ["s-angel", "8", "Blanco", 6],
+      ["s-angel", "10", "Blanco", 2],
+    ]);
+    const trajecito = celdas([
+      ["s-gloria", "4", "Blanco", 3],
+      ["s-gloria", "6", "Beige", 4],
+      ["s-modelo", "6", "Azul", 5],
+      ["s-modelo", "8", "Blanco", 2],
+      ["s-angel", "4", "Blanco", 4],
+      ["s-angel", "10", "Beige", 1],
+    ]);
+    const chaleco = celdas([
+      ["s-gloria", "CHICO", "Negro", 4],
+      ["s-gloria", "MEDIANO", "Negro", 6],
+      ["s-gloria", "GRANDE", "Beige", 2],
+      ["s-modelo", "MEDIANO", "Blanco", 3],
+      ["s-modelo", "ADULTO", "Negro", 2],
+      ["s-angel", "EXCHICO", "Negro", 1],
+      ["s-angel", "EXGRANDE", "Blanco", 3],
+    ]);
+    const vela = celdas([
+      ["s-gloria", "", "Blanco", 18],
+      ["s-gloria", "", "Marfil", 9],
+      ["s-modelo", "", "Único", 12],
+      ["s-angel", "", "Blanco", 7],
+      ["s-angel", "", "Dorado", 4],
+    ]);
+    const extras: Producto[] = [
+      {
+        id: "p-ropon",
+        sku: "BRI-1001",
+        nombre: "Ropón de bautizo",
+        categoria: "Ropa infantil",
+        unidad: "pza",
+        existencia: suma(ropon),
+        minimo: 6,
+        ubicacion: "Ropa de bautizo",
+        foto: "/productos/ropon.png",
+        esquemaConteo: "nino",
+        colores: ["Blanco", "Marfil", "Rosa"],
+        existenciasSucursal: ropon,
+      },
+      {
+        id: "p-trajecito",
+        sku: "BRI-1002",
+        nombre: "Trajecito de bautizo",
+        categoria: "Ropa infantil",
+        unidad: "pza",
+        existencia: suma(trajecito),
+        minimo: 4,
+        ubicacion: "Ropa de bautizo",
+        foto: "/productos/trajecito.png",
+        esquemaConteo: "nino",
+        colores: ["Blanco", "Beige", "Azul"],
+        existenciasSucursal: trajecito,
+      },
+      {
+        id: "p-chaleco",
+        sku: "BRI-2001",
+        nombre: "Chaleco adulto",
+        categoria: "Ropa adulto",
+        unidad: "pza",
+        existencia: suma(chaleco),
+        minimo: 3,
+        ubicacion: "Ropa adulto",
+        foto: "/productos/chaleco.png",
+        esquemaConteo: "letra",
+        colores: ["Negro", "Blanco", "Beige"],
+        existenciasSucursal: chaleco,
+      },
+      {
+        id: "p-kit-vela",
+        sku: "BRI-3001",
+        nombre: "Kit vela de bautizo",
+        categoria: "Accesorios",
+        unidad: "pza",
+        existencia: suma(vela),
+        minimo: 10,
+        ubicacion: "Accesorios",
+        foto: "/productos/kit-vela.png",
+        esquemaConteo: "accesorio",
+        colores: ["Blanco", "Marfil", "Dorado", "Único"],
+        existenciasSucursal: vela,
+      },
+    ];
+    return extras;
+  })(),
 ];
 
 export const pedidosIniciales: Pedido[] = [

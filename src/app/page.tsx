@@ -13,42 +13,47 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { FotoProducto } from "@/components/foto-producto";
 import { etiquetaUnidad, fechaClave, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import type { Producto } from "@/lib/types";
 import {
-  coloresDe,
-  existenciaTotal,
-  tallasDe,
-  tieneVariantes,
-  varianteDe,
-} from "@/lib/variantes";
+  SUCURSALES,
+  cantidadEn,
+  coloresProducto,
+  esquemaDe,
+  sucursalPorId,
+  tallasProducto,
+  totalEnSucursal,
+  totalProducto,
+  totalesPorSucursal,
+  usaTalla,
+} from "@/lib/sucursales";
+import type { Producto } from "@/lib/types";
+
+const SUCURSAL_KEY = "almacen_sucursal";
 
 function ExistenciasContent() {
-  const {
-    productos,
-    movimientos,
-    cierres,
-    user,
-    retirar,
-    contar,
-    cerrarDia,
-  } = useInventory();
+  const { productos, movimientos, cierres, user, contar, cerrarDia } =
+    useInventory();
+  const [sucursalId, setSucursalId] = useState("");
   const [q, setQ] = useState("");
   const [consulta, setConsulta] = useState("");
   const [buscado, setBuscado] = useState(false);
-  const [vista, setVista] = useState<"sacar" | "hoy">("sacar");
+  const [vista, setVista] = useState<"contar" | "hoy">("contar");
   const [activo, setActivo] = useState<Producto | null>(null);
-  const [modo, setModo] = useState<"retiro" | "conteo">("retiro");
-  const [cantidad, setCantidad] = useState("1");
+  const [cantidad, setCantidad] = useState("0");
   const [talla, setTalla] = useState("");
   const [color, setColor] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
 
+  function elegirSucursal(id: string) {
+    setSucursalId(id);
+    localStorage.setItem(SUCURSAL_KEY, id);
+  }
+
+  const sucursal = sucursalPorId(sucursalId);
   const hoy = fechaClave();
   const delDia = movimientos.filter(
     (m) =>
-      fechaClave(new Date(m.timestamp)) === hoy &&
-      (m.tipo === "retiro" || m.tipo === "conteo"),
+      fechaClave(new Date(m.timestamp)) === hoy && m.tipo === "conteo",
   );
   const cierresHoy = cierres.filter((c) => c.fecha === hoy);
   const ultimoCierreHoy = cierresHoy[0];
@@ -68,24 +73,32 @@ function ExistenciasContent() {
   const mostradoId = activo?.id ?? unico?.id;
   const mostrado =
     productos.find((p) => p.id === mostradoId) ?? activo ?? unico;
-  const conVariantes = mostrado ? tieneVariantes(mostrado) : false;
-  const tallaActiva =
-    conVariantes && mostrado
-      ? talla || tallasDe(mostrado)[0] || ""
-      : "";
-  const colorActivo =
-    conVariantes && mostrado
-      ? color || coloresDe(mostrado, tallaActiva)[0] || ""
-      : "";
-  const varianteActiva =
-    mostrado && tallaActiva && colorActivo
-      ? varianteDe(mostrado, tallaActiva, colorActivo)
-      : undefined;
-  const stockVisible = mostrado
-    ? conVariantes
-      ? (varianteActiva?.existencia ?? 0)
-      : mostrado.existencia
+
+  const esquema = mostrado ? esquemaDe(mostrado) : "accesorio";
+  const conTalla = mostrado ? usaTalla(mostrado) : false;
+  const tallas = mostrado ? tallasProducto(mostrado) : [];
+  const colores = mostrado ? coloresProducto(mostrado) : ["Único"];
+  const tallaActiva = conTalla ? talla || tallas[0] || "" : "";
+  const colorActivo = color || colores[0] || "Único";
+  const stockSucursalCelda = mostrado && sucursalId
+    ? cantidadEn(mostrado, sucursalId, tallaActiva, colorActivo)
     : 0;
+  const totalSucursal = mostrado && sucursalId
+    ? totalEnSucursal(mostrado, sucursalId)
+    : 0;
+  const totalTodas = mostrado ? totalProducto(mostrado) : 0;
+
+  function prepararProducto(producto: Producto) {
+    const t0 = usaTalla(producto) ? tallasProducto(producto)[0] ?? "" : "";
+    const c0 = coloresProducto(producto)[0] ?? "Único";
+    setTalla(t0);
+    setColor(c0);
+    if (sucursalId) {
+      setCantidad(String(cantidadEn(producto, sucursalId, t0, c0)));
+    } else {
+      setCantidad("0");
+    }
+  }
 
   function buscar(e?: React.FormEvent) {
     e?.preventDefault();
@@ -93,57 +106,64 @@ function ExistenciasContent() {
     setConsulta(texto);
     setBuscado(true);
     setActivo(null);
-    setModo("retiro");
-    setCantidad("1");
-    setTalla("");
-    setColor("");
-  }
-
-  function elegirVariante(producto: Producto) {
-    if (!tieneVariantes(producto)) {
+    const hits = productos.filter((p) => {
+      const t = texto.toLowerCase();
+      if (!t) return false;
+      return (
+        p.nombre.toLowerCase().includes(t) || p.sku.toLowerCase().includes(t)
+      );
+    });
+    if (hits.length === 1) {
+      prepararProducto(hits[0]);
+    } else {
       setTalla("");
       setColor("");
-      return;
+      setCantidad("0");
     }
-    const tallas = tallasDe(producto);
-    const t0 = tallas[0] ?? "";
-    const c0 = coloresDe(producto, t0)[0] ?? "";
-    setTalla(t0);
-    setColor(c0);
   }
 
   function abrir(producto: Producto) {
     setActivo(producto);
-    setModo("retiro");
-    setCantidad("1");
-    elegirVariante(producto);
+    prepararProducto(producto);
+  }
+
+  function cambiarTalla(t: string) {
+    if (!mostrado) return;
+    setTalla(t);
+    const cols = coloresProducto(mostrado);
+    const c = cols.includes(colorActivo) ? colorActivo : cols[0] ?? "Único";
+    if (c !== colorActivo) setColor(c);
+    if (sucursalId) {
+      setCantidad(String(cantidadEn(mostrado, sucursalId, t, c)));
+    }
+  }
+
+  function cambiarColor(c: string) {
+    if (!mostrado) return;
+    setColor(c);
+    if (sucursalId) {
+      setCantidad(String(cantidadEn(mostrado, sucursalId, tallaActiva, c)));
+    }
   }
 
   async function confirmar() {
     if (!mostrado) return;
+    if (!sucursalId) {
+      toast.error("Elige la sucursal antes de contar.");
+      return;
+    }
     setGuardando(true);
     try {
-      if (modo === "retiro") {
-        await retirar(
-          mostrado.id,
-          Number(cantidad),
-          conVariantes ? tallaActiva : undefined,
-          conVariantes ? colorActivo : undefined,
-        );
-        toast.success(
-          conVariantes
-            ? `Salida ${tallaActiva} ${colorActivo} · ${user?.nombre}`
-            : `Salida a nombre de ${user?.nombre}`,
-        );
-      } else {
-        await contar(
-          mostrado.id,
-          Number(cantidad),
-          conVariantes ? tallaActiva : undefined,
-          conVariantes ? colorActivo : undefined,
-        );
-        toast.success("Conteo guardado");
-      }
+      await contar(
+        mostrado.id,
+        Number(cantidad),
+        sucursalId,
+        conTalla ? tallaActiva : undefined,
+        colorActivo,
+      );
+      toast.success(
+        `Conteo en ${sucursal?.nombre} · ${user?.nombre}`,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
     } finally {
@@ -168,7 +188,7 @@ function ExistenciasContent() {
     <div className="space-y-4">
       <div>
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          Sacar existencia
+          Contar existencias
         </h2>
         {ultimoCierreHoy ? (
           <p className="text-sm text-teal-800">
@@ -177,13 +197,52 @@ function ExistenciasContent() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Busca el código o el nombre. No se muestra el catálogo completo.
+            Elige sucursal, busca el producto y cuenta lo que hay en anaquel.
           </p>
         )}
       </div>
 
+      <div className="space-y-2">
+        <Label>Sucursal</Label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {SUCURSALES.map((s) => (
+            <Button
+              key={s.id}
+              type="button"
+              variant={s.id === sucursalId ? "default" : "outline"}
+              className="h-11 w-full"
+              onClick={() => {
+                elegirSucursal(s.id);
+                if (mostrado) {
+                  setCantidad(
+                    String(
+                      cantidadEn(
+                        mostrado,
+                        s.id,
+                        usaTalla(mostrado)
+                          ? talla || tallasProducto(mostrado)[0] || ""
+                          : "",
+                        color || coloresProducto(mostrado)[0] || "Único",
+                      ),
+                    ),
+                  );
+                }
+              }}
+            >
+              {s.nombre}
+            </Button>
+          ))}
+        </div>
+        {!sucursalId ? (
+          <p className="text-sm text-amber-800">
+            Toca la sucursal donde estás antes de guardar un conteo.
+          </p>
+        ) : null}
+      </div>
+
       <Button
         type="button"
+        variant="outline"
         className="h-11 w-full"
         disabled={cerrando}
         onClick={() => void cerrar()}
@@ -197,7 +256,7 @@ function ExistenciasContent() {
 
       <Tabs value={vista} onValueChange={(v) => setVista(v as typeof vista)}>
         <TabsList className="w-full">
-          <TabsTrigger value="sacar">Sacar</TabsTrigger>
+          <TabsTrigger value="contar">Contar</TabsTrigger>
           <TabsTrigger value="hoy">Hoy</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -217,8 +276,7 @@ function ExistenciasContent() {
                   <li key={c.id} className="rounded-xl border p-3 text-sm">
                     <p className="font-medium">{c.userName}</p>
                     <p className="text-muted-foreground">
-                      {formatoFechaHora(c.timestamp)} · {c.retiros} salidas ·{" "}
-                      {c.conteos} conteos
+                      {formatoFechaHora(c.timestamp)} · {c.conteos} conteos
                     </p>
                   </li>
                 ))}
@@ -226,26 +284,24 @@ function ExistenciasContent() {
             )}
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-medium">Quién lo sacó</h3>
+            <h3 className="mb-2 text-sm font-medium">Quién contó</h3>
             {delDia.length === 0 ? (
               <EmptyView
-                titulo="Sin movimientos hoy"
-                detalle="Busca un producto y regístrale una salida. Queda a tu nombre."
+                titulo="Sin conteos hoy"
+                detalle="Busca un producto, elige sucursal y guarda el conteo. Queda a tu nombre."
               />
             ) : (
               <ul className="space-y-2">
                 {delDia.map((m) => (
                   <li key={m.id} className="rounded-xl border p-3 text-sm">
-                    <p className="font-medium">
-                      {m.tipo === "retiro" ? "Salió" : "Conteo"} ·{" "}
-                      {m.productoNombre}
-                    </p>
+                    <p className="font-medium">{m.productoNombre}</p>
                     <p className="text-muted-foreground">
-                      {m.tipo === "retiro" ? `${m.cantidad} pzas · ` : null}
-                      {m.userName} · {formatoFechaHora(m.timestamp)}
+                      {m.sucursalNombre ?? "Sucursal"} · {m.userName} ·{" "}
+                      {formatoFechaHora(m.timestamp)}
                       {m.talla || m.color
-                        ? ` · ${m.talla ?? "—"} / ${m.color ?? "—"}`
+                        ? ` · ${m.talla ? `${m.talla} / ` : ""}${m.color ?? ""}`
                         : ""}
+                      {` · ${m.existenciaDespues ?? 0} pzas`}
                     </p>
                   </li>
                 ))}
@@ -261,7 +317,7 @@ function ExistenciasContent() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Código o nombre"
+                placeholder="Código o nombre (ej. ropón, BRI-1001)"
                 className="h-11 pl-9 text-base"
                 enterKeyHint="search"
                 autoComplete="off"
@@ -274,8 +330,8 @@ function ExistenciasContent() {
 
           {!buscado ? (
             <EmptyView
-              titulo="Busca el producto a sacar"
-              detalle="Escribe el código (ej. ROP-5001) o el nombre (ej. playera) y toca Buscar."
+              titulo="Busca el producto a contar"
+              detalle="Escribe el código (ej. BRI-1001) o el nombre (ej. ropón, chaleco, vela)."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -291,120 +347,93 @@ function ExistenciasContent() {
                     {mostrado.nombre}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {mostrado.sku} · {mostrado.ubicacion}
+                    {mostrado.sku} · {mostrado.categoria}
                   </p>
-                  <Badge
-                    className="mt-2"
-                    variant={
-                      stockVisible <= (mostrado.minimo ?? 0)
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {conVariantes
-                      ? `${stockVisible} pza · talla ${tallaActiva} · ${colorActivo}`
-                      : `${etiquetaUnidad(mostrado.unidad, stockVisible)} en piso`}
-                  </Badge>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge variant="secondary">
+                      {sucursal
+                        ? `${etiquetaUnidad(mostrado.unidad, totalSucursal)} en ${sucursal.nombre}`
+                        : "Elige sucursal"}
+                    </Badge>
+                    <Badge
+                      variant={
+                        totalTodas <= (mostrado.minimo ?? 0)
+                          ? "destructive"
+                          : "outline"
+                      }
+                    >
+                      Total 3 sucursales: {totalTodas} {mostrado.unidad}
+                    </Badge>
+                  </div>
                 </div>
-                {conVariantes ? (
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label>Talla</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {tallasDe(mostrado).map((t) => (
-                          <Button
-                            key={t}
-                            type="button"
-                            variant={t === tallaActiva ? "default" : "outline"}
-                            className="h-10 min-w-11"
-                            onClick={() => {
-                              setTalla(t);
-                              const cols = coloresDe(mostrado, t);
-                              if (!cols.includes(colorActivo)) {
-                                setColor(cols[0] ?? "");
-                              }
-                              if (modo === "conteo") {
-                                const v = varianteDe(
-                                  mostrado,
-                                  t,
-                                  cols.includes(colorActivo)
-                                    ? colorActivo
-                                    : cols[0] ?? "",
-                                );
-                                setCantidad(String(v?.existencia ?? 0));
-                              }
-                            }}
-                          >
-                            {t}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Color</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {coloresDe(mostrado, tallaActiva).map((c) => (
-                          <Button
-                            key={c}
-                            type="button"
-                            variant={c === colorActivo ? "default" : "outline"}
-                            className="h-10"
-                            onClick={() => {
-                              setColor(c);
-                              if (modo === "conteo") {
-                                const v = varianteDe(mostrado, tallaActiva, c);
-                                setCantidad(String(v?.existencia ?? 0));
-                              }
-                            }}
-                          >
-                            {c}
-                          </Button>
-                        ))}
-                      </div>
+                <ul className="grid grid-cols-3 gap-2 text-center text-xs">
+                  {totalesPorSucursal(mostrado).map((s) => (
+                    <li
+                      key={s.id}
+                      className={`rounded-lg border p-2 ${s.id === sucursalId ? "border-teal-700 bg-teal-50" : ""}`}
+                    >
+                      <p className="font-medium">{s.nombre}</p>
+                      <p className="text-muted-foreground">{s.cantidad}</p>
+                    </li>
+                  ))}
+                </ul>
+                {conTalla ? (
+                  <div className="space-y-1.5">
+                    <Label>
+                      {esquema === "nino"
+                        ? "Talla (0–60, pares)"
+                        : "Talla"}
+                    </Label>
+                    <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+                      {tallas.map((t) => (
+                        <Button
+                          key={t}
+                          type="button"
+                          variant={t === tallaActiva ? "default" : "outline"}
+                          className="h-10 min-w-11 px-2.5 text-xs"
+                          onClick={() => cambiarTalla(t)}
+                        >
+                          {t}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Talla y color: no aplica
+                    Este producto no usa talla numérica: solo cantidad y color.
                   </p>
                 )}
-                <p className="text-sm">
-                  Lo saca: <span className="font-medium">{user?.nombre}</span>
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={modo === "retiro" ? "default" : "outline"}
-                    className="h-10 flex-1"
-                    onClick={() => {
-                      setModo("retiro");
-                      setCantidad("1");
-                    }}
-                  >
-                    Sacar
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={modo === "conteo" ? "default" : "outline"}
-                    className="h-10 flex-1"
-                    onClick={() => {
-                      setModo("conteo");
-                      setCantidad(
-                        String(
-                          conVariantes ? stockVisible : mostrado.existencia,
-                        ),
-                      );
-                    }}
-                  >
-                    Contar
-                  </Button>
+                <div className="space-y-1.5">
+                  <Label>Color</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {colores.map((c) => (
+                      <Button
+                        key={c}
+                        type="button"
+                        variant={c === colorActivo ? "default" : "outline"}
+                        className="h-10"
+                        onClick={() => cambiarColor(c)}
+                      >
+                        {c}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
+                {sucursal ? (
+                  <p className="text-sm">
+                    En {sucursal.nombre}
+                    {tallaActiva ? ` · talla ${tallaActiva}` : ""} ·{" "}
+                    {colorActivo}:{" "}
+                    <span className="font-medium">
+                      {stockSucursalCelda} {mostrado.unidad}
+                    </span>
+                  </p>
+                ) : null}
+                <p className="text-sm">
+                  Cuenta: <span className="font-medium">{user?.nombre}</span>
+                </p>
                 <div className="space-y-2">
-                  <Label>
-                    {modo === "retiro"
-                      ? "Cantidad que sale"
-                      : "Existencia contada"}
-                  </Label>
+                  <Label>Piezas en anaquel</Label>
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -439,10 +468,10 @@ function ExistenciasContent() {
                 <Button
                   type="button"
                   className="h-11 w-full"
-                  disabled={guardando}
+                  disabled={guardando || !sucursalId}
                   onClick={() => void confirmar()}
                 >
-                  {guardando ? "Guardando…" : "Registrar"}
+                  {guardando ? "Guardando…" : "Guardar conteo"}
                 </Button>
                 {coincidencias.length > 1 ? (
                   <Button
@@ -473,9 +502,11 @@ function ExistenciasContent() {
                     <div className="min-w-0">
                       <p className="font-medium">{producto.nombre}</p>
                       <p className="text-xs text-muted-foreground">
-                        {producto.sku} · {existenciaTotal(producto)}{" "}
+                        {producto.sku} · total {totalProducto(producto)}{" "}
                         {producto.unidad}
-                        {tieneVariantes(producto) ? " · talla/color" : ""}
+                        {sucursal
+                          ? ` · ${sucursal.nombre} ${totalEnSucursal(producto, sucursal.id)}`
+                          : ""}
                       </p>
                     </div>
                   </button>
