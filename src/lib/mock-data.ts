@@ -17,6 +17,7 @@ export const productosIniciales: Producto[] = [
     existencia: 42,
     minimo: 24,
     ubicacion: "Pasillo A · Anaquel 2",
+    foto: "/productos/harina.png",
   },
   {
     id: "p-aceite",
@@ -27,6 +28,7 @@ export const productosIniciales: Producto[] = [
     existencia: 8,
     minimo: 18,
     ubicacion: "Pasillo A · Anaquel 4",
+    foto: "/productos/aceite.png",
   },
   {
     id: "p-azucar",
@@ -57,6 +59,7 @@ export const productosIniciales: Producto[] = [
     existencia: 12,
     minimo: 24,
     ubicacion: "Pasillo B · Anaquel 2",
+    foto: "/productos/arroz.png",
   },
   {
     id: "p-leche",
@@ -67,6 +70,7 @@ export const productosIniciales: Producto[] = [
     existencia: 6,
     minimo: 36,
     ubicacion: "Cámara 1 · Nivel 2",
+    foto: "/productos/leche.png",
   },
   {
     id: "p-papel",
@@ -97,6 +101,7 @@ export const productosIniciales: Producto[] = [
     existencia: 19,
     minimo: 10,
     ubicacion: "Pasillo A · Anaquel 6",
+    foto: "/productos/cafe.png",
   },
   {
     id: "p-jugo",
@@ -118,6 +123,8 @@ export const pedidosIniciales: Pedido[] = [
     fecha: "2026-09-10T15:20:00.000Z",
     estado: "enviado",
     notas: "Entrega a andén 2. Revisar caducidad de leche.",
+    userId: "seed",
+    userName: "Carga inicial",
     lineas: [
       { productoId: "p-leche", cantidad: 48, recibido: 0, costoUnitario: 18.5 },
       { productoId: "p-azucar", cantidad: 24, recibido: 0, costoUnitario: 27.9 },
@@ -131,6 +138,8 @@ export const pedidosIniciales: Pedido[] = [
     fecha: "2026-09-12T18:05:00.000Z",
     estado: "parcial",
     notas: "Faltó una tarima de aceite; el resto llegó el viernes.",
+    userId: "seed",
+    userName: "Carga inicial",
     lineas: [
       { productoId: "p-aceite", cantidad: 40, recibido: 16, costoUnitario: 41.0 },
       { productoId: "p-harina", cantidad: 30, recibido: 30, costoUnitario: 19.8 },
@@ -144,6 +153,8 @@ export const pedidosIniciales: Pedido[] = [
     fecha: "2026-09-04T13:40:00.000Z",
     estado: "recibido",
     notas: "",
+    userId: "seed",
+    userName: "Carga inicial",
     lineas: [
       { productoId: "p-papel", cantidad: 18, recibido: 18, costoUnitario: 89.0 },
     ],
@@ -155,6 +166,8 @@ export const pedidosIniciales: Pedido[] = [
     fecha: "2026-09-14T21:10:00.000Z",
     estado: "enviado",
     notas: "Pedido de reposición urgente de lácteos y jugo.",
+    userId: "seed",
+    userName: "Carga inicial",
     lineas: [
       { productoId: "p-leche", cantidad: 24, recibido: 0, costoUnitario: 18.5 },
       { productoId: "p-jugo", cantidad: 12, recibido: 0, costoUnitario: 21.0 },
@@ -167,6 +180,8 @@ export const recepcionesIniciales: Recepcion[] = [
     id: "rc-9001",
     pedidoId: "po-1042",
     fecha: "2026-09-13T16:30:00.000Z",
+    userId: "seed",
+    userName: "Carga inicial",
     lineas: [
       { productoId: "p-aceite", cantidad: 16 },
       { productoId: "p-harina", cantidad: 30 },
@@ -176,6 +191,8 @@ export const recepcionesIniciales: Recepcion[] = [
     id: "rc-9000",
     pedidoId: "po-1043",
     fecha: "2026-09-05T17:00:00.000Z",
+    userId: "seed",
+    userName: "Carga inicial",
     lineas: [{ productoId: "p-papel", cantidad: 18 }],
   },
 ];

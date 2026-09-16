@@ -1,34 +1,31 @@
 # Almacén — existencias, pedidos y recepción
 
-App web **móvil primero** para una bodega: ver existencias en piso, armar pedidos a proveedor y recibir mercancía contra la orden. Está pensada para abrirse en el navegador del teléfono (y se puede agregar a la pantalla de inicio). En escritorio también funciona.
+App web **móvil primero** para bodega. Hay que entrar con usuario y contraseña; la sesión se ve en el encabezado.
 
-No hay base de datos ni inicio de sesión: usa un catálogo de ejemplo en memoria. Los pedidos y recepciones que captures viven en esa sesión.
+## Cuentas de prueba
 
-## Qué incluye
+| Rol | Usuario | Contraseña | Nombre |
+| --- | --- | --- | --- |
+| Administradora | `iza` | `iza` | Iza Zogbi |
+| Operador | `almacen1` | `almacen1` | Ana López |
+| Operador | `almacen2` | `almacen2` | Carlos Méndez |
 
-- **Existencias:** búsqueda, filtro de bajo mínimo y ficha del SKU.
-- **Pedidos:** listado con filtros, detalle y alta simple.
-- **Recepción de mercancía:** cantidades recibidas vs pedidas; al confirmar, sube la existencia.
-- Estados de **carga**, **error** (botón “Simular error” + Reintentar) y **vacío**.
+Usuarios y sesiones se guardan en `data/store.json` en el servidor.
 
-## Cómo correrlo en local
+## Día de existencias
 
-Requisitos: Node.js 20+.
+1. Entra como operador.
+2. En **Existencias**, escribe código (ej. `ALI-1001`) o nombre (ej. `harina`) y toca **Buscar**. No se lista el catálogo entero.
+3. Si hay una coincidencia, ves foto y puedes **Sacar**. Si hay varias, elige de la lista.
+4. Al terminar, toca **Cerrar el día**.
+
+Hay fotos de ejemplo en harina, aceite, arroz, leche y café. El resto muestra **Sin foto**.
+
+## Cómo correrlo
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre [http://localhost:4317](http://localhost:4317). El servidor escucha en `0.0.0.0:4317`.
-
-Producción local:
-
-```bash
-npm run build
-npm start
-```
-
-## Stack
-
-Next.js (App Router), TypeScript, Tailwind CSS y shadcn/ui.
+Abre [http://localhost:4317](http://localhost:4317).

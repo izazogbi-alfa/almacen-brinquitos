@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ClipboardList,
-  Package,
-  Truck,
-} from "lucide-react";
+import { ClipboardList, Package, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInventory } from "@/lib/inventory-context";
 import { Button } from "@/components/ui/button";
@@ -19,13 +15,17 @@ const NAV = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { simularFallo, status } = useInventory();
+  const { user, logout } = useInventory();
+
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col bg-background md:max-w-5xl">
       <header className="sticky top-0 z-40 border-b bg-background/90 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-medium tracking-wide text-teal-800 uppercase">
               Bodega Central
             </p>
@@ -33,16 +33,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Almacén
             </h1>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground"
-            onClick={simularFallo}
-            disabled={status === "loading"}
-          >
-            Simular error
-          </Button>
+          {user ? (
+            <div className="shrink-0 text-right">
+              <p className="text-sm font-medium">{user.nombre}</p>
+              <p className="text-xs text-muted-foreground">
+                {user.rol === "admin" ? "Administradora" : "Operador"} ·{" "}
+                {user.username}
+              </p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto px-0 text-xs"
+                onClick={() => void logout()}
+              >
+                Cerrar sesión
+              </Button>
+            </div>
+          ) : null}
         </div>
       </header>
 

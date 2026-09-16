@@ -5,6 +5,8 @@ export type EstadoPedido =
   | "recibido"
   | "cancelado";
 
+export type RolUsuario = "admin" | "operador";
+
 export type Producto = {
   id: string;
   sku: string;
@@ -14,6 +16,7 @@ export type Producto = {
   existencia: number;
   minimo: number;
   ubicacion: string;
+  foto?: string;
 };
 
 export type LineaPedido = {
@@ -31,6 +34,8 @@ export type Pedido = {
   estado: EstadoPedido;
   notas: string;
   lineas: LineaPedido[];
+  userId: string;
+  userName: string;
 };
 
 export type Recepcion = {
@@ -38,6 +43,53 @@ export type Recepcion = {
   pedidoId: string;
   fecha: string;
   lineas: { productoId: string; cantidad: number }[];
+  userId: string;
+  userName: string;
+};
+
+export type UsuarioPublico = {
+  id: string;
+  username: string;
+  nombre: string;
+  rol: RolUsuario;
+};
+
+export type TipoMovimiento =
+  | "retiro"
+  | "conteo"
+  | "recepcion"
+  | "pedido"
+  | "cierre";
+
+export type Movimiento = {
+  id: string;
+  tipo: TipoMovimiento;
+  productoId?: string;
+  productoNombre?: string;
+  cantidad: number;
+  existenciaAntes?: number;
+  existenciaDespues?: number;
+  pedidoId?: string;
+  userId: string;
+  userName: string;
+  timestamp: string;
+  nota: string;
+};
+
+export type Guardado = {
+  timestamp: string;
+  userId: string;
+  userName: string;
+};
+
+export type CierreDia = {
+  id: string;
+  fecha: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  retiros: number;
+  conteos: number;
 };
 
 export type AppStatus = "loading" | "ready" | "error";

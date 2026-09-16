@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -9,21 +10,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  pedidosIniciales,
-  pendienteDeLinea,
-  productosIniciales,
-  recepcionesIniciales,
-} from "@/lib/mock-data";
 import type {
-  AppStatus,
-  LineaPedido,
+  CierreDia,
+  Movimiento,
   Pedido,
   Producto,
   Recepcion,
+  UsuarioPublico,
+  AppStatus,
 } from "@/lib/types";
-
-const LATENCIA_MS = 700;
 
 type NuevaLinea = {
   productoId: string;
@@ -33,11 +28,17 @@ type NuevaLinea = {
 
 type InventoryValue = {
   status: AppStatus;
+  user: UsuarioPublico | null;
   productos: Producto[];
   pedidos: Pedido[];
   recepciones: Recepcion[];
+  movimientos: Movimiento[];
+  cierres: CierreDia[];
   retry: () => void;
-  simularFallo: () => void;
+  logout: () => Promise<void>;
+  retirar: (productoId: string, cantidad: number) => Promise<void>;
+  contar: (productoId: string, existencia: number) => Promise<void>;
+  cerrarDia: () => Promise<void>;
   crearPedido: (input: {
     proveedor: string;
     notas: string;
@@ -46,39 +47,108 @@ type InventoryValue = {
   registrarRecepcion: (
     pedidoId: string,
     lineas: { productoId: string; cantidad: number }[],
-  ) => Promise<Recepcion>;
+  ) => Promise<void>;
 };
 
 const InventoryContext = createContext<InventoryValue | null>(null);
 
-function siguienteFolio(pedidos: Pedido[]) {
-  const nums = pedidos.map((p) => Number(p.folio.replace("PO-", "")) || 0);
-  const max = nums.length ? Math.max(...nums) : 1040;
-  return `PO-${max + 1}`;
+async function parseError(res: Response) {
+  const data = (await res.json().catch(() => null)) as { error?: string } | null;
+  return data?.error ?? "No se pudo completar la acción.";
 }
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AppStatus>("loading");
-  const [productos, setProductos] = useState<Producto[]>(productosIniciales);
-  const [pedidos, setPedidos] = useState<Pedido[]>(pedidosIniciales);
-  const [recepciones, setRecepciones] = useState<Recepcion[]>(
-    recepcionesIniciales,
+  const pathname = usePathname();
+  const router = useRouter();
+  const [status, setStatus] = useState<AppStatus>(
+    pathname === "/login" ? "ready" : "loading",
   );
+  const [user, setUser] = useState<UsuarioPublico | null>(null);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [recepciones, setRecepciones] = useState<Recepcion[]>([]);
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
+  const [cierres, setCierres] = useState<CierreDia[]>([]);
 
-  const boot = useCallback((fallar: boolean) => {
-    setStatus("loading");
-    window.setTimeout(() => {
-      setStatus(fallar ? "error" : "ready");
-    }, LATENCIA_MS);
-  }, []);
+  const recargar = useCallback(async () => {
+    const res = await fetch("/api/state", { credentials: "include" });
+    if (res.status === 401) {
+      setUser(null);
+      if (pathname !== "/login") router.replace("/login");
+      throw new Error("Sesión expirada");
+    }
+    if (!res.ok) throw new Error(await parseError(res));
+    const data = await res.json();
+    setUser(data.user);
+    setProductos(data.productos);
+    setPedidos(data.pedidos);
+    setRecepciones(data.recepciones);
+    setMovimientos(data.movimientos ?? []);
+    setCierres(data.cierres ?? []);
+  }, [pathname, router]);
 
   useEffect(() => {
-    const id = window.setTimeout(() => setStatus("ready"), LATENCIA_MS);
-    return () => window.clearTimeout(id);
-  }, []);
+    if (pathname === "/login") return;
+    let cancelado = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de sesión desde el API
+    void recargar()
+      .then(() => {
+        if (!cancelado) setStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelado) setStatus("error");
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [pathname, recargar]);
 
-  const retry = useCallback(() => boot(false), [boot]);
-  const simularFallo = useCallback(() => boot(true), [boot]);
+  const retry = useCallback(() => {
+    setStatus("loading");
+    recargar()
+      .then(() => setStatus("ready"))
+      .catch(() => setStatus("error"));
+  }, [recargar]);
+
+  const logout = useCallback(async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    setUser(null);
+    router.replace("/login");
+  }, [router]);
+
+  const postAccion = useCallback(
+    async (body: Record<string, unknown>) => {
+      const res = await fetch("/api/acciones", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      await recargar();
+      return data;
+    },
+    [recargar],
+  );
+
+  const retirar = useCallback(
+    async (productoId: string, cantidad: number) => {
+      await postAccion({ accion: "retirar", productoId, cantidad });
+    },
+    [postAccion],
+  );
+
+  const contar = useCallback(
+    async (productoId: string, existencia: number) => {
+      await postAccion({ accion: "contar", productoId, existencia });
+    },
+    [postAccion],
+  );
+
+  const cerrarDia = useCallback(async () => {
+    await postAccion({ accion: "cerrar-dia" });
+  }, [postAccion]);
 
   const crearPedido = useCallback(
     async (input: {
@@ -86,25 +156,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       notas: string;
       lineas: NuevaLinea[];
     }) => {
-      await new Promise((r) => setTimeout(r, 450));
-      const pedido: Pedido = {
-        id: `po-${Date.now()}`,
-        folio: siguienteFolio(pedidos),
-        proveedor: input.proveedor,
-        fecha: new Date().toISOString(),
-        estado: "enviado",
-        notas: input.notas,
-        lineas: input.lineas.map(
-          (linea): LineaPedido => ({
-            ...linea,
-            recibido: 0,
-          }),
-        ),
-      };
-      setPedidos((prev) => [pedido, ...prev]);
-      return pedido;
+      const data = await postAccion({ accion: "pedido", ...input });
+      return data.pedido as Pedido;
     },
-    [pedidos],
+    [postAccion],
   );
 
   const registrarRecepcion = useCallback(
@@ -112,83 +167,41 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       pedidoId: string,
       lineas: { productoId: string; cantidad: number }[],
     ) => {
-      await new Promise((r) => setTimeout(r, 500));
-      const aplicadas = lineas.filter((l) => l.cantidad > 0);
-      if (aplicadas.length === 0) {
-        throw new Error("Indica al menos una cantidad a recibir.");
-      }
-
-      const pedido = pedidos.find((p) => p.id === pedidoId);
-      if (!pedido) throw new Error("No encontramos ese pedido.");
-
-      for (const linea of aplicadas) {
-        const original = pedido.lineas.find(
-          (l) => l.productoId === linea.productoId,
-        );
-        if (!original) {
-          throw new Error("Hay un producto que no pertenece al pedido.");
-        }
-        if (linea.cantidad > pendienteDeLinea(original)) {
-          throw new Error("No puedes recibir más de lo pendiente.");
-        }
-      }
-
-      setProductos((prev) =>
-        prev.map((producto) => {
-          const extra =
-            aplicadas.find((l) => l.productoId === producto.id)?.cantidad ?? 0;
-          return extra
-            ? { ...producto, existencia: producto.existencia + extra }
-            : producto;
-        }),
-      );
-
-      let estadoFinal: Pedido["estado"] = "parcial";
-      setPedidos((prev) =>
-        prev.map((p) => {
-          if (p.id !== pedidoId) return p;
-          const lineasAct = p.lineas.map((linea) => {
-            const extra =
-              aplicadas.find((l) => l.productoId === linea.productoId)
-                ?.cantidad ?? 0;
-            return { ...linea, recibido: linea.recibido + extra };
-          });
-          const completo = lineasAct.every((l) => l.recibido >= l.cantidad);
-          estadoFinal = completo ? "recibido" : "parcial";
-          return { ...p, lineas: lineasAct, estado: estadoFinal };
-        }),
-      );
-
-      const registro: Recepcion = {
-        id: `rc-${Date.now()}`,
-        pedidoId,
-        fecha: new Date().toISOString(),
-        lineas: aplicadas,
-      };
-      setRecepciones((prev) => [registro, ...prev]);
-      return registro;
+      await postAccion({ accion: "recepcion", pedidoId, lineas });
     },
-    [pedidos],
+    [postAccion],
   );
 
   const value = useMemo(
     () => ({
       status,
+      user,
       productos,
       pedidos,
       recepciones,
+      movimientos,
+      cierres,
       retry,
-      simularFallo,
+      logout,
+      retirar,
+      contar,
+      cerrarDia,
       crearPedido,
       registrarRecepcion,
     }),
     [
       status,
+      user,
       productos,
       pedidos,
       recepciones,
+      movimientos,
+      cierres,
       retry,
-      simularFallo,
+      logout,
+      retirar,
+      contar,
+      cerrarDia,
       crearPedido,
       registrarRecepcion,
     ],

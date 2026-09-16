@@ -28,8 +28,7 @@ export function ErrorView() {
       <AlertCircle />
       <AlertTitle>No se pudo cargar el almacén</AlertTitle>
       <AlertDescription>
-        Revisa la conexión e inténtalo de nuevo. Los datos de ejemplo siguen en
-        el dispositivo.
+        No se pudo hablar con el servidor. Revisa la red e inténtalo de nuevo.
       </AlertDescription>
       <div className="col-start-2 mt-3">
         <Button type="button" onClick={retry} className="h-10 gap-2">
