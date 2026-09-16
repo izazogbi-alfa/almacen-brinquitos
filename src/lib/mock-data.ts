@@ -1,5 +1,5 @@
 import type { ExistenciaSucursal, Pedido, Producto, Recepcion } from "@/lib/types";
-import { SUCURSALES } from "@/lib/sucursales";
+import { SUCURSALES, TALLAS_XC1092 } from "@/lib/sucursales";
 
 export { SUCURSALES };
 
@@ -286,6 +286,43 @@ export const productosIniciales: Producto[] = [
         colores: ["Blanco", "Marfil", "Dorado", "Único"],
         existenciasSucursal: vela,
       },
+      (() => {
+        const colores = [
+          "blanco",
+          "cielo",
+          "hueso",
+          "rosa",
+          "beige",
+          "marfil",
+          "azul",
+        ];
+        const camisaCeldas = celdas([
+          ["s-gloria", "1", "blanco", 3],
+          ["s-gloria", "1X", "blanco", 2],
+          ["s-gloria", "2", "blanco", 4],
+          ["s-gloria", "4", "cielo", 5],
+          ["s-gloria", "6", "hueso", 3],
+          ["s-modelo", "2", "blanco", 2],
+          ["s-modelo", "8", "rosa", 4],
+          ["s-angel", "1X", "beige", 1],
+          ["s-angel", "10", "azul", 3],
+        ]);
+        return {
+          id: "p-xc1092",
+          sku: "XC1092",
+          nombre: "Camisa",
+          categoria: "Ropa infantil",
+          unidad: "pza",
+          existencia: suma(camisaCeldas),
+          minimo: 8,
+          ubicacion: "Camisas",
+          foto: "/productos/camisa.png",
+          esquemaConteo: "nino" as const,
+          tallas: [...TALLAS_XC1092],
+          colores,
+          existenciasSucursal: camisaCeldas,
+        };
+      })(),
     ];
     return extras;
   })(),

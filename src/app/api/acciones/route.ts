@@ -18,6 +18,51 @@ import {
   withStore,
 } from "@/server/store";
 
+function normalizarCeldas(
+  body: {
+    talla?: string;
+    color?: string;
+    cantidad?: number;
+    existencia?: number;
+    celdas?: {
+      talla?: string;
+      color?: string;
+      cantidad?: number;
+      existencia?: number;
+    }[];
+  } | null,
+  producto: Parameters<typeof esquemaDe>[0],
+  modo: "contar" | "delta",
+) {
+  const raw =
+    body?.celdas && body.celdas.length > 0
+      ? body.celdas
+      : [
+          {
+            talla: body?.talla,
+            color: body?.color,
+            cantidad: body?.cantidad,
+            existencia: body?.existencia,
+          },
+        ];
+  return raw.map((c) => {
+    const esquema = esquemaDe(producto);
+    const talla = esquema === "accesorio" ? "" : (c.talla ?? "").trim();
+    const color =
+      (c.color ?? "").trim() || coloresProducto(producto)[0] || "Único";
+    const cantidad = Number(
+      modo === "contar" ? (c.existencia ?? c.cantidad) : c.cantidad,
+    );
+    if (esquema !== "accesorio" && !talla) {
+      throw new Error("Falta la talla en una celda.");
+    }
+    if (!Number.isFinite(cantidad) || cantidad < 0) {
+      throw new Error("Hay una cantidad inválida en la cuadrícula.");
+    }
+    return { talla, color, cantidad };
+  });
+}
+
 export async function POST(request: Request) {
   const { user, error } = await exigirUsuario();
   if (!user) {
@@ -38,6 +83,7 @@ export async function POST(request: Request) {
     nota?: string;
     proveedor?: string;
     notas?: string;
+    celdas?: { talla?: string; color?: string; cantidad?: number; existencia?: number }[];
     lineas?: {
       productoId: string;
       cantidad: number;
@@ -62,42 +108,37 @@ export async function POST(request: Request) {
         if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
         const producto = store.productos.find((p) => p.id === body?.productoId);
         if (!producto) throw new Error("Producto no encontrado.");
-        const cantidad = Number(body?.cantidad);
-        if (!Number.isFinite(cantidad) || cantidad <= 0) {
-          throw new Error("Indica cuántas piezas se sacan.");
-        }
         const sucursalId = body?.sucursalId?.trim();
         const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
         if (!sucursal) {
           throw new Error("Elige la sucursal.");
         }
-        const esquema = esquemaDe(producto);
-        const talla = esquema === "accesorio" ? "" : body?.talla?.trim() || "";
-        const color =
-          body?.color?.trim() || coloresProducto(producto)[0] || "Único";
-        if (esquema !== "accesorio" && !talla) {
-          throw new Error("Elige la talla.");
-        }
-        const { antes, despues } = ajustarCantidad(
-          producto,
-          sucursal.id,
-          talla,
-          color,
-          -cantidad,
+        const lista = normalizarCeldas(body, producto, "delta").filter(
+          (c) => c.cantidad > 0,
         );
-        agregarMovimiento(store, user, {
-          tipo: "retiro",
-          productoId: producto.id,
-          productoNombre: producto.nombre,
-          cantidad,
-          existenciaAntes: antes,
-          existenciaDespues: despues,
-          talla: talla || undefined,
-          color,
-          sucursalId: sucursal.id,
-          sucursalNombre: sucursal.nombre,
-          nota: `Salida ${sucursal.nombre}${talla ? ` · ${talla}` : ""} · ${color}`,
-        });
+        if (lista.length === 0) throw new Error("Indica al menos una pieza a sacar.");
+        for (const celda of lista) {
+          const { antes, despues } = ajustarCantidad(
+            producto,
+            sucursal.id,
+            celda.talla,
+            celda.color,
+            -celda.cantidad,
+          );
+          agregarMovimiento(store, user, {
+            tipo: "retiro",
+            productoId: producto.id,
+            productoNombre: producto.nombre,
+            cantidad: celda.cantidad,
+            existenciaAntes: antes,
+            existenciaDespues: despues,
+            talla: celda.talla || undefined,
+            color: celda.color,
+            sucursalId: sucursal.id,
+            sucursalNombre: sucursal.nombre,
+            nota: `Salida ${sucursal.nombre}${celda.talla ? ` · ${celda.talla}` : ""} · ${celda.color}`,
+          });
+        }
         marcarGuardado(store, user);
         return { ok: true };
       }
@@ -106,40 +147,36 @@ export async function POST(request: Request) {
         if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
         const producto = store.productos.find((p) => p.id === body?.productoId);
         if (!producto) throw new Error("Producto no encontrado.");
-        const existencia = Number(body?.existencia);
-        if (!Number.isFinite(existencia) || existencia < 0) {
-          throw new Error("La existencia contada no es válida.");
-        }
         const sucursalId = body?.sucursalId?.trim();
         const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
         if (!sucursal) {
           throw new Error("Elige la sucursal donde estás contando.");
         }
-        const esquema = esquemaDe(producto);
-        const talla =
-          esquema === "accesorio" ? "" : body?.talla?.trim() || "";
-        const color = body?.color?.trim() || coloresProducto(producto)[0] || "Único";
-        if (esquema !== "accesorio" && !talla) {
-          throw new Error("Elige la talla de este producto.");
+        const lista = normalizarCeldas(body, producto, "contar");
+        if (lista.length === 0) throw new Error("No hay celdas para guardar.");
+        for (const celda of lista) {
+          const antes = cantidadEn(producto, sucursal.id, celda.talla, celda.color);
+          fijarConteo(
+            producto,
+            sucursal.id,
+            celda.talla,
+            celda.color,
+            celda.cantidad,
+          );
+          agregarMovimiento(store, user, {
+            tipo: "conteo",
+            productoId: producto.id,
+            productoNombre: producto.nombre,
+            cantidad: celda.cantidad - antes,
+            existenciaAntes: antes,
+            existenciaDespues: celda.cantidad,
+            talla: celda.talla || undefined,
+            color: celda.color,
+            sucursalId: sucursal.id,
+            sucursalNombre: sucursal.nombre,
+            nota: `Conteo ${sucursal.nombre}${celda.talla ? ` · ${celda.talla}` : ""} · ${celda.color}`,
+          });
         }
-        if (!color) {
-          throw new Error("Elige el color.");
-        }
-        const antes = cantidadEn(producto, sucursal.id, talla, color);
-        fijarConteo(producto, sucursal.id, talla, color, existencia);
-        agregarMovimiento(store, user, {
-          tipo: "conteo",
-          productoId: producto.id,
-          productoNombre: producto.nombre,
-          cantidad: existencia - antes,
-          existenciaAntes: antes,
-          existenciaDespues: existencia,
-          talla: talla || undefined,
-          color,
-          sucursalId: sucursal.id,
-          sucursalNombre: sucursal.nombre,
-          nota: `Conteo ${sucursal.nombre}${talla ? ` · ${talla}` : ""} · ${color}`,
-        });
         marcarGuardado(store, user);
         return { ok: true };
       }
@@ -148,42 +185,37 @@ export async function POST(request: Request) {
         if (!mods.recepcion) throw new Error("No tienes módulo de recepción.");
         const producto = store.productos.find((p) => p.id === body?.productoId);
         if (!producto) throw new Error("Producto no encontrado.");
-        const cantidad = Number(body?.cantidad);
-        if (!Number.isFinite(cantidad) || cantidad <= 0) {
-          throw new Error("Indica cuántas piezas entran.");
-        }
         const sucursalId = body?.sucursalId?.trim();
         const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
         if (!sucursal) {
           throw new Error("Elige la sucursal.");
         }
-        const esquema = esquemaDe(producto);
-        const talla = esquema === "accesorio" ? "" : body?.talla?.trim() || "";
-        const color =
-          body?.color?.trim() || coloresProducto(producto)[0] || "Único";
-        if (esquema !== "accesorio" && !talla) {
-          throw new Error("Elige la talla.");
-        }
-        const { antes, despues } = ajustarCantidad(
-          producto,
-          sucursal.id,
-          talla,
-          color,
-          cantidad,
+        const lista = normalizarCeldas(body, producto, "delta").filter(
+          (c) => c.cantidad > 0,
         );
-        agregarMovimiento(store, user, {
-          tipo: "recepcion",
-          productoId: producto.id,
-          productoNombre: producto.nombre,
-          cantidad,
-          existenciaAntes: antes,
-          existenciaDespues: despues,
-          talla: talla || undefined,
-          color,
-          sucursalId: sucursal.id,
-          sucursalNombre: sucursal.nombre,
-          nota: `Entrada ${sucursal.nombre}${talla ? ` · ${talla}` : ""} · ${color}`,
-        });
+        if (lista.length === 0) throw new Error("Indica al menos una pieza de entrada.");
+        for (const celda of lista) {
+          const { antes, despues } = ajustarCantidad(
+            producto,
+            sucursal.id,
+            celda.talla,
+            celda.color,
+            celda.cantidad,
+          );
+          agregarMovimiento(store, user, {
+            tipo: "recepcion",
+            productoId: producto.id,
+            productoNombre: producto.nombre,
+            cantidad: celda.cantidad,
+            existenciaAntes: antes,
+            existenciaDespues: despues,
+            talla: celda.talla || undefined,
+            color: celda.color,
+            sucursalId: sucursal.id,
+            sucursalNombre: sucursal.nombre,
+            nota: `Entrada ${sucursal.nombre}${celda.talla ? ` · ${celda.talla}` : ""} · ${celda.color}`,
+          });
+        }
         marcarGuardado(store, user);
         return { ok: true };
       }

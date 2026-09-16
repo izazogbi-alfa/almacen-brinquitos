@@ -68,18 +68,12 @@ function RecepcionContent() {
         }
         onCommit={async (p) => {
           setGuardando(true);
-            try {
-            await entrada(
-              p.producto.id,
-              p.cantidad,
-              p.sucursalId,
-              p.talla || undefined,
-              p.color,
-            );
+          try {
+            await entrada(p.producto.id, p.sucursalId, p.celdas);
             toast.success(`Entrada en ${p.sucursalNombre}`);
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
-            } finally {
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
+          } finally {
             setGuardando(false);
           }
         }}

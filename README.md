@@ -14,17 +14,17 @@ Iza puede cambiar existencias/recepción de cada operador en **Usuarios**.
 
 ## Cómo probar
 
-**Como Iza:** entra → **Artículos** (busca `ropón`, cambia colores o esquema) → **Usuarios** (quita o da recepción a Ana) → **Pedidos** Nuevo (sucursal → busca artículo → confirma → tabla → Guardar) → **Autorizar** y PDF.
+**Como Iza:** entra → **Pedidos** Nuevo → sucursal → busca `XC1092` → llena la cuadrícula color × talla → confirma → Autorizar + PDF. **Artículos** sigue definiendo colores y encabezados.
 
-**Como operador:** entra `almacen1` → elige sucursal → **Contar** o **Sacar** (azul) y confirma → **Recepción** entrada verde, misma captura. `almacen2` no ve Recepción ni Pedidos.
+**Como operador:** `almacen1` → sucursal → busca `XC1092` o `camisa` → misma cuadrícula para contar/sacar. Recepción verde usa el mismo formato.
 
 ## Existencias
 
-1. Elige sucursal (La Gloria / El Modelo / El Ángel).
-2. Busca el código (no se lista el catálogo).
-3. El formulario usa las propiedades del artículo.
-4. Confirma antes de contar o sacar.
-5. PDF al cerrar el día o con Descargar PDF.
+1. Elige sucursal.
+2. Busca código o nombre (ej. `XC1092`, `camisa`). Primera celda = artículo.
+3. Filas = colores del admin. Columnas = tallas de ese artículo (1, 1X, 2, 4…60, o CHICO/MEDIANO…, o solo cantidad).
+4. Llena la fila de un color y baja a la siguiente. Confirma al terminar.
+5. PDF del día.
 
 ## Recepción
 

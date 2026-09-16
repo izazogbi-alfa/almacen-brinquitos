@@ -76,7 +76,7 @@ function NuevoPedidoContent() {
           Nuevo pedido
         </h2>
         <p className="text-sm text-muted-foreground">
-          Captura como en existencias. Queda una tabla; Iza autoriza después.
+          Captura en cuadrícula como existencias (color × talla). Queda tabla; Iza autoriza.
         </p>
       </div>
       <div className="space-y-2">
@@ -105,18 +105,18 @@ function NuevoPedidoContent() {
         onCommit={(p) => {
           setLineas((prev) => [
             ...prev,
-            {
-              key: `l${Date.now()}`,
+            ...p.celdas.map((c, i) => ({
+              key: `l${Date.now()}-${i}`,
               productoId: p.producto.id,
               nombre: p.producto.nombre,
-              cantidad: p.cantidad,
-              talla: p.talla || undefined,
-              color: p.color,
+              cantidad: c.cantidad,
+              talla: c.talla || undefined,
+              color: c.color,
               sucursalId: p.sucursalId,
               sucursalNombre: p.sucursalNombre,
-            },
+            })),
           ]);
-          toast.success("Línea agregada a la tabla");
+          toast.success("Cuadrícula agregada a la tabla");
         }}
       />
       <div>

@@ -17,6 +17,13 @@ export const TALLAS_LETRA = [
   "ADULTO",
 ] as const;
 
+/** Tallas tipo formato de pedido: 1, 1X, 2, 4 … 60 */
+export const TALLAS_XC1092 = [
+  "1",
+  "1X",
+  ...Array.from({ length: 30 }, (_, i) => String((i + 1) * 2)),
+];
+
 export function sucursalPorId(id: string) {
   return SUCURSALES.find((s) => s.id === id);
 }
@@ -38,8 +45,13 @@ export function coloresProducto(producto: Producto): string[] {
   return ["Único"];
 }
 
+export function encabezadosTalla(producto: Producto): string[] {
+  const tallas = tallasProducto(producto);
+  return tallas.length > 0 ? tallas : [""];
+}
+
 export function usaTalla(producto: Producto) {
-  return esquemaDe(producto) !== "accesorio" && tallasProducto(producto).length > 0;
+  return encabezadosTalla(producto).some((t) => t !== "");
 }
 
 export function seleccionInicial(

@@ -30,6 +30,8 @@ type NuevaLinea = {
   sucursalNombre?: string;
 };
 
+type CeldaAccion = { talla?: string; color?: string; cantidad: number };
+
 type InventoryValue = {
   status: AppStatus;
   user: UsuarioPublico | null;
@@ -42,24 +44,18 @@ type InventoryValue = {
   logout: () => Promise<void>;
   retirar: (
     productoId: string,
-    cantidad: number,
     sucursalId: string,
-    talla?: string,
-    color?: string,
+    celdas: CeldaAccion[],
   ) => Promise<void>;
   contar: (
     productoId: string,
-    existencia: number,
     sucursalId: string,
-    talla?: string,
-    color?: string,
+    celdas: CeldaAccion[],
   ) => Promise<void>;
   entrada: (
     productoId: string,
-    cantidad: number,
     sucursalId: string,
-    talla?: string,
-    color?: string,
+    celdas: CeldaAccion[],
   ) => Promise<void>;
   cerrarDia: () => Promise<void>;
   crearPedido: (input: {
@@ -162,61 +158,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const retirar = useCallback(
-    async (
-      productoId: string,
-      cantidad: number,
-      sucursalId: string,
-      talla?: string,
-      color?: string,
-    ) => {
-      await postAccion({
-        accion: "retirar",
-        productoId,
-        cantidad,
-        sucursalId,
-        talla,
-        color,
-      });
+    async (productoId: string, sucursalId: string, celdas: CeldaAccion[]) => {
+      await postAccion({ accion: "retirar", productoId, sucursalId, celdas });
     },
     [postAccion],
   );
 
   const contar = useCallback(
-    async (
-      productoId: string,
-      existencia: number,
-      sucursalId: string,
-      talla?: string,
-      color?: string,
-    ) => {
-      await postAccion({
-        accion: "contar",
-        productoId,
-        existencia,
-        sucursalId,
-        talla,
-        color,
-      });
+    async (productoId: string, sucursalId: string, celdas: CeldaAccion[]) => {
+      await postAccion({ accion: "contar", productoId, sucursalId, celdas });
     },
     [postAccion],
   );
 
   const entrada = useCallback(
-    async (
-      productoId: string,
-      cantidad: number,
-      sucursalId: string,
-      talla?: string,
-      color?: string,
-    ) => {
-      await postAccion({
-        accion: "entrada",
-        productoId,
-        cantidad,
-        sucursalId,
-        talla,
-        color,
-      });
+    async (productoId: string, sucursalId: string, celdas: CeldaAccion[]) => {
+      await postAccion({ accion: "entrada", productoId, sucursalId, celdas });
     },
     [postAccion],
   );

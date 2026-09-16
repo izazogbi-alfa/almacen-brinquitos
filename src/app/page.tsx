@@ -70,7 +70,7 @@ function ExistenciasContent() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Contar o sacar en azul. Elige sucursal y confirma antes de guardar.
+            Contar o sacar en la cuadrícula del artículo (color × talla). Elige sucursal y confirma.
           </p>
         )}
       </div>
@@ -150,22 +150,10 @@ function ExistenciasContent() {
             setGuardando(true);
             try {
               if (vista === "contar") {
-                await contar(
-                  p.producto.id,
-                  p.cantidad,
-                  p.sucursalId,
-                  p.talla || undefined,
-                  p.color,
-                );
+                await contar(p.producto.id, p.sucursalId, p.celdas);
                 toast.success(`Conteo en ${p.sucursalNombre}`);
               } else {
-                await retirar(
-                  p.producto.id,
-                  p.cantidad,
-                  p.sucursalId,
-                  p.talla || undefined,
-                  p.color,
-                );
+                await retirar(p.producto.id, p.sucursalId, p.celdas);
                 toast.success(`Salida en ${p.sucursalNombre}`);
               }
             } catch (err) {
