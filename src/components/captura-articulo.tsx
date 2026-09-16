@@ -29,6 +29,7 @@ import {
   totalProducto,
   totalesPorSucursal,
   usaTalla,
+  seleccionInicial,
 } from "@/lib/sucursales";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -124,13 +125,12 @@ export function CapturaArticulo({
   }
 
   function preparar(producto: Producto, sucId = sucursalId) {
-    const t0 = usaTalla(producto) ? tallasProducto(producto)[0] ?? "" : "";
-    const c0 = coloresProducto(producto)[0] ?? "Único";
-    setTalla(t0);
-    setColor(c0);
+    const ini = seleccionInicial(producto, sucId);
+    setTalla(ini.talla);
+    setColor(ini.color);
     setCantidad(
       modo === "contar" && sucId
-        ? String(cantidadEn(producto, sucId, t0, c0))
+        ? String(cantidadEn(producto, sucId, ini.talla, ini.color))
         : "1",
     );
   }

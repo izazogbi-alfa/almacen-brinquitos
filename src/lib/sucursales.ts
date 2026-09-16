@@ -42,6 +42,24 @@ export function usaTalla(producto: Producto) {
   return esquemaDe(producto) !== "accesorio" && tallasProducto(producto).length > 0;
 }
 
+export function seleccionInicial(
+  producto: Producto,
+  sucursalId?: string,
+) {
+  const tallas = usaTalla(producto) ? tallasProducto(producto) : [""];
+  const colores = coloresProducto(producto);
+  if (sucursalId) {
+    for (const t of tallas) {
+      for (const c of colores) {
+        if (cantidadEn(producto, sucursalId, t, c) > 0) {
+          return { talla: t, color: c };
+        }
+      }
+    }
+  }
+  return { talla: tallas[0] ?? "", color: colores[0] ?? "Único" };
+}
+
 export function claveCelda(sucursalId: string, talla: string, color: string) {
   return `${sucursalId}::${talla}::${color}`;
 }
