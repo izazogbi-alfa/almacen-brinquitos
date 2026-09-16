@@ -340,7 +340,7 @@ function ExistenciasContent() {
                     <FotoProducto
                       src={producto.foto}
                       alt={producto.nombre}
-                      className="size-16 shrink-0"
+                      className="size-16 max-h-16 shrink-0 object-cover"
                     />
                     <div className="min-w-0">
                       <p className="font-medium">{producto.nombre}</p>

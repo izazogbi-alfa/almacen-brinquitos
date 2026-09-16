@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +24,13 @@ export function FotoProducto({
     );
   }
   return (
-    <Image
+    // Foto local de demo; img evita el recorte vacío de next/image a pantalla ancha.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={src}
       alt={alt}
-      width={800}
-      height={800}
       className={cn(
-        "aspect-square w-full rounded-xl object-cover bg-muted",
+        "max-h-64 w-full rounded-xl bg-muted object-contain",
         className,
       )}
     />
