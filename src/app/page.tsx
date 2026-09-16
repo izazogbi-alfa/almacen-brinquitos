@@ -14,6 +14,13 @@ import { FotoProducto } from "@/components/foto-producto";
 import { etiquetaUnidad, fechaClave, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
 import type { Producto } from "@/lib/types";
+import {
+  coloresDe,
+  existenciaTotal,
+  tallasDe,
+  tieneVariantes,
+  varianteDe,
+} from "@/lib/variantes";
 
 function ExistenciasContent() {
   const {
@@ -32,6 +39,8 @@ function ExistenciasContent() {
   const [activo, setActivo] = useState<Producto | null>(null);
   const [modo, setModo] = useState<"retiro" | "conteo">("retiro");
   const [cantidad, setCantidad] = useState("1");
+  const [talla, setTalla] = useState("");
+  const [color, setColor] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
 
@@ -59,6 +68,24 @@ function ExistenciasContent() {
   const mostradoId = activo?.id ?? unico?.id;
   const mostrado =
     productos.find((p) => p.id === mostradoId) ?? activo ?? unico;
+  const conVariantes = mostrado ? tieneVariantes(mostrado) : false;
+  const tallaActiva =
+    conVariantes && mostrado
+      ? talla || tallasDe(mostrado)[0] || ""
+      : "";
+  const colorActivo =
+    conVariantes && mostrado
+      ? color || coloresDe(mostrado, tallaActiva)[0] || ""
+      : "";
+  const varianteActiva =
+    mostrado && tallaActiva && colorActivo
+      ? varianteDe(mostrado, tallaActiva, colorActivo)
+      : undefined;
+  const stockVisible = mostrado
+    ? conVariantes
+      ? (varianteActiva?.existencia ?? 0)
+      : mostrado.existencia
+    : 0;
 
   function buscar(e?: React.FormEvent) {
     e?.preventDefault();
@@ -68,12 +95,28 @@ function ExistenciasContent() {
     setActivo(null);
     setModo("retiro");
     setCantidad("1");
+    setTalla("");
+    setColor("");
+  }
+
+  function elegirVariante(producto: Producto) {
+    if (!tieneVariantes(producto)) {
+      setTalla("");
+      setColor("");
+      return;
+    }
+    const tallas = tallasDe(producto);
+    const t0 = tallas[0] ?? "";
+    const c0 = coloresDe(producto, t0)[0] ?? "";
+    setTalla(t0);
+    setColor(c0);
   }
 
   function abrir(producto: Producto) {
     setActivo(producto);
     setModo("retiro");
     setCantidad("1");
+    elegirVariante(producto);
   }
 
   async function confirmar() {
@@ -81,10 +124,24 @@ function ExistenciasContent() {
     setGuardando(true);
     try {
       if (modo === "retiro") {
-        await retirar(mostrado.id, Number(cantidad));
-        toast.success(`Salida a nombre de ${user?.nombre}`);
+        await retirar(
+          mostrado.id,
+          Number(cantidad),
+          conVariantes ? tallaActiva : undefined,
+          conVariantes ? colorActivo : undefined,
+        );
+        toast.success(
+          conVariantes
+            ? `Salida ${tallaActiva} ${colorActivo} · ${user?.nombre}`
+            : `Salida a nombre de ${user?.nombre}`,
+        );
       } else {
-        await contar(mostrado.id, Number(cantidad));
+        await contar(
+          mostrado.id,
+          Number(cantidad),
+          conVariantes ? tallaActiva : undefined,
+          conVariantes ? colorActivo : undefined,
+        );
         toast.success("Conteo guardado");
       }
     } catch (err) {
@@ -186,6 +243,9 @@ function ExistenciasContent() {
                     <p className="text-muted-foreground">
                       {m.tipo === "retiro" ? `${m.cantidad} pzas · ` : null}
                       {m.userName} · {formatoFechaHora(m.timestamp)}
+                      {m.talla || m.color
+                        ? ` · ${m.talla ?? "—"} / ${m.color ?? "—"}`
+                        : ""}
                     </p>
                   </li>
                 ))}
@@ -215,7 +275,7 @@ function ExistenciasContent() {
           {!buscado ? (
             <EmptyView
               titulo="Busca el producto a sacar"
-              detalle="Escribe el código (ej. ALI-1001) o el nombre (ej. harina) y toca Buscar."
+              detalle="Escribe el código (ej. ROP-5001) o el nombre (ej. playera) y toca Buscar."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -236,14 +296,78 @@ function ExistenciasContent() {
                   <Badge
                     className="mt-2"
                     variant={
-                      mostrado.existencia <= mostrado.minimo
+                      stockVisible <= (mostrado.minimo ?? 0)
                         ? "destructive"
                         : "secondary"
                     }
                   >
-                    {etiquetaUnidad(mostrado.unidad, mostrado.existencia)} en piso
+                    {conVariantes
+                      ? `${stockVisible} pza · talla ${tallaActiva} · ${colorActivo}`
+                      : `${etiquetaUnidad(mostrado.unidad, stockVisible)} en piso`}
                   </Badge>
                 </div>
+                {conVariantes ? (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label>Talla</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {tallasDe(mostrado).map((t) => (
+                          <Button
+                            key={t}
+                            type="button"
+                            variant={t === tallaActiva ? "default" : "outline"}
+                            className="h-10 min-w-11"
+                            onClick={() => {
+                              setTalla(t);
+                              const cols = coloresDe(mostrado, t);
+                              if (!cols.includes(colorActivo)) {
+                                setColor(cols[0] ?? "");
+                              }
+                              if (modo === "conteo") {
+                                const v = varianteDe(
+                                  mostrado,
+                                  t,
+                                  cols.includes(colorActivo)
+                                    ? colorActivo
+                                    : cols[0] ?? "",
+                                );
+                                setCantidad(String(v?.existencia ?? 0));
+                              }
+                            }}
+                          >
+                            {t}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Color</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {coloresDe(mostrado, tallaActiva).map((c) => (
+                          <Button
+                            key={c}
+                            type="button"
+                            variant={c === colorActivo ? "default" : "outline"}
+                            className="h-10"
+                            onClick={() => {
+                              setColor(c);
+                              if (modo === "conteo") {
+                                const v = varianteDe(mostrado, tallaActiva, c);
+                                setCantidad(String(v?.existencia ?? 0));
+                              }
+                            }}
+                          >
+                            {c}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Talla y color: no aplica
+                  </p>
+                )}
                 <p className="text-sm">
                   Lo saca: <span className="font-medium">{user?.nombre}</span>
                 </p>
@@ -265,7 +389,11 @@ function ExistenciasContent() {
                     className="h-10 flex-1"
                     onClick={() => {
                       setModo("conteo");
-                      setCantidad(String(mostrado.existencia));
+                      setCantidad(
+                        String(
+                          conVariantes ? stockVisible : mostrado.existencia,
+                        ),
+                      );
                     }}
                   >
                     Contar
@@ -345,7 +473,9 @@ function ExistenciasContent() {
                     <div className="min-w-0">
                       <p className="font-medium">{producto.nombre}</p>
                       <p className="text-xs text-muted-foreground">
-                        {producto.sku} · {producto.existencia} {producto.unidad}
+                        {producto.sku} · {existenciaTotal(producto)}{" "}
+                        {producto.unidad}
+                        {tieneVariantes(producto) ? " · talla/color" : ""}
                       </p>
                     </div>
                   </button>

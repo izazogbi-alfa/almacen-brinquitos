@@ -15,11 +15,11 @@ Usuarios y sesiones se guardan en `data/store.json` en el servidor.
 ## Día de existencias
 
 1. Entra como operador.
-2. En **Existencias**, escribe código (ej. `ALI-1001`) o nombre (ej. `harina`) y toca **Buscar**. No se lista el catálogo entero.
-3. Si hay una coincidencia, ves foto y puedes **Sacar**. Si hay varias, elige de la lista.
+2. En **Existencias**, busca por código o nombre (ej. `playera` o `ROP-5001`).
+3. Si el producto tiene **talla** y **color**, elige ambos y luego la cantidad. El stock es por variante. Si no aplica, verás “Talla y color: no aplica”.
 4. Al terminar, toca **Cerrar el día**.
 
-Hay fotos de ejemplo en harina, aceite, arroz, leche y café. El resto muestra **Sin foto**.
+Ropa de prueba: playera (S/M/L · Negro/Blanco) y pantalón (28/30/32 · Azul/Negro).
 
 ## Cómo correrlo
 

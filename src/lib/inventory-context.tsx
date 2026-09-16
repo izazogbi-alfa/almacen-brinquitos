@@ -36,8 +36,18 @@ type InventoryValue = {
   cierres: CierreDia[];
   retry: () => void;
   logout: () => Promise<void>;
-  retirar: (productoId: string, cantidad: number) => Promise<void>;
-  contar: (productoId: string, existencia: number) => Promise<void>;
+  retirar: (
+    productoId: string,
+    cantidad: number,
+    talla?: string,
+    color?: string,
+  ) => Promise<void>;
+  contar: (
+    productoId: string,
+    existencia: number,
+    talla?: string,
+    color?: string,
+  ) => Promise<void>;
   cerrarDia: () => Promise<void>;
   crearPedido: (input: {
     proveedor: string;
@@ -133,15 +143,31 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const retirar = useCallback(
-    async (productoId: string, cantidad: number) => {
-      await postAccion({ accion: "retirar", productoId, cantidad });
+    async (
+      productoId: string,
+      cantidad: number,
+      talla?: string,
+      color?: string,
+    ) => {
+      await postAccion({ accion: "retirar", productoId, cantidad, talla, color });
     },
     [postAccion],
   );
 
   const contar = useCallback(
-    async (productoId: string, existencia: number) => {
-      await postAccion({ accion: "contar", productoId, existencia });
+    async (
+      productoId: string,
+      existencia: number,
+      talla?: string,
+      color?: string,
+    ) => {
+      await postAccion({
+        accion: "contar",
+        productoId,
+        existencia,
+        talla,
+        color,
+      });
     },
     [postAccion],
   );

@@ -17,6 +17,13 @@ export type Producto = {
   minimo: number;
   ubicacion: string;
   foto?: string;
+  variantes?: Variante[];
+};
+
+export type Variante = {
+  talla: string;
+  color: string;
+  existencia: number;
 };
 
 export type LineaPedido = {
@@ -74,6 +81,8 @@ export type Movimiento = {
   userName: string;
   timestamp: string;
   nota: string;
+  talla?: string;
+  color?: string;
 };
 
 export type Guardado = {

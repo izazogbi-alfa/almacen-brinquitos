@@ -114,6 +114,24 @@ function loadRaw(): AppStore {
     ...p,
     foto: p.foto || fotos.get(p.id),
   }));
+  const porId = new Map(parsed.productos.map((p) => [p.id, p]));
+  let extra = false;
+  for (const seed of productosIniciales) {
+    const prev = porId.get(seed.id);
+    if (!prev) {
+      parsed.productos.push(seed);
+      extra = true;
+      continue;
+    }
+    if (seed.variantes?.length && !prev.variantes?.length) {
+      prev.variantes = seed.variantes.map((v) => ({ ...v }));
+      prev.existencia = seed.existencia;
+      prev.foto = prev.foto || seed.foto;
+      prev.categoria = seed.categoria;
+      extra = true;
+    }
+  }
+  if (extra) saveRaw(parsed);
   return parsed;
 }
 
