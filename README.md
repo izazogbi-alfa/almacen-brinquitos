@@ -10,7 +10,7 @@ App **móvil primero** para Brinquitos. Español. Sesión con usuario y contrase
 | Operador | `almacen1` | `almacen1` | Existencias + recepción |
 | Operador | `almacen2` | `almacen2` | Solo existencias |
 
-Iza arma las listas en **Configuración**. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. Para ordenar: mango a la izquierda (sostén, arrastra, suelta; el 1 queda primero). Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. Quien solo cuenta o recibe **elige** de esas listas; no las define.
+Iza arma las listas en **Configuración**. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. El orden se cambia arrastrando filas dentro de un recuadro (arriba = primero). Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. Quien solo cuenta o recibe **elige** de esas listas; no las define.
 
 ## Cómo probar
 

@@ -7,9 +7,8 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type ReactNode,
 } from "react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
 import { moverAIndice, moverEnLista } from "@/lib/listas";
 import { cn } from "@/lib/utils";
 
@@ -28,71 +27,21 @@ function indicePorPuntero(
   return vivos[vivos.length - 1].i;
 }
 
-function MangoOrden({
-  etiqueta,
-  numero,
-  total,
-  arrastrando,
-  desactivado,
-  onPointerDown,
-  onMoverTeclado,
-}: {
-  etiqueta: string;
-  numero: number;
-  total: number;
-  arrastrando: boolean;
-  desactivado: boolean;
-  onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => void;
-  onMoverTeclado: (direccion: -1 | 1) => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={desactivado}
-      aria-label={`Mango para ordenar ${etiqueta}. Posición ${numero} de ${total}. Sostén y arrastra, o usa flechas.`}
-      aria-grabbed={arrastrando}
-      onPointerDown={onPointerDown}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          onMoverTeclado(-1);
-        }
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          onMoverTeclado(1);
-        }
-      }}
-      className={cn(
-        "flex size-14 shrink-0 touch-none flex-col items-center justify-center rounded-xl border-2 bg-background text-foreground shadow-sm",
-        "focus-visible:ring-3 focus-visible:ring-ring/50",
-        arrastrando && "border-primary bg-primary/10",
-        desactivado && "opacity-40",
-      )}
-    >
-      <GripVertical className="size-7" aria-hidden />
-      <span className="text-xs font-bold tabular-nums leading-none">
-        {numero}
-      </span>
-    </button>
-  );
-}
-
 export function ListaOrdenable<T>({
   items,
   getKey,
   etiqueta,
   onReorder,
-  className,
-  children,
+  onQuitar,
 }: {
   items: T[];
   getKey: (item: T, index: number) => string;
   etiqueta: (item: T) => string;
   onReorder: (items: T[]) => void;
-  className?: string;
-  children: (item: T, index: number, mango: ReactNode) => ReactNode;
+  onQuitar?: (item: T) => void;
 }) {
   const idLista = useId();
+  const cajaRef = useRef<HTMLDivElement>(null);
   const filasRef = useRef<Array<HTMLElement | null>>([]);
   const itemsRef = useRef(items);
   const onReorderRef = useRef(onReorder);
@@ -135,9 +84,12 @@ export function ListaOrdenable<T>({
 
     const seguirScroll = () => {
       const y = yRef.current;
-      const margen = 72;
-      if (y < margen) window.scrollBy(0, -14);
-      else if (y > window.innerHeight - margen) window.scrollBy(0, 14);
+      const caja = cajaRef.current;
+      if (caja) {
+        const r = caja.getBoundingClientRect();
+        if (y < r.top + 36) caja.scrollTop -= 12;
+        else if (y > r.bottom - 36) caja.scrollTop += 12;
+      }
       aplicarDesdeY(y);
       scrollRef.current = requestAnimationFrame(seguirScroll);
     };
@@ -170,10 +122,7 @@ export function ListaOrdenable<T>({
     };
   }, [arrastrando, aplicarDesdeY, terminar]);
 
-  function iniciar(
-    e: ReactPointerEvent<HTMLButtonElement>,
-    indice: number,
-  ) {
+  function iniciar(e: ReactPointerEvent<HTMLElement>, indice: number) {
     if (items.length < 2) return;
     if (e.button !== 0) return;
     e.preventDefault();
@@ -188,46 +137,77 @@ export function ListaOrdenable<T>({
   return (
     <div>
       <p id={`${idLista}-ayuda`} className="sr-only">
-        Sostén el mango con puntitos y arrastra para cambiar el orden. El
-        número 1 queda primero.
+        Recuadro de orden. Arrastra cada fila hacia arriba o abajo. La de
+        arriba queda primera.
       </p>
       <div
-        className={className}
+        ref={cajaRef}
         role="list"
         aria-describedby={`${idLista}-ayuda`}
+        className="max-h-64 overflow-y-auto rounded-xl border bg-muted/40"
       >
-        {items.map((item, i) => (
-          <div
-            key={getKey(item, i)}
-            role="listitem"
-            ref={(el) => {
-              filasRef.current[i] = el;
-            }}
-            className={cn(
-              arrastre === i && "relative z-10 rounded-xl ring-2 ring-primary",
-            )}
-          >
-            {children(
-              item,
-              i,
-              <MangoOrden
-                etiqueta={etiqueta(item)}
-                numero={i + 1}
-                total={items.length}
-                arrastrando={arrastre === i}
-                desactivado={items.length < 2}
+        {items.map((item, i) => {
+          const nombre = etiqueta(item);
+          return (
+            <div
+              key={getKey(item, i)}
+              role="listitem"
+              ref={(el) => {
+                filasRef.current[i] = el;
+              }}
+              className={cn(
+                "flex items-stretch border-b border-border/70 last:border-b-0",
+                arrastre === i && "bg-primary/10",
+              )}
+            >
+              <button
+                type="button"
+                disabled={items.length < 2}
+                aria-label={`Mover ${nombre}`}
+                aria-grabbed={arrastre === i}
                 onPointerDown={(ev) => iniciar(ev, i)}
-                onMoverTeclado={(dir) =>
-                  onReorder(moverEnLista(items, i, dir))
-                }
-              />,
-            )}
-          </div>
-        ))}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    onReorder(moverEnLista(items, i, -1));
+                  }
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    onReorder(moverEnLista(items, i, 1));
+                  }
+                }}
+                className={cn(
+                  "flex min-h-11 min-w-0 flex-1 touch-none items-center gap-2 px-2 text-left",
+                  "focus-visible:ring-3 focus-visible:ring-ring/50",
+                  items.length < 2 && "opacity-70",
+                )}
+              >
+                <GripVertical
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {nombre}
+                </span>
+              </button>
+              {onQuitar ? (
+                <button
+                  type="button"
+                  className="flex size-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label={`Quitar ${nombre}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => onQuitar(item)}
+                >
+                  <X className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 export const TEXTO_ORDEN =
-  "Mango a la izquierda: sostén, arrastra y suelta. El 1 queda primero. Luego pulsa Guardar.";
+  "En el recuadro: arrastra la fila. Arriba = primero. Luego Guardar.";

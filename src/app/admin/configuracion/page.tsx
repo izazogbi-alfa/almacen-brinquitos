@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Plus, X } from "lucide-react";
+import { useState } from "react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { DialogQuitarConClave } from "@/components/dialog-quitar-con-clave";
 import { ListaOrdenable, TEXTO_ORDEN } from "@/components/lista-ordenable";
@@ -59,25 +59,8 @@ function EditorChips({
           getKey={(item) => item}
           etiqueta={(item) => item}
           onReorder={onChange}
-          className="space-y-2"
-        >
-          {(item, _i, mango) => (
-            <div className="flex items-center gap-2 rounded-lg border bg-teal-50/60 px-2 py-1.5 text-teal-950">
-              {mango}
-              <span className="min-w-0 flex-1 text-base font-medium">{item}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-12 shrink-0"
-                aria-label={`Quitar ${item}`}
-                onClick={() => setQuitar(item)}
-              >
-                <X className="size-5" />
-              </Button>
-            </div>
-          )}
-        </ListaOrdenable>
+          onQuitar={(item) => setQuitar(item)}
+        />
       )}
       <div className="flex gap-2">
         <Input
@@ -130,7 +113,6 @@ function EditorChips({
 
 function EditorEsquema({
   esquema,
-  mango,
   onChange,
   onEliminar,
   onGuardar,
@@ -138,7 +120,6 @@ function EditorEsquema({
   guardando,
 }: {
   esquema: EsquemaCatalogo;
-  mango: ReactNode;
   onChange: (e: EsquemaCatalogo) => void;
   onEliminar: () => void;
   onGuardar: (esquema: EsquemaCatalogo) => Promise<void>;
@@ -158,20 +139,17 @@ function EditorEsquema({
 
   return (
     <div className="space-y-3 rounded-xl border p-3">
-      <div className="flex items-start gap-2">
-        {mango}
-        <div className="min-w-0 flex-1 space-y-1">
-          <Label>Nombre</Label>
-          <Input
-            className="h-12"
-            value={esquema.nombre}
-            onChange={(e) => onChange({ ...esquema, nombre: e.target.value })}
-          />
-        </div>
+      <div className="space-y-1">
+        <Label>Nombre</Label>
+        <Input
+          className="h-12"
+          value={esquema.nombre}
+          onChange={(e) => onChange({ ...esquema, nombre: e.target.value })}
+        />
       </div>
       <p className="text-sm text-muted-foreground">
         Tallas de este esquema. Vacío = se cuenta solo con color y cantidad.
-        Mismo mango para ordenarlas.
+        Ordénalas en el recuadro.
       </p>
       {esquema.tallas.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sin tallas (accesorio).</p>
@@ -181,25 +159,8 @@ function EditorEsquema({
           getKey={(t) => t}
           etiqueta={(t) => t}
           onReorder={(tallas) => onChange({ ...esquema, tallas })}
-          className="space-y-2"
-        >
-          {(t, _i, mangoTalla) => (
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/60 px-2 py-1.5">
-              {mangoTalla}
-              <span className="min-w-0 flex-1 text-base">{t}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-12 shrink-0"
-                aria-label={`Quitar ${t}`}
-                onClick={() => setQuitarTalla(t)}
-              >
-                <X className="size-5" />
-              </Button>
-            </div>
-          )}
-        </ListaOrdenable>
+          onQuitar={(t) => setQuitarTalla(t)}
+        />
       )}
       <div className="flex gap-2">
         <Input
@@ -347,12 +308,22 @@ function ConfiguracionAdmin() {
           getKey={(e) => e.id}
           etiqueta={(e) => e.nombre}
           onReorder={setEsquemas}
-          className="space-y-3"
+        />
+        <Button
+          type="button"
+          className="h-12 w-full"
+          disabled={guardando === "esquemas-orden"}
+          onClick={() =>
+            void guardarBloque("esquemas-orden", { esquemas: draft.esquemas })
+          }
         >
-          {(e, i, mango) => (
+          {guardando === "esquemas-orden" ? "Guardando…" : "Guardar"}
+        </Button>
+        <div className="space-y-3">
+          {draft.esquemas.map((e, i) => (
             <EditorEsquema
+              key={e.id}
               esquema={e}
-              mango={mango}
               sePuedeEliminar={draft.esquemas.length > 1}
               guardando={guardando === `esquema-${e.id}`}
               onChange={(sig) =>
@@ -371,8 +342,8 @@ function ConfiguracionAdmin() {
                 return guardarBloque(`esquema-${e.id}`, { esquemas });
               }}
             />
-          )}
-        </ListaOrdenable>
+          ))}
+        </div>
       </section>
 
       <EditorChips
