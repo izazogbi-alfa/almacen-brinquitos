@@ -149,7 +149,7 @@ function EditorEsquema({
       </div>
       <p className="text-sm text-muted-foreground">
         Tallas de este esquema. Vacío = se cuenta solo con color y cantidad.
-        Ordénalas con los cuadritos.
+        Ordénalas arrastrando las fichas.
       </p>
       {esquema.tallas.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sin tallas (accesorio).</p>

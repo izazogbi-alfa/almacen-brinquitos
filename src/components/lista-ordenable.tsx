@@ -157,8 +157,8 @@ export function ListaOrdenable<T>({
   return (
     <div>
       <p id={`${idLista}-ayuda`} className="sr-only">
-        Recuadro de orden. Arrastra los cuadritos numerados. El 1 queda
-        primero.
+        Recuadro de orden. Arrastra las fichas. La primera de la izquierda
+        queda primero.
       </p>
       <div
         ref={cajaRef}
@@ -184,7 +184,7 @@ export function ListaOrdenable<T>({
                 type="button"
                 disabled={items.length < 2}
                 title={nombre}
-                aria-label={`Cuadro ${i + 1}, ${nombre}. Arrastra para ordenar.`}
+                aria-label={`Arrastra ${nombre} para cambiar el orden`}
                 aria-grabbed={arrastre === i}
                 onPointerDown={(ev) => iniciar(ev, i)}
                 onKeyDown={(e) => {
@@ -198,7 +198,7 @@ export function ListaOrdenable<T>({
                   }
                 }}
                 className={cn(
-                  "flex size-full touch-none flex-col items-center justify-center rounded-xl border bg-card px-1 pt-1 pb-1 shadow-sm",
+                  "flex size-full touch-none items-center justify-center rounded-xl border bg-card px-1.5 py-1 shadow-sm",
                   "text-center outline-none transition-shadow",
                   "focus-visible:ring-3 focus-visible:ring-ring/50",
                   arrastre === i &&
@@ -206,10 +206,7 @@ export function ListaOrdenable<T>({
                   items.length < 2 && "opacity-70",
                 )}
               >
-                <span className="font-heading text-xl font-semibold leading-none tabular-nums text-primary">
-                  {i + 1}
-                </span>
-                <span className="mt-1 line-clamp-2 w-full text-[10px] font-medium leading-tight text-foreground">
+                <span className="line-clamp-3 w-full font-heading text-xs font-semibold leading-tight text-foreground">
                   {nombre}
                 </span>
               </button>
@@ -233,4 +230,4 @@ export function ListaOrdenable<T>({
 }
 
 export const TEXTO_ORDEN =
-  "Arrastra los cuadritos. El 1 queda primero. Luego Guardar.";
+  "Arrastra las fichas. La de la izquierda queda primero. Luego Guardar.";
