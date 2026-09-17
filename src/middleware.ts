@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COOKIE_SESION } from "@/lib/session-cookie";
+import { COOKIE_SESION, COOKIE_SESION_ANTIGUA } from "@/lib/session-cookie";
+
+function respuestaConLimpieza(request: NextRequest, response: NextResponse) {
+  const https = request.nextUrl.protocol === "https:";
+  if (request.cookies.has(COOKIE_SESION_ANTIGUA)) {
+    response.cookies.set({
+      name: COOKIE_SESION_ANTIGUA,
+      value: "",
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+      secure: https,
+    });
+  }
+  return response;
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sesion = request.cookies.get(COOKIE_SESION)?.value;
+  const sesion = request.cookies.get(COOKIE_SESION)?.value?.trim();
 
   if (
     pathname.startsWith("/_next") ||
@@ -14,29 +30,39 @@ export function middleware(request: NextRequest) {
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest"
   ) {
-    return NextResponse.next();
+    return respuestaConLimpieza(request, NextResponse.next());
   }
 
   if (pathname === "/login") {
     if (sesion) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return respuestaConLimpieza(
+        request,
+        NextResponse.redirect(new URL("/", request.url)),
+      );
     }
-    return NextResponse.next();
+    const login = NextResponse.next();
+    login.headers.set("Cache-Control", "no-store");
+    return respuestaConLimpieza(request, login);
   }
 
   if (!sesion) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Inicia sesión para continuar." },
-        { status: 401 },
+      return respuestaConLimpieza(
+        request,
+        NextResponse.json(
+          { error: "Inicia sesión para continuar." },
+          { status: 401 },
+        ),
       );
     }
     const url = new URL("/login", request.url);
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    redirect.headers.set("Cache-Control", "no-store");
+    return respuestaConLimpieza(request, redirect);
   }
 
-  return NextResponse.next();
+  return respuestaConLimpieza(request, NextResponse.next());
 }
 
 export const config = {

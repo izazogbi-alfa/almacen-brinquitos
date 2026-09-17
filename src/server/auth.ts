@@ -16,17 +16,33 @@ export async function usuarioActual() {
   return usuarioPorSesion(await tokenActual());
 }
 
-export function cookieSesion(token: string) {
+function atributosCookie() {
   const https =
     process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
   return {
-    name: COOKIE,
-    value: token,
     httpOnly: true,
     sameSite: "lax" as const,
     path: "/",
-    maxAge: 60 * 60 * 24 * 14,
     secure: https,
+  };
+}
+
+/** Cookie de sesión: se borra al cerrar el navegador (sin Max-Age). */
+export function cookieSesion(token: string) {
+  return {
+    name: COOKIE,
+    value: token,
+    ...atributosCookie(),
+  };
+}
+
+export function cookieSesionCaducada(name: string = COOKIE) {
+  return {
+    name,
+    value: "",
+    ...atributosCookie(),
+    maxAge: 0,
+    expires: new Date(0),
   };
 }
 

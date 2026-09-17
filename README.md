@@ -1,6 +1,6 @@
 # Almacén — existencias, pedidos y recepción
 
-App **móvil primero** para Brinquitos. Español. Sesión con usuario y contraseña.
+App **móvil primero** para Brinquitos. Español. Cada visita pide **Usuario** y **Contraseña**. La sesión dura mientras el navegador esté abierto; al cerrarlo hay que entrar de nuevo. **Cerrar sesión** también pide login.
 
 ## Cuentas
 

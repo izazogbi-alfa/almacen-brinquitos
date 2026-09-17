@@ -146,6 +146,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     setUser(null);
     router.replace("/login");
+    router.refresh();
   }, [router]);
 
   const postAccion = useCallback(
