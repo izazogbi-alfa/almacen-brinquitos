@@ -4,6 +4,14 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsyncGate, EmptyView } from "@/components/status-views";
@@ -103,12 +111,63 @@ function EditorEsquema({
   sePuedeEliminar: boolean;
 }) {
   const [entrada, setEntrada] = useState("");
+  const [confirmar, setConfirmar] = useState(false);
+  const [password, setPassword] = useState("");
+  const [errorClave, setErrorClave] = useState("");
+  const [verificando, setVerificando] = useState(false);
 
   function agregar() {
     const nuevos = parseLista(entrada);
     if (nuevos.length === 0) return;
     onChange({ ...esquema, tallas: agregarUnicos(esquema.tallas, nuevos) });
     setEntrada("");
+  }
+
+  function abrirConfirmacion() {
+    setPassword("");
+    setErrorClave("");
+    setConfirmar(true);
+  }
+
+  function cerrarConfirmacion() {
+    setConfirmar(false);
+    setPassword("");
+    setErrorClave("");
+  }
+
+  async function confirmarEliminar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!password) {
+      setErrorClave("Escribe tu contraseña.");
+      return;
+    }
+    setVerificando(true);
+    setErrorClave("");
+    try {
+      const res = await fetch("/api/auth/verificar-contrasena", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!res.ok) {
+        setErrorClave(
+          data.error ?? "Contraseña incorrecta. El esquema no se quitó.",
+        );
+        return;
+      }
+      cerrarConfirmacion();
+      onEliminar();
+    } catch {
+      setErrorClave(
+        "No se pudo comprobar la contraseña. El esquema no se quitó.",
+      );
+    } finally {
+      setVerificando(false);
+    }
   }
 
   return (
@@ -179,10 +238,76 @@ function EditorEsquema({
         </Button>
       </div>
       {sePuedeEliminar ? (
-        <Button type="button" variant="ghost" className="w-full" onClick={onEliminar}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-11 w-full"
+          onClick={abrirConfirmacion}
+        >
           Quitar este esquema
         </Button>
       ) : null}
+
+      <Dialog
+        open={confirmar}
+        onOpenChange={(abierto) => {
+          if (!abierto) cerrarConfirmacion();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={(e) => void confirmarEliminar(e)} className="grid gap-4">
+            <DialogHeader>
+              <DialogTitle>Quitar esquema</DialogTitle>
+              <DialogDescription>
+                Para quitar «{esquema.nombre}» escribe tu contraseña. Si te
+                equivocas, el esquema se queda.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor={`clave-esquema-${esquema.id}`}>
+                Tu contraseña
+              </Label>
+              <Input
+                id={`clave-esquema-${esquema.id}`}
+                type="password"
+                autoComplete="current-password"
+                className="h-11"
+                autoFocus
+                value={password}
+                aria-invalid={Boolean(errorClave)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errorClave) setErrorClave("");
+                }}
+              />
+              {errorClave ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {errorClave}
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter className="sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full sm:w-auto"
+                disabled={verificando}
+                onClick={cerrarConfirmacion}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                className="h-11 w-full sm:w-auto"
+                disabled={verificando}
+              >
+                {verificando ? "Comprobando…" : "Quitar esquema"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

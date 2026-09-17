@@ -279,6 +279,12 @@ export function usuarioPorSesion(token: string | undefined) {
   return store.users.find((u) => u.id === sesion.userId) ?? null;
 }
 
+export function contrasenaCoincide(userId: string, password: string) {
+  const user = readStore().users.find((u) => u.id === userId);
+  if (!user) return false;
+  return verifyPassword(password, user.passwordHash);
+}
+
 export function login(username: string, password: string) {
   return withStore((store) => {
     const user = store.users.find(
