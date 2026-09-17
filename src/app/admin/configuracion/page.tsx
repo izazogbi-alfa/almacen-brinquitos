@@ -1,60 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { DialogQuitarConClave } from "@/components/dialog-quitar-con-clave";
+import { ListaOrdenable, TEXTO_ORDEN } from "@/components/lista-ordenable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { useInventory } from "@/lib/inventory-context";
-import {
-  agregarUnicos,
-  moverEnLista,
-  parseLista,
-  quitarDeLista,
-} from "@/lib/listas";
+import { agregarUnicos, parseLista, quitarDeLista } from "@/lib/listas";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
-
-function BotonesOrden({
-  indice,
-  total,
-  etiqueta,
-  onMover,
-}: {
-  indice: number;
-  total: number;
-  etiqueta: string;
-  onMover: (direccion: -1 | 1) => void;
-}) {
-  return (
-    <div className="flex shrink-0 gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="size-11"
-        disabled={indice === 0}
-        aria-label={`Subir ${etiqueta}`}
-        onClick={() => onMover(-1)}
-      >
-        <ChevronUp className="size-5" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="size-11"
-        disabled={indice === total - 1}
-        aria-label={`Bajar ${etiqueta}`}
-        onClick={() => onMover(1)}
-      >
-        <ChevronDown className="size-5" />
-      </Button>
-    </div>
-  );
-}
 
 function EditorChips({
   titulo,
@@ -90,44 +47,41 @@ function EditorChips({
       <div>
         <h3 className="font-heading text-lg font-semibold">{titulo}</h3>
         <p className="text-sm text-muted-foreground">{descripcion}</p>
+        <p className="mt-1 text-sm font-medium">{TEXTO_ORDEN}</p>
       </div>
       {items.length === 0 ? (
         <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
           {vacio}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {items.map((item, i) => (
-            <li
-              key={`${item}-${i}`}
-              className="flex items-center gap-2 rounded-lg border bg-teal-50/60 px-2 py-1.5 text-teal-950"
-            >
-              <span className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
-                {item}
-              </span>
-              <BotonesOrden
-                indice={i}
-                total={items.length}
-                etiqueta={item}
-                onMover={(dir) => onChange(moverEnLista(items, i, dir))}
-              />
+        <ListaOrdenable
+          items={items}
+          getKey={(item) => item}
+          etiqueta={(item) => item}
+          onReorder={onChange}
+          className="space-y-2"
+        >
+          {(item, _i, mango) => (
+            <div className="flex items-center gap-2 rounded-lg border bg-teal-50/60 px-2 py-1.5 text-teal-950">
+              {mango}
+              <span className="min-w-0 flex-1 text-base font-medium">{item}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-11 shrink-0"
+                className="size-12 shrink-0"
                 aria-label={`Quitar ${item}`}
                 onClick={() => setQuitar(item)}
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </Button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+        </ListaOrdenable>
       )}
       <div className="flex gap-2">
         <Input
-          className="h-11"
+          className="h-12"
           value={entrada}
           placeholder={placeholder}
           onChange={(e) => setEntrada(e.target.value)}
@@ -141,7 +95,7 @@ function EditorChips({
         <Button
           type="button"
           variant="outline"
-          className="h-11 shrink-0 gap-1"
+          className="h-12 shrink-0 gap-1"
           onClick={agregar}
         >
           <Plus className="size-4" />
@@ -150,7 +104,7 @@ function EditorChips({
       </div>
       <Button
         type="button"
-        className="h-11 w-full"
+        className="h-12 w-full"
         disabled={guardando}
         onClick={() => void onGuardar(items)}
       >
@@ -176,20 +130,16 @@ function EditorChips({
 
 function EditorEsquema({
   esquema,
-  indice,
-  total,
+  mango,
   onChange,
-  onMover,
   onEliminar,
   onGuardar,
   sePuedeEliminar,
   guardando,
 }: {
   esquema: EsquemaCatalogo;
-  indice: number;
-  total: number;
+  mango: ReactNode;
   onChange: (e: EsquemaCatalogo) => void;
-  onMover: (direccion: -1 | 1) => void;
   onEliminar: () => void;
   onGuardar: (esquema: EsquemaCatalogo) => Promise<void>;
   sePuedeEliminar: boolean;
@@ -209,64 +159,51 @@ function EditorEsquema({
   return (
     <div className="space-y-3 rounded-xl border p-3">
       <div className="flex items-start gap-2">
+        {mango}
         <div className="min-w-0 flex-1 space-y-1">
           <Label>Nombre</Label>
           <Input
-            className="h-11"
+            className="h-12"
             value={esquema.nombre}
             onChange={(e) => onChange({ ...esquema, nombre: e.target.value })}
-          />
-        </div>
-        <div className="pt-6">
-          <BotonesOrden
-            indice={indice}
-            total={total}
-            etiqueta={esquema.nombre}
-            onMover={onMover}
           />
         </div>
       </div>
       <p className="text-sm text-muted-foreground">
         Tallas de este esquema. Vacío = se cuenta solo con color y cantidad.
+        Mismo mango para ordenarlas.
       </p>
       {esquema.tallas.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sin tallas (accesorio).</p>
       ) : (
-        <ul className="space-y-2">
-          {esquema.tallas.map((t, i) => (
-            <li
-              key={`${t}-${i}`}
-              className="flex items-center gap-2 rounded-lg border bg-muted/60 px-2 py-1.5"
-            >
-              <span className="min-w-0 flex-1 truncate px-1 text-sm">{t}</span>
-              <BotonesOrden
-                indice={i}
-                total={esquema.tallas.length}
-                etiqueta={t}
-                onMover={(dir) =>
-                  onChange({
-                    ...esquema,
-                    tallas: moverEnLista(esquema.tallas, i, dir),
-                  })
-                }
-              />
+        <ListaOrdenable
+          items={esquema.tallas}
+          getKey={(t) => t}
+          etiqueta={(t) => t}
+          onReorder={(tallas) => onChange({ ...esquema, tallas })}
+          className="space-y-2"
+        >
+          {(t, _i, mangoTalla) => (
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/60 px-2 py-1.5">
+              {mangoTalla}
+              <span className="min-w-0 flex-1 text-base">{t}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-11 shrink-0"
+                className="size-12 shrink-0"
                 aria-label={`Quitar ${t}`}
                 onClick={() => setQuitarTalla(t)}
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </Button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+        </ListaOrdenable>
       )}
       <div className="flex gap-2">
         <Input
-          className="h-11"
+          className="h-12"
           value={entrada}
           placeholder="Ej. 4, 6, 8 o CHICO"
           onChange={(e) => setEntrada(e.target.value)}
@@ -277,13 +214,13 @@ function EditorEsquema({
             }
           }}
         />
-        <Button type="button" variant="outline" className="h-11" onClick={agregar}>
+        <Button type="button" variant="outline" className="h-12" onClick={agregar}>
           Agregar
         </Button>
       </div>
       <Button
         type="button"
-        className="h-11 w-full"
+        className="h-12 w-full"
         disabled={guardando}
         onClick={() => void onGuardar(esquema)}
       >
@@ -293,7 +230,7 @@ function EditorEsquema({
         <Button
           type="button"
           variant="ghost"
-          className="h-11 w-full"
+          className="h-12 w-full"
           onClick={() => setQuitarEsquema(true)}
         >
           Quitar este esquema
@@ -383,13 +320,13 @@ function ConfiguracionAdmin() {
             </h3>
             <p className="text-sm text-muted-foreground">
               Cómo se cuenta: niño, letra, accesorio u otro que tú armes.
-              Sube o baja cada esquema y pulsa Guardar en esa tarjeta.
             </p>
+            <p className="mt-1 text-sm font-medium">{TEXTO_ORDEN}</p>
           </div>
           <Button
             type="button"
             variant="outline"
-            className="h-11"
+            className="h-12"
             onClick={() =>
               setEsquemas([
                 ...draft.esquemas,
@@ -405,18 +342,19 @@ function ConfiguracionAdmin() {
             Esquema
           </Button>
         </div>
-        <div className="space-y-3">
-          {draft.esquemas.map((e, i) => (
+        <ListaOrdenable
+          items={draft.esquemas}
+          getKey={(e) => e.id}
+          etiqueta={(e) => e.nombre}
+          onReorder={setEsquemas}
+          className="space-y-3"
+        >
+          {(e, i, mango) => (
             <EditorEsquema
-              key={e.id}
               esquema={e}
-              indice={i}
-              total={draft.esquemas.length}
+              mango={mango}
               sePuedeEliminar={draft.esquemas.length > 1}
               guardando={guardando === `esquema-${e.id}`}
-              onMover={(dir) =>
-                setEsquemas(moverEnLista(draft.esquemas, i, dir))
-              }
               onChange={(sig) =>
                 setEsquemas(draft.esquemas.map((x, j) => (j === i ? sig : x)))
               }
@@ -433,13 +371,13 @@ function ConfiguracionAdmin() {
                 return guardarBloque(`esquema-${e.id}`, { esquemas });
               }}
             />
-          ))}
-        </div>
+          )}
+        </ListaOrdenable>
       </section>
 
       <EditorChips
         titulo="Colores"
-        descripcion="Colores que el operador puede elegir al capturar. Ordénalos como quieras."
+        descripcion="Colores que el operador puede elegir al capturar."
         placeholder="Ej. blanco, rosa, azul"
         vacio="Aún no hay colores. Agrega los que usan en el almacén."
         items={draft.colores}
@@ -449,7 +387,7 @@ function ConfiguracionAdmin() {
       />
       <EditorChips
         titulo="Tallas"
-        descripcion="Catálogo general de tallas. Ordénalas como quieras. También puedes copiarlas a un esquema."
+        descripcion="Catálogo general de tallas. También puedes copiarlas a un esquema."
         placeholder="Ej. 1, 1X, 4 o CHICO"
         vacio="Aún no hay tallas sueltas."
         items={draft.tallas}
@@ -459,7 +397,7 @@ function ConfiguracionAdmin() {
       />
       <EditorChips
         titulo="Especificaciones"
-        descripcion="Notas de captura: manga, forro, paquete, etc. Ordénalas como quieras."
+        descripcion="Notas de captura: manga, forro, paquete, etc."
         placeholder="Ej. manga corta, con gorro"
         vacio="Aún no hay especificaciones. El operador las verá vacías hasta que las armes."
         items={draft.especificaciones}

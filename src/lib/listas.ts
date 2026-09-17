@@ -32,11 +32,25 @@ export function moverEnLista<T>(
   indice: number,
   direccion: -1 | 1,
 ): T[] {
-  const destino = indice + direccion;
-  if (destino < 0 || destino >= items.length) return items;
+  return moverAIndice(items, indice, indice + direccion);
+}
+
+export function moverAIndice<T>(
+  items: T[],
+  desde: number,
+  hacia: number,
+): T[] {
+  if (
+    desde === hacia ||
+    desde < 0 ||
+    hacia < 0 ||
+    desde >= items.length ||
+    hacia >= items.length
+  ) {
+    return items;
+  }
   const siguiente = [...items];
-  const actual = siguiente[indice];
-  siguiente[indice] = siguiente[destino];
-  siguiente[destino] = actual;
+  const [item] = siguiente.splice(desde, 1);
+  siguiente.splice(hacia, 0, item);
   return siguiente;
 }
