@@ -12,7 +12,8 @@ import type {
   Recepcion,
   RolUsuario,
 } from "@/lib/types";
-import { hashPassword, nuevoToken, verifyPassword } from "@/server/passwords";
+import { hashPassword, verifyPassword } from "@/server/passwords";
+import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
 import { modulosDe } from "@/lib/modulos";
 
 export type UsuarioInterno = {
@@ -40,8 +41,12 @@ export type AppStore = {
 
 const CATALOG_ORIGEN = "iza-csv-v1";
 
-const DATA_DIR = join(process.cwd(), "data");
+const DATA_DIR = process.env.VERCEL
+  ? join("/tmp", "almacen-brinquitos")
+  : join(process.cwd(), "data");
 const STORE_PATH = join(DATA_DIR, "store.json");
+
+let memoryStore: AppStore | null = null;
 
 const DEMO_USERS: {
   id: string;
@@ -73,18 +78,28 @@ const DEMO_USERS: {
   },
 ];
 
+function seedUsers(): UsuarioInterno[] {
+  return DEMO_USERS.map((u) => ({
+    id: u.id,
+    username: u.username,
+    nombre: u.nombre,
+    rol: u.rol,
+    passwordHash: hashPassword(u.password),
+    modulos: modulosDe(u),
+  }));
+}
+
 function seedStore(): AppStore {
+  let productos: Producto[] = [];
+  try {
+    productos = leerCatalogoIza();
+  } catch (error) {
+    console.error("catalog seed skipped", error);
+  }
   return {
-    users: DEMO_USERS.map((u) => ({
-      id: u.id,
-      username: u.username,
-      nombre: u.nombre,
-      rol: u.rol,
-      passwordHash: hashPassword(u.password),
-      modulos: modulosDe(u),
-    })),
+    users: seedUsers(),
     sessions: [],
-    productos: leerCatalogoIza(),
+    productos,
     catalogOrigen: CATALOG_ORIGEN,
     pedidos: pedidosIniciales.map((p) => ({
       ...p,
@@ -103,13 +118,22 @@ function seedStore(): AppStore {
 }
 
 function loadRaw(): AppStore {
+  if (memoryStore) return memoryStore;
   if (!existsSync(STORE_PATH)) {
-    mkdirSync(DATA_DIR, { recursive: true });
     const seeded = seedStore();
-    writeFileSync(STORE_PATH, JSON.stringify(seeded, null, 2));
+    memoryStore = seeded;
+    persistStore(seeded);
     return seeded;
   }
-  const parsed = JSON.parse(readFileSync(STORE_PATH, "utf8")) as AppStore;
+  let parsed: AppStore;
+  try {
+    parsed = JSON.parse(readFileSync(STORE_PATH, "utf8")) as AppStore;
+  } catch (error) {
+    console.error("store read failed", error);
+    const seeded = seedStore();
+    memoryStore = seeded;
+    return seeded;
+  }
   if (!parsed.cierres) parsed.cierres = [];
   if (!parsed.movimientos) parsed.movimientos = [];
   let extra = false;
@@ -118,7 +142,16 @@ function loadRaw(): AppStore {
     extra = true;
     return { ...u, modulos: modulosDe(u) };
   });
-  const catalogo = leerCatalogoIza();
+  if (!parsed.users.length) {
+    parsed.users = seedUsers();
+    extra = true;
+  }
+  let catalogo: Producto[] = [];
+  try {
+    catalogo = leerCatalogoIza();
+  } catch (error) {
+    console.error("catalog read skipped", error);
+  }
   const yaImportado = parsed.catalogOrigen === CATALOG_ORIGEN;
   if (!yaImportado) {
     parsed.productos = catalogo;
@@ -128,7 +161,7 @@ function loadRaw(): AppStore {
     parsed.cierres = [];
     parsed.catalogOrigen = CATALOG_ORIGEN;
     extra = true;
-  } else {
+  } else if (catalogo.length) {
     const prevPorSku = new Map(
       parsed.productos.map((p) => [p.sku.toUpperCase(), p] as const),
     );
@@ -151,8 +184,13 @@ function loadRaw(): AppStore {
       };
     });
   }
-  const fotos = leerFotosCatalogo();
-  parsed.productos = parsed.productos.map((p) => {
+  let fotos: Record<string, string> = {};
+  try {
+    fotos = leerFotosCatalogo();
+  } catch (error) {
+    console.error("catalog photos skipped", error);
+  }
+  parsed.productos = (parsed.productos ?? []).map((p) => {
     const foto = p.foto || fotos[p.sku] || fotos[p.sku.toUpperCase()];
     if (foto && p.foto !== foto) {
       extra = true;
@@ -161,12 +199,22 @@ function loadRaw(): AppStore {
     return p;
   });
   if (extra) saveRaw(parsed);
+  memoryStore = parsed;
   return parsed;
 }
 
+function persistStore(store: AppStore) {
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+  } catch (error) {
+    if (!process.env.VERCEL) throw error;
+  }
+}
+
 function saveRaw(store: AppStore) {
-  mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+  memoryStore = store;
+  persistStore(store);
 }
 
 export function withStore<T>(fn: (store: AppStore) => T): T {
@@ -215,6 +263,10 @@ export function agregarMovimiento(
 export function usuarioPorSesion(token: string | undefined) {
   if (!token) return null;
   const store = readStore();
+  const firmado = verificarTokenSesion(token);
+  if (firmado) {
+    return store.users.find((u) => u.id === firmado) ?? null;
+  }
   const sesion = store.sessions.find((s) => s.token === token);
   if (!sesion) return null;
   return store.users.find((u) => u.id === sesion.userId) ?? null;
@@ -226,7 +278,7 @@ export function login(username: string, password: string) {
       (u) => u.username.toLowerCase() === username.trim().toLowerCase(),
     );
     if (!user || !verifyPassword(password, user.passwordHash)) return null;
-    const token = nuevoToken();
+    const token = firmarTokenSesion(user.id);
     store.sessions.push({
       token,
       userId: user.id,

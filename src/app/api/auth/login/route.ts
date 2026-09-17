@@ -16,14 +16,22 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const result = login(username, password);
-  if (!result) {
+  try {
+    const result = login(username, password);
+    if (!result) {
+      return NextResponse.json(
+        { error: "Usuario o contraseña incorrectos." },
+        { status: 401 },
+      );
+    }
+    const jar = await cookies();
+    jar.set(cookieSesion(result.token));
+    return NextResponse.json({ user: jsonUsuario(result.user) });
+  } catch (error) {
+    console.error("login failed", error);
     return NextResponse.json(
-      { error: "Usuario o contraseña incorrectos." },
-      { status: 401 },
+      { error: "No se pudo entrar. Intenta de nuevo." },
+      { status: 500 },
     );
   }
-  const jar = await cookies();
-  jar.set(cookieSesion(result.token));
-  return NextResponse.json({ user: jsonUsuario(result.user) });
 }

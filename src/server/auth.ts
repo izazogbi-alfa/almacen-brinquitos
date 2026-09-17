@@ -15,6 +15,8 @@ export async function usuarioActual() {
 }
 
 export function cookieSesion(token: string) {
+  const https =
+    process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
   return {
     name: COOKIE,
     value: token,
@@ -22,7 +24,7 @@ export function cookieSesion(token: string) {
     sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 60 * 24 * 14,
-    secure: false,
+    secure: https,
   };
 }
 
