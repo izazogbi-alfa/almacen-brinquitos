@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CabeceraUsuarios } from "@/components/cabecera-usuarios";
+import { DialogCambiarContrasena } from "@/components/dialog-cambiar-contrasena";
 import { DialogQuitarConClave } from "@/components/dialog-quitar-con-clave";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,9 @@ function PersonasAdmin() {
   const [nuevosModulos, setNuevosModulos] = useState<ModulosUsuario>(modsVacios);
   const [creando, setCreando] = useState(false);
   const [quitar, setQuitar] = useState<UsuarioPublico | null>(null);
+  const [cambiarClave, setCambiarClave] = useState<UsuarioPublico | null>(
+    null,
+  );
 
   const admins = useMemo(
     () => usuarios.filter((u) => u.rol === "admin").length,
@@ -238,7 +242,7 @@ function PersonasAdmin() {
     <div className="space-y-6">
       <CabeceraUsuarios
         titulo="Personas"
-        descripcion="Crea personas. Elige Administrador (todo, incluso Usuarios) o Usuario (solo los módulos marcados). Autorizar pedidos sigue siendo de administradora."
+        descripcion="Crea personas. Elige Administrador (todo, incluso Usuarios) o Usuario (solo los módulos marcados). Autorizar pedidos sigue siendo de administradora. En cada ficha: Cambiar contraseña."
       />
 
       <form
@@ -362,6 +366,14 @@ function PersonasAdmin() {
                 )}
                 <Button
                   type="button"
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() => setCambiarClave(u)}
+                >
+                  Cambiar contraseña
+                </Button>
+                <Button
+                  type="button"
                   variant="destructive"
                   className="h-11 w-full"
                   disabled={!puedeQuitar(u)}
@@ -374,6 +386,30 @@ function PersonasAdmin() {
           })}
         </ul>
       )}
+
+      <DialogCambiarContrasena
+        abierto={Boolean(cambiarClave)}
+        persona={cambiarClave}
+        onCerrar={() => setCambiarClave(null)}
+        onGuardar={async (nueva, claveAdmin) => {
+          if (!cambiarClave) return;
+          try {
+            await post({
+              accion: "cambiar-contrasena",
+              userId: cambiarClave.id,
+              password: claveAdmin,
+              passwordNueva: nueva,
+            });
+            toast.success(`Contraseña nueva para ${cambiarClave.nombre}`);
+            setCambiarClave(null);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "No se cambió la contraseña.",
+            );
+            throw err;
+          }
+        }}
+      />
 
       <DialogQuitarConClave
         abierto={Boolean(quitar)}

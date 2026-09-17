@@ -3,7 +3,13 @@ import { completarModulos } from "@/lib/modulos";
 import type { ModulosUsuario, RolUsuario } from "@/lib/types";
 import { exigirAdmin } from "@/server/auth";
 import { hashPassword } from "@/server/passwords";
-import { publicoDe, readStore, withStore } from "@/server/store";
+import {
+  cambiarContrasenaUsuario,
+  contrasenaCoincide,
+  publicoDe,
+  readStore,
+  withStore,
+} from "@/server/store";
 
 function rolDe(valor: unknown): RolUsuario | null {
   if (valor === "admin" || valor === "operador") return valor;
@@ -58,6 +64,7 @@ export async function POST(request: Request) {
     userId?: string;
     username?: string;
     password?: string;
+    passwordNueva?: string;
     nombre?: string;
     rol?: unknown;
     modulos?: Partial<ModulosUsuario>;
@@ -122,6 +129,47 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({
         usuario: actualizado,
+        usuarios: usuarioPublicoRespuesta(),
+      });
+    }
+
+    if (accion === "cambiar-contrasena") {
+      if (!body?.userId) {
+        return NextResponse.json({ error: "Falta el usuario." }, { status: 400 });
+      }
+      const nueva =
+        typeof body?.passwordNueva === "string" ? body.passwordNueva : "";
+      const claveAdmin =
+        typeof body?.password === "string" ? body.password : "";
+      if (!nueva) {
+        return NextResponse.json(
+          { error: "Escribe la contraseña nueva." },
+          { status: 400 },
+        );
+      }
+      if (!claveAdmin) {
+        return NextResponse.json(
+          { error: "Escribe tu contraseña (la de ahora)." },
+          { status: 400 },
+        );
+      }
+      try {
+        if (!contrasenaCoincide(user.id, claveAdmin)) {
+          return NextResponse.json(
+            { error: "Contraseña incorrecta. No se cambió." },
+            { status: 401 },
+          );
+        }
+      } catch {
+        console.error("password verify failed");
+        return NextResponse.json(
+          { error: "No se pudo comprobar la contraseña. No se cambió." },
+          { status: 500 },
+        );
+      }
+      cambiarContrasenaUsuario(body.userId, nueva);
+      return NextResponse.json({
+        ok: true,
         usuarios: usuarioPublicoRespuesta(),
       });
     }

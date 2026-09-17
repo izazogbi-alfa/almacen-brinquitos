@@ -10,7 +10,7 @@ App **móvil primero** para Brinquitos. Español. Cada visita pide **Usuario** y
 | Usuario | `almacen1` | Existencias + recepción (atajo Entrada) |
 | Usuario | `almacen2` | Solo existencias (atajo Solo almacén) |
 
-Las cuentas de demostración siguen igual. Iza puede crear más gente, quitarlas o cambiar módulos.
+Las cuentas de demostración siguen igual (`iza` / `iza` hasta que Iza la cambie). Iza puede crear más gente, cambiar contraseñas, quitarlas o cambiar módulos.
 
 ## Usuarios (solo administradora)
 
@@ -20,14 +20,15 @@ La barra sigue diciendo **Usuarios**. Esa pantalla es un hub con botones grandes
 2. Pulsa **Personas**. **Volver** regresa al hub.
 3. **Persona nueva:** usuario, contraseña, nombre, rol Administrador o Usuario.
 4. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego casillas (Existencias, Recepción, Pedidos captura, Artículos, Configuración).
-5. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
-6. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
+5. **Cambiar contraseña** (en cada persona, incluida la administradora): clave nueva dos veces + **tu** contraseña de ahora. Clave mala: no cambia.
+6. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
+7. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
 
 Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay uno: **Listas de captura**. Ahí están **Esquemas de conteo**, **Colores**, **Tallas** y **Especificaciones**. **Volver** en un editor regresa a Listas de captura; **Volver** ahí regresa a Configuración. Más módulos (sucursales, PDF) se suman después como botones hermanos en Configuración, no mezclados con esas cuatro listas (`src/lib/secciones-configuracion.ts`). Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. El orden se cambia arrastrando fichas (con el nombre) dentro de un recuadro. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. En **Artículos**, la ficha tiene **Agregar esquemas**: ahí se elige el esquema de Configuración (el mismo para existencias, pedidos y recepción). **Clonar a otros artículos** copia esa asignación (no Clave ni nombre).
 
 ## Cómo probar
 
-**Como Iza:** entra → **Usuarios** → **Personas** → crea o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → color y talla de ese esquema.
+**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → color y talla de ese esquema.
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 

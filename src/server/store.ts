@@ -295,6 +295,15 @@ export function contrasenaCoincide(userId: string, password: string) {
   return verifyPassword(password, user.passwordHash);
 }
 
+/** Cambia el hash. No devuelve hash ni clave. */
+export function cambiarContrasenaUsuario(userId: string, nueva: string) {
+  withStore((store) => {
+    const dest = store.users.find((u) => u.id === userId);
+    if (!dest) throw new Error("Usuario no encontrado.");
+    dest.passwordHash = hashPassword(nueva);
+  });
+}
+
 export function login(username: string, password: string) {
   return withStore((store) => {
     const user = store.users.find(
