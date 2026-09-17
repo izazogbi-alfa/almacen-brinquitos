@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AsyncGate, EmptyView } from "@/components/status-views";
+import { DialogClonarAsignacion } from "@/components/clonar-asignacion";
 import { FotoProducto } from "@/components/foto-producto";
 import {
   alternarDeCatalogo,
@@ -75,7 +76,8 @@ function ChipCatalogo({
 }
 
 function ArticulosAdmin() {
-  const { productos, catalogos, user, guardarArticulo } = useInventory();
+  const { productos, catalogos, user, guardarArticulo, clonarAsignacion } =
+    useInventory();
   const [q, setQ] = useState("");
   const [orden, setOrden] = useState<OrdenArticulos>("nombre");
   const [pagina, setPagina] = useState(1);
@@ -90,6 +92,7 @@ function ArticulosAdmin() {
   const [confirmar, setConfirmar] = useState(false);
   const [password, setPassword] = useState("");
   const [errorClave, setErrorClave] = useState("");
+  const [clonar, setClonar] = useState(false);
 
   const filtrados = useMemo(() => {
     return ordenarArticulos(filtrarArticulos(productos, q), orden);
@@ -162,6 +165,7 @@ function ArticulosAdmin() {
   function cerrarFicha() {
     setFicha(null);
     setConfirmar(false);
+    setClonar(false);
     setPassword("");
     setErrorClave("");
   }
@@ -217,9 +221,9 @@ function ArticulosAdmin() {
             Artículos
           </h2>
           <p className="text-sm text-muted-foreground">
-            {ARTICULOS_POR_PAGINA} por página. Busca por Clave o nombre. Aquí
-            eliges cómo se cuenta cada artículo; las listas se arman en
-            Configuración.
+            {ARTICULOS_POR_PAGINA} por página. En la ficha eliges un solo
+            esquema para existencias, pedidos y recepción. Las listas se arman
+            en Configuración.
           </p>
         </div>
         <Button
@@ -365,8 +369,9 @@ function ArticulosAdmin() {
                 {ficha === "nuevo" ? "Alta de artículo" : "Ficha del artículo"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Clave primero, luego el nombre. Abajo eliges de las listas ya
-                armadas. Guardar pide tu contraseña.
+                Clave primero, luego el nombre. El esquema de abajo es el mismo
+                para existencias, pedidos y recepción: no hay uno distinto por
+                módulo. Guardar pide tu contraseña.
               </p>
             </div>
             <div className="space-y-1">
@@ -393,7 +398,14 @@ function ArticulosAdmin() {
             </div>
 
             <section className="space-y-2">
-              <Label>Esquema de conteo</Label>
+              <div className="space-y-1">
+                <Label>Esquema de conteo</Label>
+                <p className="text-sm text-muted-foreground">
+                  Así se cuenta este artículo en existencias, pedidos y
+                  recepción. Colores, tallas y especificaciones salen de
+                  Configuración; aquí solo marcas las que usa.
+                </p>
+              </div>
               {catalogos.esquemas.length === 0 ? (
                 <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
                   No hay esquemas. Ármalos en Configuración.
@@ -461,7 +473,9 @@ function ArticulosAdmin() {
             </section>
 
             <aside className="space-y-2 rounded-xl bg-teal-50 p-4 text-teal-950 ring-1 ring-teal-200">
-              <p className="text-sm font-semibold">Así se cuenta</p>
+              <p className="text-sm font-semibold">
+                Así se cuenta (existencias, pedidos y recepción)
+              </p>
               <p className="text-sm">
                 <span className="font-medium">{resumen.esquemaNombre}</span>
               </p>
@@ -485,6 +499,15 @@ function ArticulosAdmin() {
 
             <Button type="submit" className="h-11 w-full" disabled={guardando}>
               {ficha === "nuevo" ? "Guardar alta" : "Guardar ficha"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full"
+              disabled={guardando || catalogos.esquemas.length === 0}
+              onClick={() => setClonar(true)}
+            >
+              Clonar a otros artículos
             </Button>
             <Button
               type="button"
@@ -563,6 +586,32 @@ function ArticulosAdmin() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <DialogClonarAsignacion
+        abierto={clonar}
+        origenId={productoFicha?.id}
+        origenEtiqueta={
+          clave.trim() && nombre.trim()
+            ? `Clave ${clave} ${nombre}`
+            : "esta ficha"
+        }
+        esquemaNombre={resumen.esquemaNombre}
+        productos={productos}
+        onCerrar={() => setClonar(false)}
+        onClonar={async (ids, claveAdmin) => {
+          await clonarAsignacion({
+            ids,
+            esquemaConteo: esquemaId,
+            colores,
+            tallas,
+            especificaciones,
+            password: claveAdmin,
+          });
+          toast.success(
+            `Esquema copiado a ${ids.length} artículo${ids.length === 1 ? "" : "s"}`,
+          );
+        }}
+      />
     </div>
   );
 }

@@ -70,7 +70,8 @@ function ExistenciasContent() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Color, talla y cantidad. Cada color confirmado baja a la tabla.
+            Color, talla y cantidad del esquema de la ficha. Cada color
+            confirmado baja a la tabla.
           </p>
         )}
       </div>

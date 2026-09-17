@@ -45,7 +45,8 @@ function RecepcionContent() {
           Entrada de mercancía
         </h2>
         <p className="text-sm text-emerald-800/80">
-          Misma captura que existencias, en verde. Elige sucursal y confirma.
+          Misma captura que existencias, en verde. El esquema es el de la ficha.
+          Elige sucursal y confirma.
         </p>
       </div>
       <CapturaArticulo

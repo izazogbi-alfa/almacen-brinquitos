@@ -87,7 +87,6 @@ export function CapturaArticulo({
   const [consulta, setConsulta] = useState("");
   const [buscado, setBuscado] = useState(false);
   const [activo, setActivo] = useState<Producto | null>(null);
-  const [esquemaId, setEsquemaId] = useState("");
   const [color, setColor] = useState("");
   const [talla, setTalla] = useState("");
   const [especificacion, setEspecificacion] = useState("");
@@ -118,18 +117,16 @@ export function CapturaArticulo({
   const mostrado =
     productos.find((p) => p.id === mostradoId) ?? activo ?? unico;
 
-  const esquemaActivo = esquemaPorId(catalogos, esquemaId);
+  const esquemaActivo = mostrado
+    ? esquemaPorId(catalogos, mostrado.esquemaConteo)
+    : undefined;
   const colores = mostrado
     ? coloresDeCaptura(mostrado, catalogos)
     : catalogos.colores.length
       ? catalogos.colores
       : ["Único"];
   const encabezados = mostrado
-    ? tallasDeCaptura(
-        mostrado,
-        catalogos,
-        esquemaId || mostrado.esquemaConteo,
-      )
+    ? tallasDeCaptura(mostrado, catalogos, mostrado.esquemaConteo)
     : (esquemaActivo?.tallas ?? []);
   const specsCaptura = mostrado
     ? especificacionesDeCaptura(mostrado, catalogos)
@@ -148,7 +145,6 @@ export function CapturaArticulo({
     const paleta = coloresDeCaptura(producto, catalogos);
     const c0 = paleta[0] ?? "Único";
     const t0 = heads[0] ?? "";
-    setEsquemaId(esq);
     setColor(c0);
     setTalla(t0);
     setEspecificacion("");
@@ -183,23 +179,7 @@ export function CapturaArticulo({
     else {
       setColor("");
       setTalla("");
-      setEsquemaId("");
       setBorrador([]);
-    }
-  }
-
-  function cambiarEsquema(id: string) {
-    setEsquemaId(id);
-    setBorrador([]);
-    const heads = mostrado
-      ? tallasDeCaptura(mostrado, catalogos, id)
-      : (esquemaPorId(catalogos, id)?.tallas ?? []);
-    const t0 = heads[0] ?? "";
-    setTalla(t0);
-    if (mostrado && sucursalId && modo === "contar") {
-      setCantidad(String(cantidadEn(mostrado, sucursalId, t0, colorActivo)));
-    } else {
-      setCantidad("1");
     }
   }
 
@@ -359,7 +339,7 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Elige esquema, color y tallas de las listas. Cada color confirmado baja a la tabla."
+              detalle="Se usa el esquema guardado en la ficha (el mismo en existencias, pedidos y recepción). Elige color y tallas; cada color confirmado baja a la tabla."
             />
           ) : !listasListas ? (
             <EmptyView
@@ -389,22 +369,15 @@ export function CapturaArticulo({
                 </div>
                 <div className="space-y-1.5">
                   <Label>Esquema de conteo</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {catalogos.esquemas.map((e) => (
-                      <Button
-                        key={e.id}
-                        type="button"
-                        variant={e.id === esquemaActivo?.id ? "default" : "outline"}
-                        className={cn(
-                          "h-10",
-                          e.id === esquemaActivo?.id && btn,
-                        )}
-                        onClick={() => cambiarEsquema(e.id)}
-                      >
-                        {e.nombre}
-                      </Button>
-                    ))}
-                  </div>
+                  <p className="rounded-lg border bg-muted/40 p-3 text-sm">
+                    <span className="font-medium">
+                      {esquemaActivo?.nombre ?? "Sin esquema"}
+                    </span>
+                    <span className="mt-1 block text-muted-foreground">
+                      Lo eligió Iza en la ficha. Es el mismo para existencias,
+                      pedidos y recepción.
+                    </span>
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Color</Label>
@@ -529,8 +502,8 @@ export function CapturaArticulo({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Elige esquema, color, talla y cantidad. Confirma el color
-                    (o la línea) para bajarlo a la tabla.
+                    Elige color, talla y cantidad de las listas de este
+                    artículo. Confirma el color para bajarlo a la tabla.
                   </p>
                 )}
                 <Button

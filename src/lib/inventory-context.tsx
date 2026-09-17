@@ -77,6 +77,14 @@ type InventoryValue = {
     especificaciones?: string[];
     password: string;
   }) => Promise<void>;
+  clonarAsignacion: (input: {
+    ids: string[];
+    esquemaConteo?: string;
+    colores?: string[];
+    tallas?: string[];
+    especificaciones?: string[];
+    password: string;
+  }) => Promise<void>;
   guardarCatalogos: (catalogos: Partial<Catalogos>) => Promise<void>;
 };
 
@@ -233,6 +241,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [recargar],
   );
 
+  const clonarAsignacion = useCallback(
+    async (input: {
+      ids: string[];
+      esquemaConteo?: string;
+      colores?: string[];
+      tallas?: string[];
+      especificaciones?: string[];
+      password: string;
+    }) => {
+      const res = await fetch("/api/admin/articulos/clonar", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      await recargar();
+    },
+    [recargar],
+  );
+
   const guardarCatalogos = useCallback(
     async (siguiente: Partial<Catalogos>) => {
       const res = await fetch("/api/admin/catalogos", {
@@ -266,6 +295,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       crearPedido,
       autorizarPedido,
       guardarArticulo,
+      clonarAsignacion,
       guardarCatalogos,
     }),
     [
@@ -286,6 +316,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       crearPedido,
       autorizarPedido,
       guardarArticulo,
+      clonarAsignacion,
       guardarCatalogos,
     ],
   );
