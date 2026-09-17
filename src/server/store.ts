@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pedidosIniciales, recepcionesIniciales } from "@/lib/mock-data";
-import { leerCatalogoIza } from "@/server/parse-catalogo";
+import { leerCatalogoIza, leerFotosCatalogo } from "@/server/parse-catalogo";
 import type {
   CierreDia,
   Guardado,
@@ -147,9 +147,19 @@ function loadRaw(): AppStore {
         existenciasSucursal: prev.existenciasSucursal ?? [],
         existencia: prev.existencia,
         variantes: prev.variantes,
+        foto: prev.foto || c.foto,
       };
     });
   }
+  const fotos = leerFotosCatalogo();
+  parsed.productos = parsed.productos.map((p) => {
+    const foto = p.foto || fotos[p.sku] || fotos[p.sku.toUpperCase()];
+    if (foto && p.foto !== foto) {
+      extra = true;
+      return { ...p, foto };
+    }
+    return p;
+  });
   if (extra) saveRaw(parsed);
   return parsed;
 }

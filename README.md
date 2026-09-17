@@ -18,7 +18,7 @@ Iza puede cambiar existencias/recepción de cada operador en **Usuarios**.
 
 **Como operador:** `almacen1` → sucursal → busca la clave o el nombre. Recepción verde usa el mismo formato.
 
-El catálogo de búsqueda es el de Iza (`data/catalogo.csv`): solo **clave** y **nombre**. Sin fotos hasta que las mande. Cada artículo arranca con esquema niño / letra / accesorio según el nombre; Iza lo ajusta en Artículos.
+El catálogo es el de Iza (`data/catalogo.csv` + fotos del Excel). Búsqueda por **clave** o **nombre**. Cada artículo arranca con esquema niño / letra / accesorio; Iza lo ajusta en Artículos.
 
 ## Existencias
 

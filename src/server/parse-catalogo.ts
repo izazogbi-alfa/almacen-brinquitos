@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { EsquemaConteo, Producto } from "@/lib/types";
 
@@ -74,7 +74,23 @@ export function parseCatalogoCsv(text: string): Producto[] {
   return productos;
 }
 
+export function leerFotosCatalogo(): Record<string, string> {
+  const path = join(process.cwd(), "data", "catalogo-fotos.json");
+  if (!existsSync(path)) return {};
+  const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, string>;
+  const out: Record<string, string> = {};
+  for (const [sku, foto] of Object.entries(raw)) {
+    out[sku] = foto;
+    out[sku.toUpperCase()] = foto;
+  }
+  return out;
+}
+
 export function leerCatalogoIza(): Producto[] {
   const path = join(process.cwd(), "data", "catalogo.csv");
-  return parseCatalogoCsv(readFileSync(path, "utf8"));
+  const fotos = leerFotosCatalogo();
+  return parseCatalogoCsv(readFileSync(path, "utf8")).map((p) => {
+    const foto = p.foto || fotos[p.sku] || fotos[p.sku.toUpperCase()];
+    return foto ? { ...p, foto } : p;
+  });
 }

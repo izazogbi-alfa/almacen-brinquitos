@@ -9,6 +9,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/icons") ||
+    pathname.startsWith("/productos") ||
     pathname.startsWith("/api/auth/login") ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest"
