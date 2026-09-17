@@ -14,17 +14,20 @@ Las cuentas de demostración siguen igual. Iza puede crear más gente, quitarlas
 
 ## Usuarios (solo administradora)
 
+La barra sigue diciendo **Usuarios**. Esa pantalla es un hub con botones grandes (igual que Configuración). Hoy hay uno: **Personas**. Más funciones se suman después en `src/lib/secciones-usuarios.ts` más su página.
+
 1. Abre **Usuarios** en la barra.
-2. **Persona nueva:** usuario, contraseña, nombre, rol Administrador o Usuario.
-3. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego casillas (Existencias, Recepción, Pedidos captura, Artículos, Configuración).
-4. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
-5. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
+2. Pulsa **Personas**. **Volver** regresa al hub.
+3. **Persona nueva:** usuario, contraseña, nombre, rol Administrador o Usuario.
+4. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego casillas (Existencias, Recepción, Pedidos captura, Artículos, Configuración).
+5. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
+6. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
 
 Iza arma las listas en **Configuración**: un hub con botones grandes (**Esquemas de conteo**, **Colores**, **Tallas**, **Especificaciones**). Cada botón abre esa lista. **Volver** regresa al hub. Más botones (sucursales, PDF) se pueden sumar después. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. El orden se cambia arrastrando fichas (con el nombre) dentro de un recuadro. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. En **Artículos**, la ficha tiene **Agregar esquemas**: ahí se elige el esquema de Configuración (el mismo para existencias, pedidos y recepción). **Clonar a otros artículos** copia esa asignación (no Clave ni nombre).
 
 ## Cómo probar
 
-**Como Iza:** entra → **Configuración** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver**. Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → color y talla de ese esquema.
+**Como Iza:** entra → **Usuarios** → **Personas** → crea o quita gente → **Volver**. **Configuración** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver**. Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → color y talla de ese esquema.
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
