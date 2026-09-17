@@ -8,23 +8,40 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { GripVertical, X } from "lucide-react";
+import { X } from "lucide-react";
 import { moverAIndice, moverEnLista } from "@/lib/listas";
 import { cn } from "@/lib/utils";
 
 function indicePorPuntero(
-  filas: Array<HTMLElement | null>,
+  celdas: Array<HTMLElement | null>,
+  x: number,
   y: number,
 ): number {
-  const vivos = filas
+  const vivos = celdas
     .map((el, i) => (el ? { i, el } : null))
-    .filter((x): x is { i: number; el: HTMLElement } => x !== null);
+    .filter((nodo): nodo is { i: number; el: HTMLElement } => nodo !== null);
   if (vivos.length === 0) return 0;
+  let mejor = vivos[0].i;
+  let mejorDist = Number.POSITIVE_INFINITY;
   for (const { i, el } of vivos) {
     const caja = el.getBoundingClientRect();
-    if (y < caja.top + caja.height / 2) return i;
+    if (
+      x >= caja.left &&
+      x <= caja.right &&
+      y >= caja.top &&
+      y <= caja.bottom
+    ) {
+      return i;
+    }
+    const cx = caja.left + caja.width / 2;
+    const cy = caja.top + caja.height / 2;
+    const dist = (x - cx) ** 2 + (y - cy) ** 2;
+    if (dist < mejorDist) {
+      mejorDist = dist;
+      mejor = i;
+    }
   }
-  return vivos[vivos.length - 1].i;
+  return mejor;
 }
 
 export function ListaOrdenable<T>({
@@ -42,13 +59,14 @@ export function ListaOrdenable<T>({
 }) {
   const idLista = useId();
   const cajaRef = useRef<HTMLDivElement>(null);
-  const filasRef = useRef<Array<HTMLElement | null>>([]);
+  const celdasRef = useRef<Array<HTMLElement | null>>([]);
   const itemsRef = useRef(items);
   const onReorderRef = useRef(onReorder);
   const arrastreRef = useRef<number | null>(null);
   const [arrastre, setArrastre] = useState<number | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const scrollRef = useRef<number | null>(null);
+  const xRef = useRef(0);
   const yRef = useRef(0);
 
   useEffect(() => {
@@ -66,10 +84,10 @@ export function ListaOrdenable<T>({
     }
   }, []);
 
-  const aplicarDesdeY = useCallback((y: number) => {
+  const aplicarDesdePunto = useCallback((x: number, y: number) => {
     const desde = arrastreRef.current;
     if (desde === null) return;
-    const hacia = indicePorPuntero(filasRef.current, y);
+    const hacia = indicePorPuntero(celdasRef.current, x, y);
     if (hacia === desde) return;
     onReorderRef.current(moverAIndice(itemsRef.current, desde, hacia));
     arrastreRef.current = hacia;
@@ -90,14 +108,15 @@ export function ListaOrdenable<T>({
         if (y < r.top + 36) caja.scrollTop -= 12;
         else if (y > r.bottom - 36) caja.scrollTop += 12;
       }
-      aplicarDesdeY(y);
+      aplicarDesdePunto(xRef.current, y);
       scrollRef.current = requestAnimationFrame(seguirScroll);
     };
     scrollRef.current = requestAnimationFrame(seguirScroll);
 
     const onMove = (e: PointerEvent) => {
+      xRef.current = e.clientX;
       yRef.current = e.clientY;
-      aplicarDesdeY(e.clientY);
+      aplicarDesdePunto(e.clientX, e.clientY);
     };
     const bloquearScroll = (e: TouchEvent) => {
       e.preventDefault();
@@ -120,7 +139,7 @@ export function ListaOrdenable<T>({
         scrollRef.current = null;
       }
     };
-  }, [arrastrando, aplicarDesdeY, terminar]);
+  }, [arrastrando, aplicarDesdePunto, terminar]);
 
   function iniciar(e: ReactPointerEvent<HTMLElement>, indice: number) {
     if (items.length < 2) return;
@@ -129,6 +148,7 @@ export function ListaOrdenable<T>({
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     arrastreRef.current = indice;
+    xRef.current = e.clientX;
     yRef.current = e.clientY;
     setArrastre(indice);
     setArrastrando(true);
@@ -137,14 +157,14 @@ export function ListaOrdenable<T>({
   return (
     <div>
       <p id={`${idLista}-ayuda`} className="sr-only">
-        Recuadro de orden. Arrastra cada fila hacia arriba o abajo. La de
-        arriba queda primera.
+        Recuadro de orden. Arrastra los cuadritos numerados. El 1 queda
+        primero.
       </p>
       <div
         ref={cajaRef}
         role="list"
         aria-describedby={`${idLista}-ayuda`}
-        className="max-h-64 overflow-y-auto rounded-xl border bg-muted/40"
+        className="flex max-h-72 flex-wrap content-start gap-2 overflow-y-auto rounded-xl border bg-muted/30 p-3"
       >
         {items.map((item, i) => {
           const nombre = etiqueta(item);
@@ -153,52 +173,55 @@ export function ListaOrdenable<T>({
               key={getKey(item, i)}
               role="listitem"
               ref={(el) => {
-                filasRef.current[i] = el;
+                celdasRef.current[i] = el;
               }}
               className={cn(
-                "flex items-stretch border-b border-border/70 last:border-b-0",
-                arrastre === i && "bg-primary/10",
+                "relative size-[4.5rem] shrink-0",
+                arrastre === i && "z-10",
               )}
             >
               <button
                 type="button"
                 disabled={items.length < 2}
-                aria-label={`Mover ${nombre}`}
+                title={nombre}
+                aria-label={`Cuadro ${i + 1}, ${nombre}. Arrastra para ordenar.`}
                 aria-grabbed={arrastre === i}
                 onPointerDown={(ev) => iniciar(ev, i)}
                 onKeyDown={(e) => {
-                  if (e.key === "ArrowUp") {
+                  if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
                     e.preventDefault();
                     onReorder(moverEnLista(items, i, -1));
                   }
-                  if (e.key === "ArrowDown") {
+                  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
                     e.preventDefault();
                     onReorder(moverEnLista(items, i, 1));
                   }
                 }}
                 className={cn(
-                  "flex min-h-11 min-w-0 flex-1 touch-none items-center gap-2 px-2 text-left",
+                  "flex size-full touch-none flex-col items-center justify-center rounded-xl border bg-card px-1 pt-1 pb-1 shadow-sm",
+                  "text-center outline-none transition-shadow",
                   "focus-visible:ring-3 focus-visible:ring-ring/50",
+                  arrastre === i &&
+                    "border-primary shadow-md ring-2 ring-primary",
                   items.length < 2 && "opacity-70",
                 )}
               >
-                <GripVertical
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                <span className="font-heading text-xl font-semibold leading-none tabular-nums text-primary">
+                  {i + 1}
+                </span>
+                <span className="mt-1 line-clamp-2 w-full text-[10px] font-medium leading-tight text-foreground">
                   {nombre}
                 </span>
               </button>
               {onQuitar ? (
                 <button
                   type="button"
-                  className="flex size-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                  className="absolute -top-1.5 -right-1.5 flex size-8 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-sm hover:text-foreground"
                   aria-label={`Quitar ${nombre}`}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => onQuitar(item)}
                 >
-                  <X className="size-4" />
+                  <X className="size-3.5" />
                 </button>
               ) : null}
             </div>
@@ -210,4 +233,4 @@ export function ListaOrdenable<T>({
 }
 
 export const TEXTO_ORDEN =
-  "En el recuadro: arrastra la fila. Arriba = primero. Luego Guardar.";
+  "Arrastra los cuadritos. El 1 queda primero. Luego Guardar.";
