@@ -4,15 +4,15 @@ import {
   opcionesTallaArticulo,
 } from "@/lib/asignacion-articulo";
 import { normalizarCatalogos } from "@/lib/catalogos";
-import { exigirAdmin } from "@/server/auth";
+import { exigirModulo } from "@/server/auth";
 import { contrasenaCoincide, withStore } from "@/server/store";
 
 export async function POST(request: Request) {
-  const { user, error } = await exigirAdmin();
+  const { user, error } = await exigirModulo("articulos");
   if (!user) {
     return (
       error ??
-      NextResponse.json({ error: "Solo la administradora." }, { status: 403 })
+      NextResponse.json({ error: "No tienes módulo de artículos." }, { status: 403 })
     );
   }
 

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInventory } from "@/lib/inventory-context";
-import { puede } from "@/lib/modulos";
+import { etiquetaRol, puede } from "@/lib/modulos";
 import { Button } from "@/components/ui/button";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -33,10 +33,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     puede(user, "recepcion")
       ? { href: "/recepcion", label: "Recepción", icon: Truck }
       : null,
-    user?.rol === "admin"
+    puede(user, "articulos")
       ? { href: "/admin/articulos", label: "Artículos", icon: Shirt }
       : null,
-    user?.rol === "admin"
+    puede(user, "configuracion")
       ? { href: "/admin/configuracion", label: "Configuración", icon: Settings }
       : null,
     user?.rol === "admin"
@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="shrink-0 text-right">
               <p className="text-sm font-medium">{user.nombre}</p>
               <p className="text-xs text-muted-foreground">
-                {user.rol === "admin" ? "Administradora" : "Operador"} ·{" "}
+                {etiquetaRol(user.rol)} ·{" "}
                 {user.username}
               </p>
               <Button

@@ -24,6 +24,7 @@ import {
   textoLista,
 } from "@/lib/asignacion-articulo";
 import { useInventory } from "@/lib/inventory-context";
+import { puede } from "@/lib/modulos";
 import {
   ARTICULOS_POR_PAGINA,
   filtrarArticulos,
@@ -107,11 +108,11 @@ function ArticulosAdmin() {
   const productoFicha = ficha && ficha !== "nuevo" ? ficha : null;
   const formVisible = ficha !== null;
 
-  if (user?.rol !== "admin") {
+  if (!puede(user, "articulos")) {
     return (
       <EmptyView
-        titulo="Solo administradora"
-        detalle="Los operadores no dan de alta artículos."
+        titulo="Sin acceso a artículos"
+        detalle="Pide a Iza que te asigne el módulo de artículos."
       />
     );
   }

@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { COOKIE_SESION } from "@/lib/session-cookie";
+import { puede } from "@/lib/modulos";
+import type { ClaveModulo } from "@/lib/types";
 import { publicoDe, usuarioPorSesion, type UsuarioInterno } from "@/server/store";
 
 export const COOKIE = COOKIE_SESION;
@@ -49,7 +51,22 @@ export async function exigirAdmin() {
     return {
       user: null,
       error: NextResponse.json(
-        { error: "Solo la administradora puede hacer esto." },
+        { error: "Solo quien administra puede hacer esto." },
+        { status: 403 },
+      ),
+    };
+  }
+  return { user, error: null };
+}
+
+export async function exigirModulo(modulo: ClaveModulo) {
+  const { user, error } = await exigirUsuario();
+  if (error || !user) return { user: null, error };
+  if (!puede(publicoDe(user), modulo)) {
+    return {
+      user: null,
+      error: NextResponse.json(
+        { error: "No tienes este módulo." },
         { status: 403 },
       ),
     };

@@ -41,8 +41,8 @@ function PedidosContent() {
   if (!puede(user, "pedidos")) {
     return (
       <EmptyView
-        titulo="Solo Iza ve pedidos"
-        detalle="Los operadores trabajan existencias y/o recepción."
+        titulo="Sin acceso a pedidos"
+        detalle="Pide a Iza que te asigne el módulo de pedidos (solo captura). Autorizar sigue siendo de administradora."
       />
     );
   }
@@ -55,7 +55,7 @@ function PedidosContent() {
             Pedidos
           </h2>
           <p className="text-sm text-muted-foreground">
-            Captura en tabla; solo Iza autoriza
+            Captura en tabla. Solo quien administra autoriza.
           </p>
         </div>
         {puede(user, "pedidos") ? (

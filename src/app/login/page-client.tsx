@@ -43,7 +43,7 @@ export default function LoginPage() {
       </p>
       <h1 className="font-heading mt-1 text-3xl font-semibold">Almacén</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Entra con tu usuario. Iza define artículos y roles. El conteo y la entrada piden sucursal y confirmación.
+        Entra con tu usuario. Iza crea personas y elige qué módulos ve cada una. El conteo y la entrada piden sucursal y confirmación.
       </p>
       <form onSubmit={entrar} className="mt-8 space-y-4">
         <div className="space-y-2">

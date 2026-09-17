@@ -10,12 +10,21 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { etiquetaEstado, formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
 import { descargarPdf } from "@/lib/pdf";
-import { puede } from "@/lib/modulos";
+import { puede, puedeAutorizarPedidos } from "@/lib/modulos";
 
 function DetallePedidoContent() {
   const params = useParams<{ id: string }>();
   const { pedidos, productos, user, autorizarPedido } = useInventory();
   const pedido = pedidos.find((p) => p.id === params.id);
+
+  if (!puede(user, "pedidos")) {
+    return (
+      <EmptyView
+        titulo="Sin acceso a pedidos"
+        detalle="Pide a Iza que te asigne el módulo de pedidos."
+      />
+    );
+  }
 
   if (!pedido) {
     return (
@@ -110,7 +119,7 @@ function DetallePedidoContent() {
       <Button type="button" variant="outline" className="h-11 w-full" onClick={pdf}>
         Descargar PDF
       </Button>
-      {pedido.estado === "borrador" && puede(user, "pedidos") ? (
+      {pedido.estado === "borrador" && puedeAutorizarPedidos(user) ? (
         <Button
           type="button"
           className="h-11 w-full"

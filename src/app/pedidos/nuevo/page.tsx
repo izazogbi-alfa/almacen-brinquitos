@@ -25,8 +25,8 @@ function NuevoPedidoContent() {
   if (!puede(user, "pedidos")) {
     return (
       <EmptyView
-        titulo="Solo Iza autoriza pedidos"
-        detalle="Los operadores no arman órdenes de compra."
+        titulo="Sin acceso a pedidos"
+        detalle="Pide a Iza que te asigne el módulo de pedidos (solo captura). Autorizar sigue siendo de administradora."
       />
     );
   }

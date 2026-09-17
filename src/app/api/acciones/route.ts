@@ -243,8 +243,8 @@ export async function POST(request: Request) {
       }
 
       if (accion === "pedido") {
-        if (user.rol !== "admin") {
-          throw new Error("Solo la administradora arma y autoriza pedidos.");
+        if (!mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
         }
         const lineas = (body?.lineas ?? []).filter((l) => l.cantidad > 0);
         if (!body?.proveedor || lineas.length === 0) {
@@ -283,7 +283,7 @@ export async function POST(request: Request) {
 
       if (accion === "autorizar-pedido") {
         if (user.rol !== "admin") {
-          throw new Error("Solo la administradora autoriza pedidos.");
+          throw new Error("Solo quien administra autoriza pedidos.");
         }
         const pedido = store.pedidos.find((p) => p.id === body?.pedidoId);
         if (!pedido) throw new Error("No encontramos ese pedido.");

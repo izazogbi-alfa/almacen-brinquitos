@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { parseLista } from "@/lib/listas";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
-import { exigirAdmin } from "@/server/auth";
+import { exigirModulo } from "@/server/auth";
 import { withStore } from "@/server/store";
 
 export async function POST(request: Request) {
-  const { user, error } = await exigirAdmin();
+  const { user, error } = await exigirModulo("configuracion");
   if (!user) {
     return (
       error ??
-      NextResponse.json({ error: "Solo la administradora." }, { status: 403 })
+      NextResponse.json({ error: "No tienes módulo de configuración." }, { status: 403 })
     );
   }
 

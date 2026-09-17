@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { useInventory } from "@/lib/inventory-context";
 import { agregarUnicos, parseLista, quitarDeLista } from "@/lib/listas";
+import { puede } from "@/lib/modulos";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
 
 function EditorChips({
@@ -235,11 +236,11 @@ function ConfiguracionAdmin() {
   const [draft, setDraft] = useState<Catalogos>(catalogos);
   const [guardando, setGuardando] = useState<string | null>(null);
 
-  if (user?.rol !== "admin") {
+  if (!puede(user, "configuracion")) {
     return (
       <EmptyView
-        titulo="Solo administradora"
-        detalle="Iza arma aquí las listas. Quien solo cuenta o recibe mercancía las elige al capturar."
+        titulo="Sin acceso a configuración"
+        detalle="Pide a Iza que te asigne el módulo de configuración."
       />
     );
   }

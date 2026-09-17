@@ -7,11 +7,14 @@ export type EstadoPedido =
 
 export type RolUsuario = "admin" | "operador";
 
-export type ModulosUsuario = {
-  existencias: boolean;
-  recepcion: boolean;
-  pedidos: boolean;
-};
+export type ClaveModulo =
+  | "existencias"
+  | "recepcion"
+  | "pedidos"
+  | "articulos"
+  | "configuracion";
+
+export type ModulosUsuario = Record<ClaveModulo, boolean>;
 
 export type EsquemaConteo = string;
 

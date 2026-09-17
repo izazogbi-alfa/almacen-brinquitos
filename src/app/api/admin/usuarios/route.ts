@@ -1,24 +1,47 @@
 import { NextResponse } from "next/server";
-import { modulosDe } from "@/lib/modulos";
-import type { ModulosUsuario } from "@/lib/types";
+import { completarModulos } from "@/lib/modulos";
+import type { ModulosUsuario, RolUsuario } from "@/lib/types";
 import { exigirAdmin } from "@/server/auth";
+import { hashPassword } from "@/server/passwords";
 import { publicoDe, readStore, withStore } from "@/server/store";
+
+function rolDe(valor: unknown): RolUsuario | null {
+  if (valor === "admin" || valor === "operador") return valor;
+  return null;
+}
+
+function modsDe(
+  rol: RolUsuario,
+  incoming: Partial<ModulosUsuario> | undefined,
+  username?: string,
+): ModulosUsuario {
+  return completarModulos({
+    rol,
+    username,
+    modulos: rol === "admin" ? undefined : incoming,
+  });
+}
+
+function ultimoAdmin(store: { users: { id: string; rol: RolUsuario }[] }, userId: string) {
+  const dest = store.users.find((u) => u.id === userId);
+  if (!dest || dest.rol !== "admin") return false;
+  return store.users.filter((u) => u.rol === "admin").length <= 1;
+}
+
+function usuarioPublicoRespuesta() {
+  const store = readStore();
+  return store.users.map((u) => publicoDe(u));
+}
 
 export async function GET() {
   const { user, error } = await exigirAdmin();
   if (!user) {
     return (
       error ??
-      NextResponse.json({ error: "Solo la administradora." }, { status: 403 })
+      NextResponse.json({ error: "Solo quien administra." }, { status: 403 })
     );
   }
-  const store = readStore();
-  return NextResponse.json({
-    usuarios: store.users.map((u) => ({
-      ...publicoDe(u),
-      modulos: modulosDe(u),
-    })),
-  });
+  return NextResponse.json({ usuarios: usuarioPublicoRespuesta() });
 }
 
 export async function POST(request: Request) {
@@ -26,25 +49,106 @@ export async function POST(request: Request) {
   if (!user) {
     return (
       error ??
-      NextResponse.json({ error: "Solo la administradora." }, { status: 403 })
+      NextResponse.json({ error: "Solo quien administra." }, { status: 403 })
     );
   }
+
   const body = (await request.json().catch(() => null)) as {
+    accion?: string;
     userId?: string;
-    modulos?: ModulosUsuario;
+    username?: string;
+    password?: string;
+    nombre?: string;
+    rol?: unknown;
+    modulos?: Partial<ModulosUsuario>;
   } | null;
-  if (!body?.userId || !body.modulos) {
-    return NextResponse.json({ error: "Faltan datos." }, { status: 400 });
+
+  const accion = body?.accion ?? (body?.userId ? "actualizar" : "crear");
+
+  try {
+    if (accion === "crear") {
+      const username = (body?.username ?? "").trim().toLowerCase();
+      const nombre = (body?.nombre ?? "").trim();
+      const password = typeof body?.password === "string" ? body.password : "";
+      const rol = rolDe(body?.rol) ?? "operador";
+      if (!username) {
+        return NextResponse.json({ error: "Escribe un usuario." }, { status: 400 });
+      }
+      if (!nombre) {
+        return NextResponse.json({ error: "Escribe el nombre." }, { status: 400 });
+      }
+      if (!password) {
+        return NextResponse.json(
+          { error: "Escribe una contraseña." },
+          { status: 400 },
+        );
+      }
+      const creado = withStore((store) => {
+        if (
+          store.users.some((u) => u.username.toLowerCase() === username)
+        ) {
+          throw new Error("Ese usuario ya existe.");
+        }
+        const nuevo = {
+          id: `u-${Date.now().toString(36)}`,
+          username,
+          nombre,
+          rol,
+          passwordHash: hashPassword(password),
+          modulos: modsDe(rol, body?.modulos, username),
+        };
+        store.users.push(nuevo);
+        return publicoDe(nuevo);
+      });
+      return NextResponse.json({ usuario: creado, usuarios: usuarioPublicoRespuesta() });
+    }
+
+    if (accion === "actualizar") {
+      if (!body?.userId) {
+        return NextResponse.json({ error: "Falta el usuario." }, { status: 400 });
+      }
+      const actualizado = withStore((store) => {
+        const dest = store.users.find((u) => u.id === body.userId);
+        if (!dest) throw new Error("Usuario no encontrado.");
+        const rol = rolDe(body.rol) ?? dest.rol;
+        if (dest.rol === "admin" && rol !== "admin" && ultimoAdmin(store, dest.id)) {
+          throw new Error(
+            "Debe quedar al menos una persona administradora.",
+          );
+        }
+        dest.rol = rol;
+        dest.modulos = modsDe(rol, body.modulos, dest.username);
+        return publicoDe(dest);
+      });
+      return NextResponse.json({
+        usuario: actualizado,
+        usuarios: usuarioPublicoRespuesta(),
+      });
+    }
+
+    if (accion === "quitar") {
+      if (!body?.userId) {
+        return NextResponse.json({ error: "Falta el usuario." }, { status: 400 });
+      }
+      withStore((store) => {
+        const dest = store.users.find((u) => u.id === body.userId);
+        if (!dest) throw new Error("Usuario no encontrado.");
+        if (ultimoAdmin(store, dest.id)) {
+          throw new Error(
+            "No se puede quitar a la última persona administradora. Quedarían sin quien entre a Usuarios.",
+          );
+        }
+        store.users = store.users.filter((u) => u.id !== dest.id);
+        store.sessions = store.sessions.filter((s) => s.userId !== dest.id);
+      });
+      return NextResponse.json({ ok: true, usuarios: usuarioPublicoRespuesta() });
+    }
+
+    return NextResponse.json({ error: "Acción no válida." }, { status: 400 });
+  } catch (err) {
+    const mensaje =
+      err instanceof Error ? err.message : "No se pudo guardar el usuario.";
+    const codigo = mensaje.includes("ya existe") ? 409 : 400;
+    return NextResponse.json({ error: mensaje }, { status: codigo });
   }
-  const actualizado = withStore((store) => {
-    const dest = store.users.find((u) => u.id === body.userId);
-    if (!dest) throw new Error("Usuario no encontrado.");
-    dest.modulos = {
-      existencias: Boolean(body.modulos?.existencias),
-      recepcion: Boolean(body.modulos?.recepcion),
-      pedidos: dest.rol === "admin",
-    };
-    return publicoDe(dest);
-  });
-  return NextResponse.json({ usuario: actualizado });
 }

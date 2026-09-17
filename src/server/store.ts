@@ -16,7 +16,7 @@ import type {
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
-import { modulosDe } from "@/lib/modulos";
+import { completarModulos } from "@/lib/modulos";
 
 export type UsuarioInterno = {
   id: string;
@@ -88,7 +88,7 @@ function seedUsers(): UsuarioInterno[] {
     nombre: u.nombre,
     rol: u.rol,
     passwordHash: hashPassword(u.password),
-    modulos: modulosDe(u),
+    modulos: completarModulos(u),
   }));
 }
 
@@ -145,9 +145,16 @@ function loadRaw(): AppStore {
   parsed.catalogos = normalizarCatalogos(parsed.catalogos);
   if (!catalogosAntes) extra = true;
   parsed.users = (parsed.users ?? []).map((u) => {
-    if (u.modulos) return u;
-    extra = true;
-    return { ...u, modulos: modulosDe(u) };
+    const modulos = completarModulos(u);
+    const iguales =
+      u.modulos &&
+      u.modulos.existencias === modulos.existencias &&
+      u.modulos.recepcion === modulos.recepcion &&
+      u.modulos.pedidos === modulos.pedidos &&
+      u.modulos.articulos === modulos.articulos &&
+      u.modulos.configuracion === modulos.configuracion;
+    if (!iguales) extra = true;
+    return { ...u, modulos };
   });
   if (!parsed.users.length) {
     parsed.users = seedUsers();
@@ -244,7 +251,7 @@ export function publicoDe(user: UsuarioInterno) {
     username: user.username,
     nombre: user.nombre,
     rol: user.rol,
-    modulos: modulosDe(user),
+    modulos: completarModulos(user),
   };
 }
 

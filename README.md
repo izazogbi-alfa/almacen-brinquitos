@@ -4,19 +4,29 @@ App **móvil primero** para Brinquitos. Español. Sesión con usuario y contrase
 
 ## Cuentas
 
-| Rol | Usuario | Contraseña | Acceso |
-| --- | --- | --- | --- |
-| Administradora | `iza` | `iza` | Artículos, Configuración, usuarios, pedidos (autoriza), existencias, recepción |
-| Operador | `almacen1` | `almacen1` | Existencias + recepción |
-| Operador | `almacen2` | `almacen2` | Solo existencias |
+| Rol | Usuario | Acceso de fábrica |
+| --- | --- | --- |
+| Administrador | `iza` | Todo, incluido **Usuarios**. Autoriza pedidos. |
+| Usuario | `almacen1` | Existencias + recepción (atajo Entrada) |
+| Usuario | `almacen2` | Solo existencias (atajo Solo almacén) |
+
+Las cuentas de demostración siguen igual. Iza puede crear más gente, quitarlas o cambiar módulos.
+
+## Usuarios (solo administradora)
+
+1. Abre **Usuarios** en la barra.
+2. **Persona nueva:** usuario, contraseña, nombre, rol Administrador o Usuario.
+3. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego casillas (Existencias, Recepción, Pedidos captura, Artículos, Configuración).
+4. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
+5. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
 
 Iza arma las listas en **Configuración**. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. El orden se cambia arrastrando fichas (con el nombre) dentro de un recuadro. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. Quien solo cuenta o recibe **elige** de esas listas; no las define.
 
 ## Cómo probar
 
-**Como Iza:** entra → **Configuración** → arma o reordena y pulsa **Guardar** en cada bloque → **Artículos** (10 por página, Clave y nombre, sin engranes) → abre una ficha → elige cómo se cuenta ese artículo → **Guardar ficha**. Luego **Pedidos** Nuevo → sucursal → busca → elige color, tallas y cantidades.
+**Como Iza:** entra → **Usuarios** (crea, roles, módulos) → **Configuración** → arma o reordena y pulsa **Guardar** en cada bloque → **Artículos** (10 por página, Clave y nombre, sin engranes) → abre una ficha → elige cómo se cuenta ese artículo → **Guardar ficha**. Luego **Pedidos** Nuevo → sucursal → busca → elige color, tallas y cantidades.
 
-**Como operador:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. No aparece Configuración ni Artículos.
+**Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
 ## Existencias
 
@@ -32,7 +42,7 @@ Misma captura, título **Entrada de mercancía**, color verde.
 
 ## Pedidos
 
-Solo admin. Misma captura y misma tabla. Estado *Por autorizar* hasta que Iza autoriza.
+Misma captura y misma tabla si el módulo está marcado. Estado *Por autorizar* hasta que una administradora autoriza.
 
 ## Cómo correrlo
 
