@@ -1,18 +1,25 @@
 "use client";
 
-import { ClipboardList } from "lucide-react";
+import { ListChecks, Palette, Ruler, Shirt } from "lucide-react";
 import { BotonHub } from "@/components/boton-hub";
+import { CabeceraConfiguracion } from "@/components/cabecera-configuracion";
 import { AsyncGate } from "@/components/status-views";
 import { SinAccesoConfiguracion } from "@/components/use-editor-catalogos";
 import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
-import { SECCIONES_CONFIGURACION } from "@/lib/secciones-configuracion";
+import {
+  HREF_CONFIGURACION,
+  LISTAS_CAPTURA,
+} from "@/lib/secciones-configuracion";
 
 const ICONOS = {
-  "listas-de-captura": ClipboardList,
+  esquemas: Shirt,
+  colores: Palette,
+  tallas: Ruler,
+  especificaciones: ListChecks,
 } as const;
 
-function HubConfiguracion() {
+function HubListasCaptura() {
   const { user } = useInventory();
 
   if (!puede(user, "configuracion")) {
@@ -21,17 +28,13 @@ function HubConfiguracion() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          Configuración
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Pulsa un botón. Cada función está aparte. Luego puedes sumar más
-          aquí mismo.
-        </p>
-      </div>
+      <CabeceraConfiguracion
+        titulo="Listas de captura"
+        descripcion="Pulsa un botón. Cada lista está aparte. Volver te lleva a Configuración."
+        volverHref={HREF_CONFIGURACION}
+      />
       <div className="grid gap-3">
-        {SECCIONES_CONFIGURACION.map((seccion) => (
+        {LISTAS_CAPTURA.map((seccion) => (
           <BotonHub
             key={seccion.slug}
             href={seccion.href}
@@ -45,10 +48,10 @@ function HubConfiguracion() {
   );
 }
 
-export default function PaginaConfiguracion() {
+export default function PaginaListasCaptura() {
   return (
     <AsyncGate>
-      <HubConfiguracion />
+      <HubListasCaptura />
     </AsyncGate>
   );
 }
