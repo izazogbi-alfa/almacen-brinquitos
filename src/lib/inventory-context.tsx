@@ -75,8 +75,9 @@ type InventoryValue = {
     colores?: string[];
     tallas?: string[];
     especificaciones?: string[];
+    soloIdentidad?: boolean;
     password: string;
-  }) => Promise<void>;
+  }) => Promise<Producto>;
   clonarAsignacion: (input: {
     ids: string[];
     esquemaConteo?: string;
@@ -227,6 +228,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       colores?: string[];
       tallas?: string[];
       especificaciones?: string[];
+      soloIdentidad?: boolean;
       password: string;
     }) => {
       const res = await fetch("/api/admin/articulos", {
@@ -236,7 +238,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(input),
       });
       if (!res.ok) throw new Error(await parseError(res));
+      const data = (await res.json()) as { producto: Producto };
       await recargar();
+      return data.producto;
     },
     [recargar],
   );

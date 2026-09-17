@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     colores?: unknown;
     tallas?: unknown;
     especificaciones?: unknown;
+    soloIdentidad?: unknown;
     password?: unknown;
   } | null;
 
@@ -62,9 +63,10 @@ export async function POST(request: Request) {
       if (!nombre) throw new Error("Escribe el nombre.");
 
       const catalogos = normalizarCatalogos(store.catalogos);
-      const esquemaId =
-        catalogos.esquemas.find((e) => e.id === body?.esquemaConteo?.trim())
-          ?.id ?? catalogos.esquemas[0]?.id ?? "accesorio";
+      const soloIdentidad = body?.soloIdentidad === true;
+      const esquemaPedido = body?.esquemaConteo?.trim() ?? "";
+      const esquemaId = catalogos.esquemas.find((e) => e.id === esquemaPedido)
+        ?.id;
       const opcionesTalla = opcionesTallaArticulo(catalogos, esquemaId);
       const colores = filtrarEnCatalogo(catalogos.colores, body?.colores);
       const tallas = filtrarEnCatalogo(opcionesTalla, body?.tallas);
@@ -80,6 +82,11 @@ export async function POST(request: Request) {
       if (duplicada) throw new Error("Esa Clave ya existe.");
 
       if (!body?.id) {
+        if (!soloIdentidad && !esquemaId) {
+          throw new Error(
+            "Elige el esquema que mejor le queda a este artículo.",
+          );
+        }
         let id = `p-${clave.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
         if (store.productos.some((p) => p.id === id)) {
           id = `${id}-${Date.now()}`;
@@ -93,10 +100,10 @@ export async function POST(request: Request) {
           existencia: 0,
           minimo: 0,
           ubicacion: "",
-          esquemaConteo: esquemaId,
-          colores,
-          tallas,
-          especificaciones,
+          esquemaConteo: soloIdentidad ? undefined : esquemaId,
+          colores: soloIdentidad ? [] : colores,
+          tallas: soloIdentidad ? [] : tallas,
+          especificaciones: soloIdentidad ? [] : especificaciones,
         };
         store.productos.push(creado);
         return creado;
@@ -106,10 +113,15 @@ export async function POST(request: Request) {
       if (!prev) throw new Error("Artículo no encontrado.");
       prev.nombre = nombre;
       prev.sku = clave;
-      prev.esquemaConteo = esquemaId;
-      prev.colores = colores;
-      prev.tallas = tallas;
-      prev.especificaciones = especificaciones;
+      if (!soloIdentidad) {
+        if (!esquemaId) {
+          throw new Error("Elige el esquema que mejor le queda a este artículo.");
+        }
+        prev.esquemaConteo = esquemaId;
+        prev.colores = colores;
+        prev.tallas = tallas;
+        prev.especificaciones = especificaciones;
+      }
       return prev;
     });
     return NextResponse.json({ producto });

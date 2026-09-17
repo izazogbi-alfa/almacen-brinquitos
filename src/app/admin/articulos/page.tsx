@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DialogAgregarEsquemas } from "@/components/agregar-esquemas";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { DialogClonarAsignacion } from "@/components/clonar-asignacion";
 import { FotoProducto } from "@/components/foto-producto";
 import {
-  alternarDeCatalogo,
   estaElegido,
   opcionesTallaArticulo,
   resumenConteo,
@@ -35,45 +35,6 @@ import {
 } from "@/lib/articulos-lista";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-function ChipCatalogo({
-  items,
-  elegidos,
-  onToggle,
-  vacio,
-}: {
-  items: string[];
-  elegidos: string[];
-  onToggle: (valor: string) => void;
-  vacio: string;
-}) {
-  if (items.length === 0) {
-    return (
-      <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-        {vacio}
-      </p>
-    );
-  }
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => {
-        const activo = estaElegido(elegidos, item);
-        return (
-          <Button
-            key={item}
-            type="button"
-            variant={activo ? "default" : "outline"}
-            className="h-11 min-w-11 capitalize"
-            aria-pressed={activo}
-            onClick={() => onToggle(item)}
-          >
-            {item}
-          </Button>
-        );
-      })}
-    </div>
-  );
-}
 
 function ArticulosAdmin() {
   const { productos, catalogos, user, guardarArticulo, clonarAsignacion } =
@@ -93,6 +54,7 @@ function ArticulosAdmin() {
   const [password, setPassword] = useState("");
   const [errorClave, setErrorClave] = useState("");
   const [clonar, setClonar] = useState(false);
+  const [agregarEsquemas, setAgregarEsquemas] = useState(false);
 
   const filtrados = useMemo(() => {
     return ordenarArticulos(filtrarArticulos(productos, q), orden);
@@ -100,7 +62,6 @@ function ArticulosAdmin() {
 
   const lista = paginarArticulos(filtrados, pagina);
   const paginaActual = lista.pagina;
-  const opcionesTalla = opcionesTallaArticulo(catalogos, esquemaId);
   const resumen = resumenConteo(
     catalogos,
     esquemaId,
@@ -120,32 +81,24 @@ function ArticulosAdmin() {
     );
   }
 
-  function aplicarEsquema(id: string, producto?: Producto | null) {
-    setEsquemaId(id);
-    const opciones = opcionesTallaArticulo(catalogos, id);
-    const delEsquema = catalogos.esquemas.find((e) => e.id === id)?.tallas ?? [];
-    if (producto && producto.esquemaConteo === id && producto.tallas?.length) {
-      setTallas(producto.tallas.filter((t) => estaElegido(opciones, t)));
-      return;
-    }
-    setTallas(delEsquema.filter((t) => estaElegido(opciones, t)));
-  }
-
-  function abrir(p: Producto) {
-    setFicha(p);
-    setNombre(p.nombre);
-    setClave(p.sku);
-    const esq =
-      catalogos.esquemas.find((e) => e.id === p.esquemaConteo)?.id ??
-      catalogos.esquemas[0]?.id ??
-      "";
-    aplicarEsquema(esq, p);
+  function aplicarDesdeProducto(p: Producto) {
+    const esq = catalogos.esquemas.find((e) => e.id === p.esquemaConteo)?.id ?? "";
+    setEsquemaId(esq);
+    const opciones = opcionesTallaArticulo(catalogos, esq);
+    setTallas((p.tallas ?? []).filter((t) => estaElegido(opciones, t)));
     setColores((p.colores ?? []).filter((c) => estaElegido(catalogos.colores, c)));
     setEspecificaciones(
       (p.especificaciones ?? []).filter((s) =>
         estaElegido(catalogos.especificaciones, s),
       ),
     );
+  }
+
+  function abrir(p: Producto) {
+    setFicha(p);
+    setNombre(p.nombre);
+    setClave(p.sku);
+    aplicarDesdeProducto(p);
     setErrorClave("");
     setPassword("");
   }
@@ -154,8 +107,8 @@ function ArticulosAdmin() {
     setFicha("nuevo");
     setNombre("");
     setClave("");
-    const esq = catalogos.esquemas[0]?.id ?? "";
-    aplicarEsquema(esq, null);
+    setEsquemaId("");
+    setTallas([]);
     setColores([]);
     setEspecificaciones([]);
     setErrorClave("");
@@ -166,6 +119,7 @@ function ArticulosAdmin() {
     setFicha(null);
     setConfirmar(false);
     setClonar(false);
+    setAgregarEsquemas(false);
     setPassword("");
     setErrorClave("");
   }
@@ -196,14 +150,11 @@ function ArticulosAdmin() {
         id: productoFicha?.id,
         nombre,
         sku: clave,
-        esquemaConteo: esquemaId,
-        colores,
-        tallas,
-        especificaciones,
+        soloIdentidad: true,
         password,
       });
       toast.success(
-        ficha === "nuevo" ? "Artículo dado de alta" : "Artículo guardado",
+        ficha === "nuevo" ? "Artículo dado de alta" : "Clave y nombre guardados",
       );
       cerrarFicha();
     } catch (err) {
@@ -221,9 +172,9 @@ function ArticulosAdmin() {
             Artículos
           </h2>
           <p className="text-sm text-muted-foreground">
-            {ARTICULOS_POR_PAGINA} por página. En la ficha eliges un solo
-            esquema para existencias, pedidos y recepción. Las listas se arman
-            en Configuración.
+            {ARTICULOS_POR_PAGINA} por página. En la ficha pulsa Agregar
+            esquemas para el conteo de existencias, pedidos y recepción. Las
+            listas se arman en Configuración.
           </p>
         </div>
         <Button
@@ -369,9 +320,9 @@ function ArticulosAdmin() {
                 {ficha === "nuevo" ? "Alta de artículo" : "Ficha del artículo"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Clave primero, luego el nombre. El esquema de abajo es el mismo
-                para existencias, pedidos y recepción: no hay uno distinto por
-                módulo. Guardar pide tu contraseña.
+                Clave primero, luego el nombre. El esquema no se elige aquí: pulsa
+                Agregar esquemas. Es el mismo para existencias, pedidos y
+                recepción.
               </p>
             </div>
             <div className="space-y-1">
@@ -397,114 +348,59 @@ function ArticulosAdmin() {
               />
             </div>
 
-            <section className="space-y-2">
-              <div className="space-y-1">
-                <Label>Esquema de conteo</Label>
-                <p className="text-sm text-muted-foreground">
-                  Así se cuenta este artículo en existencias, pedidos y
-                  recepción. Colores, tallas y especificaciones salen de
-                  Configuración; aquí solo marcas las que usa.
-                </p>
-              </div>
-              {catalogos.esquemas.length === 0 ? (
-                <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                  No hay esquemas. Ármalos en Configuración.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {catalogos.esquemas.map((e) => (
-                    <Button
-                      key={e.id}
-                      type="button"
-                      variant={e.id === esquemaId ? "default" : "outline"}
-                      className="h-11"
-                      aria-pressed={e.id === esquemaId}
-                      onClick={() => aplicarEsquema(e.id, productoFicha)}
-                    >
-                      {e.nombre}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="space-y-2">
-              <Label>Colores de este artículo</Label>
-              <ChipCatalogo
-                items={catalogos.colores}
-                elegidos={colores}
-                onToggle={(valor) =>
-                  setColores(
-                    alternarDeCatalogo(catalogos.colores, colores, valor),
-                  )
-                }
-                vacio="No hay colores en Configuración. Ármalos ahí."
-              />
-            </section>
-
-            <section className="space-y-2">
-              <Label>Tallas de este artículo</Label>
-              <ChipCatalogo
-                items={opcionesTalla}
-                elegidos={tallas}
-                onToggle={(valor) =>
-                  setTallas(alternarDeCatalogo(opcionesTalla, tallas, valor))
-                }
-                vacio="Este esquema no usa talla. Si necesitas tallas, elige otro esquema o agrégalas en Configuración."
-              />
-            </section>
-
-            <section className="space-y-2">
-              <Label>Especificaciones</Label>
-              <ChipCatalogo
-                items={catalogos.especificaciones}
-                elegidos={especificaciones}
-                onToggle={(valor) =>
-                  setEspecificaciones(
-                    alternarDeCatalogo(
-                      catalogos.especificaciones,
-                      especificaciones,
-                      valor,
-                    ),
-                  )
-                }
-                vacio="No hay especificaciones en Configuración. El artículo se puede guardar sin ellas."
-              />
-            </section>
-
             <aside className="space-y-2 rounded-xl bg-teal-50 p-4 text-teal-950 ring-1 ring-teal-200">
               <p className="text-sm font-semibold">
                 Así se cuenta (existencias, pedidos y recepción)
               </p>
-              <p className="text-sm">
-                <span className="font-medium">{resumen.esquemaNombre}</span>
-              </p>
-              <p className="text-sm">
-                Colores:{" "}
-                {textoLista(
-                  resumen.colores,
-                  "ninguno aún (al capturar se usa la lista de Configuración)",
-                )}
-              </p>
-              <p className="text-sm">
-                {resumen.sinTalla
-                  ? "Tallas: no usa talla. Solo color y cantidad."
-                  : `Tallas: ${textoLista(resumen.tallas, "")}`}
-              </p>
-              <p className="text-sm">
-                Especificaciones:{" "}
-                {textoLista(resumen.especificaciones, "ninguna")}
-              </p>
+              {esquemaId ? (
+                <>
+                  <p className="text-sm">
+                    <span className="font-medium">{resumen.esquemaNombre}</span>
+                  </p>
+                  <p className="text-sm">
+                    Colores:{" "}
+                    {textoLista(resumen.colores, "ninguno aún")}
+                  </p>
+                  <p className="text-sm">
+                    {resumen.sinTalla
+                      ? "Tallas: no usa talla. Solo color y cantidad."
+                      : `Tallas: ${textoLista(resumen.tallas, "")}`}
+                  </p>
+                  <p className="text-sm">
+                    Especificaciones:{" "}
+                    {textoLista(resumen.especificaciones, "ninguna")}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm">
+                  Aún no hay esquema. Pulsa Agregar esquemas y elige el que
+                  mejor le queda, de los ya armados en Configuración.
+                </p>
+              )}
             </aside>
 
-            <Button type="submit" className="h-11 w-full" disabled={guardando}>
+            <Button
+              type="button"
+              className="h-11 w-full"
+              disabled={guardando}
+              onClick={() => {
+                if (!clave.trim() || !nombre.trim()) {
+                  toast.error("Escribe Clave y nombre antes de agregar el esquema.");
+                  return;
+                }
+                setAgregarEsquemas(true);
+              }}
+            >
+              Agregar esquemas
+            </Button>
+            <Button type="submit" variant="outline" className="h-11 w-full" disabled={guardando}>
               {ficha === "nuevo" ? "Guardar alta" : "Guardar ficha"}
             </Button>
             <Button
               type="button"
               variant="outline"
               className="h-11 w-full"
-              disabled={guardando || catalogos.esquemas.length === 0}
+              disabled={guardando || !esquemaId}
               onClick={() => setClonar(true)}
             >
               Clonar a otros artículos
@@ -540,8 +436,8 @@ function ArticulosAdmin() {
             <DialogHeader>
               <DialogTitle>Guardar artículo</DialogTitle>
               <DialogDescription>
-                Escribe tu contraseña de administradora para guardar cómo se
-                cuenta este artículo. Si te equivocas, no se guarda.
+                Escribe tu contraseña de administradora para guardar Clave y
+                nombre. El esquema se elige en Agregar esquemas, no aquí.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
@@ -586,6 +482,34 @@ function ArticulosAdmin() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <DialogAgregarEsquemas
+        key={agregarEsquemas ? "agregar-esquemas-abierto" : "agregar-esquemas-cerrado"}
+        abierto={agregarEsquemas}
+        catalogos={catalogos}
+        inicial={{
+          esquemaConteo: esquemaId,
+          colores,
+          tallas,
+          especificaciones,
+        }}
+        onCerrar={() => setAgregarEsquemas(false)}
+        onGuardar={async (asignacion, claveAdmin) => {
+          const guardado = await guardarArticulo({
+            id: productoFicha?.id,
+            nombre,
+            sku: clave,
+            esquemaConteo: asignacion.esquemaConteo,
+            colores: asignacion.colores,
+            tallas: asignacion.tallas,
+            especificaciones: asignacion.especificaciones,
+            password: claveAdmin,
+          });
+          setFicha(guardado);
+          aplicarDesdeProducto(guardado);
+          toast.success("Esquema guardado para existencias, pedidos y recepción");
+        }}
+      />
 
       <DialogClonarAsignacion
         abierto={clonar}

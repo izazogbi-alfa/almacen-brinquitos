@@ -20,11 +20,11 @@ Las cuentas de demostración siguen igual. Iza puede crear más gente, quitarlas
 4. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
 5. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
 
-Iza arma las listas en **Configuración**. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. El orden se cambia arrastrando fichas (con el nombre) dentro de un recuadro. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. En **Artículos**, la ficha elige **un** esquema (y sus colores/tallas/especificaciones) para existencias, pedidos y recepción a la vez. **Clonar a otros artículos** copia esa asignación (no Clave ni nombre) con la misma confirmación de contraseña.
+Iza arma las listas en **Configuración**. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. El orden se cambia arrastrando fichas (con el nombre) dentro de un recuadro. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. En **Artículos**, la ficha tiene **Agregar esquemas**: ahí se elige el esquema de Configuración (el mismo para existencias, pedidos y recepción). **Clonar a otros artículos** copia esa asignación (no Clave ni nombre).
 
 ## Cómo probar
 
-**Como Iza:** entra → **Usuarios** (crea, roles, módulos) → **Configuración** → arma o reordena y pulsa **Guardar** en cada bloque → **Artículos** (10 por página, Clave y nombre) → abre una ficha → elige el esquema común a existencias, pedidos y recepción → **Guardar ficha**. Opcional: **Clonar a otros artículos**, elige varios, contraseña. Luego **Pedidos** Nuevo → sucursal → busca → color, tallas y cantidades de ese esquema.
+**Como Iza:** entra → **Configuración** → arma listas → **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → color y talla de ese esquema.
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
