@@ -14,9 +14,9 @@ Iza arma las listas en **Configuración**. Quien solo cuenta o recibe **elige** 
 
 ## Cómo probar
 
-**Como Iza:** entra → **Configuración** y revisa esquemas, colores, tallas y especificaciones → **Artículos** (10 por página, Clave y nombre) → **Pedidos** Nuevo → sucursal → busca Clave o nombre → elige esquema, color, tallas y cantidades → confirma el color → la tabla crece abajo.
+**Como Iza:** entra → **Configuración** y arma esquemas, colores, tallas y especificaciones → **Artículos** (10 por página, Clave y nombre) → abre una ficha → elige cómo se cuenta ese artículo (esquema y listas) → **Guardar ficha** → escribe tu contraseña. Luego **Pedidos** Nuevo → sucursal → busca → elige color, tallas y cantidades.
 
-**Como operador:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. No aparece Configuración.
+**Como operador:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. No aparece Configuración ni Artículos.
 
 ## Existencias
 

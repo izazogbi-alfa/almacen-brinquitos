@@ -184,6 +184,9 @@ function loadRaw(): AppStore {
         esquemaConteo: prev.esquemaConteo ?? c.esquemaConteo,
         tallas: prev.tallas?.length ? prev.tallas : c.tallas,
         colores: prev.colores?.length ? prev.colores : c.colores,
+        especificaciones: prev.especificaciones?.length
+          ? prev.especificaciones
+          : c.especificaciones,
         existenciasSucursal: prev.existenciasSucursal ?? [],
         existencia: prev.existencia,
         variantes: prev.variantes,

@@ -71,6 +71,11 @@ type InventoryValue = {
     id?: string;
     nombre: string;
     sku: string;
+    esquemaConteo?: string;
+    colores?: string[];
+    tallas?: string[];
+    especificaciones?: string[];
+    password: string;
   }) => Promise<void>;
   guardarCatalogos: (catalogos: Catalogos) => Promise<void>;
 };
@@ -205,7 +210,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const guardarArticulo = useCallback(
-    async (input: { id?: string; nombre: string; sku: string }) => {
+    async (input: {
+      id?: string;
+      nombre: string;
+      sku: string;
+      esquemaConteo?: string;
+      colores?: string[];
+      tallas?: string[];
+      especificaciones?: string[];
+      password: string;
+    }) => {
       const res = await fetch("/api/admin/articulos", {
         method: "POST",
         credentials: "include",

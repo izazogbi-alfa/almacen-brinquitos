@@ -21,7 +21,12 @@ import {
   cantidadEn,
   sucursalPorId,
 } from "@/lib/sucursales";
-import { esquemaPorId, tallasDeEsquema } from "@/lib/catalogos";
+import {
+  coloresDeCaptura,
+  especificacionesDeCaptura,
+  tallasDeCaptura,
+} from "@/lib/asignacion-articulo";
+import { esquemaPorId } from "@/lib/catalogos";
 import { useInventory } from "@/lib/inventory-context";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -113,21 +118,35 @@ export function CapturaArticulo({
   const mostrado =
     productos.find((p) => p.id === mostradoId) ?? activo ?? unico;
 
-  const colores = catalogos.colores.length ? catalogos.colores : ["Único"];
   const esquemaActivo = esquemaPorId(catalogos, esquemaId);
-  const encabezados = tallasDeEsquema(catalogos, esquemaActivo?.id);
+  const colores = mostrado
+    ? coloresDeCaptura(mostrado, catalogos)
+    : catalogos.colores.length
+      ? catalogos.colores
+      : ["Único"];
+  const encabezados = mostrado
+    ? tallasDeCaptura(
+        mostrado,
+        catalogos,
+        esquemaId || mostrado.esquemaConteo,
+      )
+    : (esquemaActivo?.tallas ?? []);
+  const specsCaptura = mostrado
+    ? especificacionesDeCaptura(mostrado, catalogos)
+    : catalogos.especificaciones;
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
   const listasListas =
-    catalogos.esquemas.length > 0 && catalogos.colores.length > 0;
+    catalogos.esquemas.length > 0 && colores.length > 0;
 
   function preparar(producto: Producto, sucId = sucursalId) {
     const esq =
       esquemaPorId(catalogos, producto.esquemaConteo)?.id ??
       catalogos.esquemas[0]?.id ??
       "";
-    const heads = tallasDeEsquema(catalogos, esq);
-    const c0 = colores[0] ?? "Único";
+    const heads = tallasDeCaptura(producto, catalogos, esq);
+    const paleta = coloresDeCaptura(producto, catalogos);
+    const c0 = paleta[0] ?? "Único";
     const t0 = heads[0] ?? "";
     setEsquemaId(esq);
     setColor(c0);
@@ -172,7 +191,9 @@ export function CapturaArticulo({
   function cambiarEsquema(id: string) {
     setEsquemaId(id);
     setBorrador([]);
-    const heads = tallasDeEsquema(catalogos, id);
+    const heads = mostrado
+      ? tallasDeCaptura(mostrado, catalogos, id)
+      : (esquemaPorId(catalogos, id)?.tallas ?? []);
     const t0 = heads[0] ?? "";
     setTalla(t0);
     if (mostrado && sucursalId && modo === "contar") {
@@ -426,11 +447,11 @@ export function CapturaArticulo({
                     Este esquema no usa talla: solo cantidad y color.
                   </p>
                 )}
-                {catalogos.especificaciones.length > 0 ? (
+                {specsCaptura.length > 0 ? (
                   <div className="space-y-1.5">
                     <Label>Especificación (opcional)</Label>
                     <div className="flex flex-wrap gap-2">
-                      {catalogos.especificaciones.map((s) => (
+                      {specsCaptura.map((s) => (
                         <Button
                           key={s}
                           type="button"
