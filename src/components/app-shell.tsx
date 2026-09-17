@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Package, Settings2, Truck, Users } from "lucide-react";
+import {
+  ClipboardList,
+  Package,
+  Settings,
+  Shirt,
+  Truck,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
@@ -27,7 +34,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ? { href: "/recepcion", label: "Recepción", icon: Truck }
       : null,
     user?.rol === "admin"
-      ? { href: "/admin/articulos", label: "Artículos", icon: Settings2 }
+      ? { href: "/admin/articulos", label: "Artículos", icon: Shirt }
+      : null,
+    user?.rol === "admin"
+      ? { href: "/admin/configuracion", label: "Configuración", icon: Settings }
       : null,
     user?.rol === "admin"
       ? { href: "/admin/usuarios", label: "Usuarios", icon: Users }
@@ -45,9 +55,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ? "grid-cols-2"
           : nav.length === 4
             ? "grid-cols-4"
-            : nav.length >= 5
+            : nav.length === 5
               ? "grid-cols-5"
-              : "grid-cols-3";
+              : nav.length >= 6
+                ? "grid-cols-3 sm:grid-cols-6"
+                : "grid-cols-3";
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col bg-background md:max-w-5xl">

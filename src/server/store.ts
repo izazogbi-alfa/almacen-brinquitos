@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { pedidosIniciales, recepcionesIniciales } from "@/lib/mock-data";
 import { leerCatalogoIza, leerFotosCatalogo } from "@/server/parse-catalogo";
 import type {
+  Catalogos,
   CierreDia,
   Guardado,
   ModulosUsuario,
@@ -12,6 +13,7 @@ import type {
   Recepcion,
   RolUsuario,
 } from "@/lib/types";
+import { normalizarCatalogos } from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
 import { modulosDe } from "@/lib/modulos";
@@ -37,6 +39,7 @@ export type AppStore = {
   cierres: CierreDia[];
   ultimoGuardado: Guardado | null;
   catalogOrigen?: string;
+  catalogos: Catalogos;
 };
 
 const CATALOG_ORIGEN = "iza-csv-v1";
@@ -114,6 +117,7 @@ function seedStore(): AppStore {
     movimientos: [],
     cierres: [],
     ultimoGuardado: null,
+    catalogos: normalizarCatalogos(null),
   };
 }
 
@@ -137,6 +141,9 @@ function loadRaw(): AppStore {
   if (!parsed.cierres) parsed.cierres = [];
   if (!parsed.movimientos) parsed.movimientos = [];
   let extra = false;
+  const catalogosAntes = parsed.catalogos;
+  parsed.catalogos = normalizarCatalogos(parsed.catalogos);
+  if (!catalogosAntes) extra = true;
   parsed.users = (parsed.users ?? []).map((u) => {
     if (u.modulos) return u;
     extra = true;

@@ -17,8 +17,6 @@ export async function POST(request: Request) {
     nombre?: string;
     sku?: string;
     esquemaConteo?: EsquemaConteo;
-    colores?: string;
-    tallas?: string;
   } | null;
 
   const clave = body?.sku?.trim() ?? "";
@@ -26,21 +24,12 @@ export async function POST(request: Request) {
 
   try {
     const producto = withStore((store) => {
-      const parseLista = (valor?: string) =>
-        typeof valor === "string"
-          ? valor
-              .split(",")
-              .map((c) => c.trim())
-              .filter(Boolean)
-          : undefined;
-
       if (!clave) throw new Error("Escribe la Clave.");
       if (!nombre) throw new Error("Escribe el nombre.");
 
       const duplicada = store.productos.find(
         (p) =>
-          p.sku.toUpperCase() === clave.toUpperCase() &&
-          p.id !== body?.id,
+          p.sku.toUpperCase() === clave.toUpperCase() && p.id !== body?.id,
       );
       if (duplicada) throw new Error("Esa Clave ya existe.");
 
@@ -59,8 +48,8 @@ export async function POST(request: Request) {
           minimo: 0,
           ubicacion: "",
           esquemaConteo: body?.esquemaConteo ?? "accesorio",
-          colores: parseLista(body?.colores) ?? [],
-          tallas: parseLista(body?.tallas) ?? [],
+          colores: [] as string[],
+          tallas: [] as string[],
         };
         store.productos.push(creado);
         return creado;
@@ -70,13 +59,6 @@ export async function POST(request: Request) {
       if (!prev) throw new Error("Artículo no encontrado.");
       prev.nombre = nombre;
       prev.sku = clave;
-      if (body.esquemaConteo) prev.esquemaConteo = body.esquemaConteo;
-      if (typeof body.colores === "string") {
-        prev.colores = parseLista(body.colores) ?? [];
-      }
-      if (typeof body.tallas === "string") {
-        prev.tallas = parseLista(body.tallas) ?? [];
-      }
       return prev;
     });
     return NextResponse.json({ producto });

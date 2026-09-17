@@ -19,5 +19,6 @@ export async function GET() {
     movimientos: store.movimientos.slice(0, 80),
     cierres: store.cierres.slice(0, 40),
     ultimoGuardado: store.ultimoGuardado,
+    catalogos: store.catalogos,
   });
 }

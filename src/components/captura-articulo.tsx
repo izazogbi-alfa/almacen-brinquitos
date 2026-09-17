@@ -19,10 +19,10 @@ import { FotoProducto } from "@/components/foto-producto";
 import {
   SUCURSALES,
   cantidadEn,
-  coloresProducto,
-  encabezadosTalla,
   sucursalPorId,
 } from "@/lib/sucursales";
+import { esquemaPorId, tallasDeEsquema } from "@/lib/catalogos";
+import { useInventory } from "@/lib/inventory-context";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +49,7 @@ export type LineaTabla = {
   sku: string;
   nombre: string;
   color: string;
+  especificacion?: string;
   sucursalId: string;
   sucursalNombre: string;
   pares: ParTalla[];
@@ -75,13 +76,16 @@ export function CapturaArticulo({
   guardando?: boolean;
   extraAfter?: ReactNode;
 }) {
+  const { catalogos } = useInventory();
   const [sucursalId, setSucursalId] = useState("");
   const [q, setQ] = useState("");
   const [consulta, setConsulta] = useState("");
   const [buscado, setBuscado] = useState(false);
   const [activo, setActivo] = useState<Producto | null>(null);
+  const [esquemaId, setEsquemaId] = useState("");
   const [color, setColor] = useState("");
   const [talla, setTalla] = useState("");
+  const [especificacion, setEspecificacion] = useState("");
   const [cantidad, setCantidad] = useState("1");
   const [borrador, setBorrador] = useState<ParTalla[]>([]);
   const [lineas, setLineas] = useState<LineaTabla[]>([]);
@@ -109,18 +113,26 @@ export function CapturaArticulo({
   const mostrado =
     productos.find((p) => p.id === mostradoId) ?? activo ?? unico;
 
-  const colores = mostrado ? coloresProducto(mostrado) : [];
-  const encabezados = mostrado ? encabezadosTalla(mostrado) : [];
+  const colores = catalogos.colores.length ? catalogos.colores : ["Único"];
+  const esquemaActivo = esquemaPorId(catalogos, esquemaId);
+  const encabezados = tallasDeEsquema(catalogos, esquemaActivo?.id);
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
+  const listasListas =
+    catalogos.esquemas.length > 0 && catalogos.colores.length > 0;
 
   function preparar(producto: Producto, sucId = sucursalId) {
-    const cols = coloresProducto(producto);
-    const heads = encabezadosTalla(producto);
-    const c0 = cols[0] ?? "Único";
+    const esq =
+      esquemaPorId(catalogos, producto.esquemaConteo)?.id ??
+      catalogos.esquemas[0]?.id ??
+      "";
+    const heads = tallasDeEsquema(catalogos, esq);
+    const c0 = colores[0] ?? "Único";
     const t0 = heads[0] ?? "";
+    setEsquemaId(esq);
     setColor(c0);
     setTalla(t0);
+    setEspecificacion("");
     setBorrador([]);
     if (modo === "contar" && sucId) {
       setCantidad(String(cantidadEn(producto, sucId, t0, c0)));
@@ -152,7 +164,21 @@ export function CapturaArticulo({
     else {
       setColor("");
       setTalla("");
+      setEsquemaId("");
       setBorrador([]);
+    }
+  }
+
+  function cambiarEsquema(id: string) {
+    setEsquemaId(id);
+    setBorrador([]);
+    const heads = tallasDeEsquema(catalogos, id);
+    const t0 = heads[0] ?? "";
+    setTalla(t0);
+    if (mostrado && sucursalId && modo === "contar") {
+      setCantidad(String(cantidadEn(mostrado, sucursalId, t0, colorActivo)));
+    } else {
+      setCantidad("1");
     }
   }
 
@@ -228,6 +254,7 @@ export function CapturaArticulo({
           (x) =>
             x.productoId === mostrado.id &&
             x.color === colorActivo &&
+            x.especificacion === especificacion &&
             x.sucursalId === sucursal.id,
         );
         if (idx >= 0) {
@@ -250,6 +277,7 @@ export function CapturaArticulo({
             sku: mostrado.sku,
             nombre: mostrado.nombre,
             color: colorActivo,
+            especificacion: especificacion || undefined,
             sucursalId: sucursal.id,
             sucursalNombre: sucursal.nombre,
             pares,
@@ -310,7 +338,12 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Elige color y tallas. Cada color confirmado baja a la tabla."
+              detalle="Elige esquema, color y tallas de las listas. Cada color confirmado baja a la tabla."
+            />
+          ) : !listasListas ? (
+            <EmptyView
+              titulo="Faltan listas"
+              detalle="Iza debe armar esquema y colores en Configuración. Aquí solo se elige, no se crean."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -332,6 +365,25 @@ export function CapturaArticulo({
                   {usuarioNombre ? (
                     <p className="text-xs text-muted-foreground">{usuarioNombre}</p>
                   ) : null}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Esquema de conteo</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {catalogos.esquemas.map((e) => (
+                      <Button
+                        key={e.id}
+                        type="button"
+                        variant={e.id === esquemaActivo?.id ? "default" : "outline"}
+                        className={cn(
+                          "h-10",
+                          e.id === esquemaActivo?.id && btn,
+                        )}
+                        onClick={() => cambiarEsquema(e.id)}
+                      >
+                        {e.nombre}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Color</Label>
@@ -371,9 +423,29 @@ export function CapturaArticulo({
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Este artículo no usa talla: solo cantidad y color.
+                    Este esquema no usa talla: solo cantidad y color.
                   </p>
                 )}
+                {catalogos.especificaciones.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label>Especificación (opcional)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {catalogos.especificaciones.map((s) => (
+                        <Button
+                          key={s}
+                          type="button"
+                          variant={s === especificacion ? "default" : "outline"}
+                          className={cn("h-10", s === especificacion && btn)}
+                          onClick={() =>
+                            setEspecificacion((prev) => (prev === s ? "" : s))
+                          }
+                        >
+                          {s}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="space-y-2">
                   <Label>
                     {modo === "contar"
@@ -436,8 +508,8 @@ export function CapturaArticulo({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Elige color, talla y cantidad. Confirma el color (o la línea)
-                    para bajarlo a la tabla.
+                    Elige esquema, color, talla y cantidad. Confirma el color
+                    (o la línea) para bajarlo a la tabla.
                   </p>
                 )}
                 <Button
@@ -507,7 +579,14 @@ export function CapturaArticulo({
                             {ln.nombre}
                           </p>
                         </td>
-                        <td className="border-r px-2 py-2 capitalize">{ln.color}</td>
+                        <td className="border-r px-2 py-2 capitalize">
+                          {ln.color}
+                          {ln.especificacion ? (
+                            <span className="block text-xs text-muted-foreground normal-case">
+                              {ln.especificacion}
+                            </span>
+                          ) : null}
+                        </td>
                         {ln.pares.flatMap((p) => [
                           <td
                             key={`${ln.key}-${p.talla}-t`}

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import type {
+  Catalogos,
   CierreDia,
   Movimiento,
   Pedido,
@@ -19,6 +20,7 @@ import type {
   UsuarioPublico,
   AppStatus,
 } from "@/lib/types";
+import { catalogosVacios } from "@/lib/catalogos";
 
 type NuevaLinea = {
   productoId: string;
@@ -36,6 +38,7 @@ type InventoryValue = {
   status: AppStatus;
   user: UsuarioPublico | null;
   productos: Producto[];
+  catalogos: Catalogos;
   pedidos: Pedido[];
   recepciones: Recepcion[];
   movimientos: Movimiento[];
@@ -68,10 +71,8 @@ type InventoryValue = {
     id?: string;
     nombre: string;
     sku: string;
-    esquemaConteo: Producto["esquemaConteo"];
-    colores: string;
-    tallas: string;
   }) => Promise<void>;
+  guardarCatalogos: (catalogos: Catalogos) => Promise<void>;
 };
 
 const InventoryContext = createContext<InventoryValue | null>(null);
@@ -89,6 +90,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
   const [user, setUser] = useState<UsuarioPublico | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [catalogos, setCatalogos] = useState<Catalogos>(catalogosVacios);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [recepciones, setRecepciones] = useState<Recepcion[]>([]);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
@@ -105,6 +107,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     setUser(data.user);
     setProductos(data.productos);
+    setCatalogos(data.catalogos ?? catalogosVacios());
     setPedidos(data.pedidos);
     setRecepciones(data.recepciones);
     setMovimientos(data.movimientos ?? []);
@@ -202,14 +205,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const guardarArticulo = useCallback(
-    async (input: {
-      id?: string;
-      nombre: string;
-      sku: string;
-      esquemaConteo: Producto["esquemaConteo"];
-      colores: string;
-      tallas: string;
-    }) => {
+    async (input: { id?: string; nombre: string; sku: string }) => {
       const res = await fetch("/api/admin/articulos", {
         method: "POST",
         credentials: "include",
@@ -222,11 +218,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [recargar],
   );
 
+  const guardarCatalogos = useCallback(
+    async (siguiente: Catalogos) => {
+      const res = await fetch("/api/admin/catalogos", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(siguiente),
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      await recargar();
+    },
+    [recargar],
+  );
+
   const value = useMemo(
     () => ({
       status,
       user,
       productos,
+      catalogos,
       pedidos,
       recepciones,
       movimientos,
@@ -240,11 +251,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       crearPedido,
       autorizarPedido,
       guardarArticulo,
+      guardarCatalogos,
     }),
     [
       status,
       user,
       productos,
+      catalogos,
       pedidos,
       recepciones,
       movimientos,
@@ -258,6 +271,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       crearPedido,
       autorizarPedido,
       guardarArticulo,
+      guardarCatalogos,
     ],
   );
 

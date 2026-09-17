@@ -5,7 +5,6 @@ import {
   ajustarCantidad,
   cantidadEn,
   coloresProducto,
-  esquemaDe,
   fijarConteo,
   sucursalPorId,
 } from "@/lib/sucursales";
@@ -31,7 +30,7 @@ function normalizarCeldas(
       existencia?: number;
     }[];
   } | null,
-  producto: Parameters<typeof esquemaDe>[0],
+  producto: Parameters<typeof coloresProducto>[0],
   modo: "contar" | "delta",
 ) {
   const raw =
@@ -46,16 +45,12 @@ function normalizarCeldas(
           },
         ];
   return raw.map((c) => {
-    const esquema = esquemaDe(producto);
-    const talla = esquema === "accesorio" ? "" : (c.talla ?? "").trim();
+    const talla = (c.talla ?? "").trim();
     const color =
       (c.color ?? "").trim() || coloresProducto(producto)[0] || "Único";
     const cantidad = Number(
       modo === "contar" ? (c.existencia ?? c.cantidad) : c.cantidad,
     );
-    if (esquema !== "accesorio" && !talla) {
-      throw new Error("Falta la talla en una celda.");
-    }
     if (!Number.isFinite(cantidad) || cantidad < 0) {
       throw new Error("Hay una cantidad inválida en la cuadrícula.");
     }

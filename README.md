@@ -6,26 +6,24 @@ App **móvil primero** para Brinquitos. Español. Sesión con usuario y contrase
 
 | Rol | Usuario | Contraseña | Acceso |
 | --- | --- | --- | --- |
-| Administradora | `iza` | `iza` | Artículos, usuarios, pedidos (autoriza), existencias, recepción |
+| Administradora | `iza` | `iza` | Artículos, Configuración, usuarios, pedidos (autoriza), existencias, recepción |
 | Operador | `almacen1` | `almacen1` | Existencias + recepción |
 | Operador | `almacen2` | `almacen2` | Solo existencias |
 
-Iza puede cambiar existencias/recepción de cada operador en **Usuarios**.
+Iza arma las listas en **Configuración**. Quien solo cuenta o recibe **elige** de esas listas; no las define.
 
 ## Cómo probar
 
-**Como Iza:** entra → **Pedidos** Nuevo → sucursal → busca Clave o nombre (ej. `XC1092`, `330`, `camisa`) → color, tallas y cantidades → confirma el color → la tabla crece abajo. Autorizar + PDF. **Artículos** lista 10 por página (buscar Clave/nombre, orden A–Z o por Clave); la ficha pone Clave, luego nombre, y las tallas/colores de ese artículo.
+**Como Iza:** entra → **Configuración** y revisa esquemas, colores, tallas y especificaciones → **Artículos** (10 por página, Clave y nombre) → **Pedidos** Nuevo → sucursal → busca Clave o nombre → elige esquema, color, tallas y cantidades → confirma el color → la tabla crece abajo.
 
-**Como operador:** `almacen1` → sucursal → busca la clave o el nombre. Recepción verde usa el mismo formato.
-
-El catálogo es el de Iza (`data/catalogo.csv` + fotos del Excel). Búsqueda por **clave** o **nombre**. Cada artículo arranca con esquema niño / letra / accesorio; Iza lo ajusta en Artículos.
+**Como operador:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. No aparece Configuración.
 
 ## Existencias
 
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `XC1092`, `camisa`).
-3. Elige color, talla y cantidad. Agrega tallas de ese color.
-4. Confirma el color (o la línea). Abajo crece una tabla: código arriba / nombre abajo, luego color, luego talla y cantidad (solo las que capturaste).
+3. Elige esquema, color, talla y cantidad de las listas ya armadas.
+4. Confirma el color. Abajo crece una tabla (no una matriz vacía).
 5. PDF del día.
 
 ## Recepción
@@ -34,7 +32,7 @@ Misma captura, título **Entrada de mercancía**, color verde.
 
 ## Pedidos
 
-Solo admin. Misma captura y misma tabla que existencias. Estado *Por autorizar* hasta que Iza autoriza. PDF del folio.
+Solo admin. Misma captura y misma tabla. Estado *Por autorizar* hasta que Iza autoriza.
 
 ## Cómo correrlo
 

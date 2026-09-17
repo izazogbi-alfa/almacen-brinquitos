@@ -13,7 +13,21 @@ export type ModulosUsuario = {
   pedidos: boolean;
 };
 
-export type EsquemaConteo = "nino" | "letra" | "accesorio";
+export type EsquemaConteo = string;
+
+export type EsquemaCatalogo = {
+  id: string;
+  nombre: string;
+  detalle?: string;
+  tallas: string[];
+};
+
+export type Catalogos = {
+  esquemas: EsquemaCatalogo[];
+  colores: string[];
+  tallas: string[];
+  especificaciones: string[];
+};
 
 export type Sucursal = {
   id: string;

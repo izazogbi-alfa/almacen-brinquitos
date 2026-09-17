@@ -16,15 +16,8 @@ import {
   paginarArticulos,
   type OrdenArticulos,
 } from "@/lib/articulos-lista";
-import type { EsquemaConteo, Producto } from "@/lib/types";
-import { coloresProducto, esquemaDe, tallasProducto } from "@/lib/sucursales";
+import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-function etiquetaEsquema(esquema: EsquemaConteo) {
-  if (esquema === "nino") return "Niño 0–60";
-  if (esquema === "letra") return "Letra";
-  return "Accesorio";
-}
 
 function ArticulosAdmin() {
   const { productos, user, guardarArticulo } = useInventory();
@@ -34,9 +27,6 @@ function ArticulosAdmin() {
   const [ficha, setFicha] = useState<Producto | "nuevo" | null>(null);
   const [nombre, setNombre] = useState("");
   const [clave, setClave] = useState("");
-  const [esquema, setEsquema] = useState<EsquemaConteo>("accesorio");
-  const [colores, setColores] = useState("");
-  const [tallas, setTallas] = useState("");
   const [guardando, setGuardando] = useState(false);
 
   const filtrados = useMemo(() => {
@@ -50,7 +40,7 @@ function ArticulosAdmin() {
     return (
       <EmptyView
         titulo="Solo administradora"
-        detalle="Iza define las especificaciones de cada artículo."
+        detalle="Los operadores no dan de alta artículos."
       />
     );
   }
@@ -59,18 +49,12 @@ function ArticulosAdmin() {
     setFicha(p);
     setNombre(p.nombre);
     setClave(p.sku);
-    setEsquema(esquemaDe(p));
-    setColores(coloresProducto(p).join(", "));
-    setTallas(p.tallas?.length ? p.tallas.join(", ") : "");
   }
 
   function abrirNuevo() {
     setFicha("nuevo");
     setNombre("");
     setClave("");
-    setEsquema("accesorio");
-    setColores("");
-    setTallas("");
   }
 
   function cerrarFicha() {
@@ -78,22 +62,6 @@ function ArticulosAdmin() {
   }
 
   const productoFicha = ficha && ficha !== "nuevo" ? ficha : null;
-  const previewTallas = tallasProducto({
-    id: productoFicha?.id ?? "nuevo",
-    sku: clave,
-    nombre,
-    categoria: productoFicha?.categoria ?? "",
-    unidad: "pza",
-    existencia: 0,
-    minimo: 0,
-    ubicacion: "",
-    esquemaConteo: esquema,
-    tallas: tallas
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean),
-  }).slice(0, 8);
-
   const formVisible = ficha !== null;
 
   return (
@@ -104,8 +72,8 @@ function ArticulosAdmin() {
             Artículos
           </h2>
           <p className="text-sm text-muted-foreground">
-            {ARTICULOS_POR_PAGINA} por página. Busca por Clave o nombre. Cada
-            ficha tiene su propio conteo, colores y tallas.
+            {ARTICULOS_POR_PAGINA} por página. Busca por Clave o nombre. Las
+            listas de conteo se arman en Configuración.
           </p>
         </div>
         <Button
@@ -124,12 +92,7 @@ function ArticulosAdmin() {
           formVisible ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]" : "grid-cols-1",
         )}
       >
-        <div
-          className={cn(
-            "space-y-3",
-            formVisible && "hidden md:block",
-          )}
-        >
+        <div className={cn("space-y-3", formVisible && "hidden md:block")}>
           <div className="space-y-1">
             <Label htmlFor="buscar-articulo">Buscar por Clave o nombre</Label>
             <Input
@@ -191,7 +154,8 @@ function ArticulosAdmin() {
                       type="button"
                       className={cn(
                         "flex w-full items-center gap-3 rounded-xl border p-3 text-left",
-                        productoFicha?.id === p.id && "border-teal-700 ring-2 ring-teal-700/20",
+                        productoFicha?.id === p.id &&
+                          "border-teal-700 ring-2 ring-teal-700/20",
                       )}
                       onClick={() => abrir(p)}
                     >
@@ -205,9 +169,6 @@ function ArticulosAdmin() {
                           Clave {p.sku}
                         </p>
                         <p className="font-medium leading-tight">{p.nombre}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {etiquetaEsquema(esquemaDe(p))}
-                        </p>
                       </div>
                     </button>
                   </li>
@@ -259,9 +220,6 @@ function ArticulosAdmin() {
                   id: productoFicha?.id,
                   nombre,
                   sku: clave,
-                  esquemaConteo: esquema,
-                  colores,
-                  tallas,
                 });
                 toast.success(
                   ficha === "nuevo"
@@ -281,8 +239,8 @@ function ArticulosAdmin() {
                 {ficha === "nuevo" ? "Alta de artículo" : "Ficha del artículo"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Clave primero. Las tallas y colores son de este artículo, no de
-                todo el catálogo.
+                Clave primero, luego el nombre. Esquema, colores, tallas y
+                especificaciones se eligen al capturar, desde Configuración.
               </p>
             </div>
             <div className="space-y-1">
@@ -307,54 +265,6 @@ function ArticulosAdmin() {
                 autoComplete="off"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="esquema-articulo">Esquema de conteo</Label>
-              <select
-                id="esquema-articulo"
-                className="h-11 w-full rounded-lg border bg-background px-3"
-                value={esquema}
-                onChange={(e) => setEsquema(e.target.value as EsquemaConteo)}
-              >
-                <option value="nino">Ropa niño (tallas 0–60 pares)</option>
-                <option value="letra">Letra (EXCHICO…ADULTO)</option>
-                <option value="accesorio">Accesorio (sin talla)</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="colores-articulo">
-                Colores de este artículo (separados por coma)
-              </Label>
-              <Input
-                id="colores-articulo"
-                className="h-11"
-                value={colores}
-                onChange={(e) => setColores(e.target.value)}
-                placeholder="Ej. blanco, rosa, azul"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="tallas-articulo">
-                Tallas / especificaciones de este artículo (opcional, coma)
-              </Label>
-              <Input
-                id="tallas-articulo"
-                className="h-11"
-                value={tallas}
-                onChange={(e) => setTallas(e.target.value)}
-                placeholder={
-                  esquema === "nino"
-                    ? "Vacío = 0,2,4…60"
-                    : esquema === "letra"
-                      ? "Vacío = EXCHICO…ADULTO"
-                      : "Vacío = sin talla"
-                }
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Vista previa de tallas:{" "}
-              {previewTallas.length ? previewTallas.join(", ") : "sin talla"}
-              {previewTallas.length >= 8 ? "…" : ""}
-            </p>
             <Button type="submit" className="h-11 w-full" disabled={guardando}>
               {guardando
                 ? "Guardando…"
@@ -374,7 +284,7 @@ function ArticulosAdmin() {
         ) : (
           <p className="hidden rounded-xl border border-dashed p-6 text-sm text-muted-foreground md:block">
             Elige un artículo de la lista o pulsa Artículo nuevo. Aquí verás su
-            Clave, nombre y especificaciones.
+            Clave y nombre.
           </p>
         )}
       </div>
