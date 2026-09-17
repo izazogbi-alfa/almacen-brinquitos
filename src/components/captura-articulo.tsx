@@ -296,7 +296,7 @@ export function CapturaArticulo({
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Código o nombre (ej. XC1092 camisa)"
+                placeholder="Clave o nombre (ej. XC1092 camisa)"
                 className="h-11 pl-9 text-base"
                 enterKeyHint="search"
                 autoComplete="off"
@@ -322,6 +322,9 @@ export function CapturaArticulo({
               <CardContent className="space-y-3">
                 <FotoProducto src={mostrado.foto} alt={mostrado.nombre} />
                 <div>
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Clave
+                  </p>
                   <p className="font-heading text-lg font-semibold">
                     {mostrado.sku}
                   </p>

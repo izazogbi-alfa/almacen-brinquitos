@@ -65,10 +65,9 @@ type InventoryValue = {
   }) => Promise<Pedido>;
   autorizarPedido: (pedidoId: string) => Promise<Pedido>;
   guardarArticulo: (input: {
-    id: string;
+    id?: string;
     nombre: string;
     sku: string;
-    categoria: string;
     esquemaConteo: Producto["esquemaConteo"];
     colores: string;
     tallas: string;
@@ -204,10 +203,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const guardarArticulo = useCallback(
     async (input: {
-      id: string;
+      id?: string;
       nombre: string;
       sku: string;
-      categoria: string;
       esquemaConteo: Producto["esquemaConteo"];
       colores: string;
       tallas: string;
