@@ -14,7 +14,7 @@ Iza puede cambiar existencias/recepción de cada operador en **Usuarios**.
 
 ## Cómo probar
 
-**Como Iza:** entra → **Pedidos** Nuevo → sucursal → busca Clave o nombre (ej. `XC1092`, `330`, `camisa`) → color, tallas y cantidades → confirma el color → la tabla crece abajo. Autorizar + PDF. **Artículos** lista 10 por página (buscar Clave/nombre, orden A–Z o por Clave). En la ficha, el engrane de esquema / colores / tallas / especificaciones abre la lista de **ese** artículo.
+**Como Iza:** entra → **Pedidos** Nuevo → sucursal → busca Clave o nombre (ej. `XC1092`, `330`, `camisa`) → color, tallas y cantidades → confirma el color → la tabla crece abajo. Autorizar + PDF. **Artículos** lista 10 por página (buscar Clave/nombre, orden A–Z o por Clave); la ficha pone Clave, luego nombre, y las tallas/colores de ese artículo.
 
 **Como operador:** `almacen1` → sucursal → busca la clave o el nombre. Recepción verde usa el mismo formato.
 

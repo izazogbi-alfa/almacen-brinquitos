@@ -71,7 +71,6 @@ type InventoryValue = {
     esquemaConteo: Producto["esquemaConteo"];
     colores: string;
     tallas: string;
-    especificaciones: string;
   }) => Promise<void>;
 };
 
@@ -210,7 +209,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       esquemaConteo: Producto["esquemaConteo"];
       colores: string;
       tallas: string;
-      especificaciones: string;
     }) => {
       const res = await fetch("/api/admin/articulos", {
         method: "POST",

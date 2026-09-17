@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { parseLista } from "@/lib/listas-articulo";
 import type { EsquemaConteo } from "@/lib/types";
 import { exigirAdmin } from "@/server/auth";
 import { withStore } from "@/server/store";
@@ -20,7 +19,6 @@ export async function POST(request: Request) {
     esquemaConteo?: EsquemaConteo;
     colores?: string;
     tallas?: string;
-    especificaciones?: string;
   } | null;
 
   const clave = body?.sku?.trim() ?? "";
@@ -28,18 +26,23 @@ export async function POST(request: Request) {
 
   try {
     const producto = withStore((store) => {
+      const parseLista = (valor?: string) =>
+        typeof valor === "string"
+          ? valor
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean)
+          : undefined;
+
       if (!clave) throw new Error("Escribe la Clave.");
       if (!nombre) throw new Error("Escribe el nombre.");
 
       const duplicada = store.productos.find(
         (p) =>
-          p.sku.toUpperCase() === clave.toUpperCase() && p.id !== body?.id,
+          p.sku.toUpperCase() === clave.toUpperCase() &&
+          p.id !== body?.id,
       );
       if (duplicada) throw new Error("Esa Clave ya existe.");
-
-      const colores = parseLista(body?.colores);
-      const tallas = parseLista(body?.tallas);
-      const especificaciones = parseLista(body?.especificaciones);
 
       if (!body?.id) {
         let id = `p-${clave.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
@@ -56,9 +59,8 @@ export async function POST(request: Request) {
           minimo: 0,
           ubicacion: "",
           esquemaConteo: body?.esquemaConteo ?? "accesorio",
-          colores,
-          tallas,
-          especificaciones,
+          colores: parseLista(body?.colores) ?? [],
+          tallas: parseLista(body?.tallas) ?? [],
         };
         store.productos.push(creado);
         return creado;
@@ -69,10 +71,11 @@ export async function POST(request: Request) {
       prev.nombre = nombre;
       prev.sku = clave;
       if (body.esquemaConteo) prev.esquemaConteo = body.esquemaConteo;
-      if (typeof body.colores === "string") prev.colores = colores;
-      if (typeof body.tallas === "string") prev.tallas = tallas;
-      if (typeof body.especificaciones === "string") {
-        prev.especificaciones = especificaciones;
+      if (typeof body.colores === "string") {
+        prev.colores = parseLista(body.colores) ?? [];
+      }
+      if (typeof body.tallas === "string") {
+        prev.tallas = parseLista(body.tallas) ?? [];
       }
       return prev;
     });
