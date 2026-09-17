@@ -41,6 +41,7 @@ export type Producto = {
   esquemaConteo?: EsquemaConteo;
   tallas?: string[];
   colores?: string[];
+  especificaciones?: string[];
   existenciasSucursal?: ExistenciaSucursal[];
 };
 

@@ -6,6 +6,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  BloqueConfig,
+  DialogoEsquema,
+  DialogoListaArticulo,
+  etiquetaEsquema,
+} from "@/components/config-articulo";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { FotoProducto } from "@/components/foto-producto";
 import { useInventory } from "@/lib/inventory-context";
@@ -16,15 +22,17 @@ import {
   paginarArticulos,
   type OrdenArticulos,
 } from "@/lib/articulos-lista";
+import { unirLista } from "@/lib/listas-articulo";
 import type { EsquemaConteo, Producto } from "@/lib/types";
-import { coloresProducto, esquemaDe, tallasProducto } from "@/lib/sucursales";
+import { esquemaDe } from "@/lib/sucursales";
 import { cn } from "@/lib/utils";
 
-function etiquetaEsquema(esquema: EsquemaConteo) {
-  if (esquema === "nino") return "Niño 0–60";
-  if (esquema === "letra") return "Letra";
-  return "Accesorio";
-}
+type PanelConfig =
+  | null
+  | "esquema"
+  | "colores"
+  | "tallas"
+  | "especificaciones";
 
 function ArticulosAdmin() {
   const { productos, user, guardarArticulo } = useInventory();
@@ -35,9 +43,11 @@ function ArticulosAdmin() {
   const [nombre, setNombre] = useState("");
   const [clave, setClave] = useState("");
   const [esquema, setEsquema] = useState<EsquemaConteo>("accesorio");
-  const [colores, setColores] = useState("");
-  const [tallas, setTallas] = useState("");
+  const [colores, setColores] = useState<string[]>([]);
+  const [tallas, setTallas] = useState<string[]>([]);
+  const [especificaciones, setEspecificaciones] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
+  const [panel, setPanel] = useState<PanelConfig>(null);
 
   const filtrados = useMemo(() => {
     return ordenarArticulos(filtrarArticulos(productos, q), orden);
@@ -60,8 +70,10 @@ function ArticulosAdmin() {
     setNombre(p.nombre);
     setClave(p.sku);
     setEsquema(esquemaDe(p));
-    setColores(coloresProducto(p).join(", "));
-    setTallas(p.tallas?.length ? p.tallas.join(", ") : "");
+    setColores(p.colores?.length ? p.colores : []);
+    setTallas(p.tallas?.length ? p.tallas : []);
+    setEspecificaciones(p.especificaciones?.length ? p.especificaciones : []);
+    setPanel(null);
   }
 
   function abrirNuevo() {
@@ -69,32 +81,54 @@ function ArticulosAdmin() {
     setNombre("");
     setClave("");
     setEsquema("accesorio");
-    setColores("");
-    setTallas("");
+    setColores([]);
+    setTallas([]);
+    setEspecificaciones([]);
+    setPanel(null);
   }
 
   function cerrarFicha() {
     setFicha(null);
+    setPanel(null);
   }
 
   const productoFicha = ficha && ficha !== "nuevo" ? ficha : null;
-  const previewTallas = tallasProducto({
-    id: productoFicha?.id ?? "nuevo",
-    sku: clave,
-    nombre,
-    categoria: productoFicha?.categoria ?? "",
-    unidad: "pza",
-    existencia: 0,
-    minimo: 0,
-    ubicacion: "",
-    esquemaConteo: esquema,
-    tallas: tallas
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean),
-  }).slice(0, 8);
-
   const formVisible = ficha !== null;
+
+  async function persistir(parcial?: {
+    esquema?: EsquemaConteo;
+    colores?: string[];
+    tallas?: string[];
+    especificaciones?: string[];
+  }) {
+    const sigEsquema = parcial?.esquema ?? esquema;
+    const sigColores = parcial?.colores ?? colores;
+    const sigTallas = parcial?.tallas ?? tallas;
+    const sigEspecs = parcial?.especificaciones ?? especificaciones;
+    if (ficha === "nuevo") {
+      setEsquema(sigEsquema);
+      setColores(sigColores);
+      setTallas(sigTallas);
+      setEspecificaciones(sigEspecs);
+      toast.success("Queda en el alta. Pulsa Guardar alta al terminar.");
+      return;
+    }
+    if (!productoFicha) return;
+    await guardarArticulo({
+      id: productoFicha.id,
+      nombre,
+      sku: clave,
+      esquemaConteo: sigEsquema,
+      colores: unirLista(sigColores),
+      tallas: unirLista(sigTallas),
+      especificaciones: unirLista(sigEspecs),
+    });
+    setEsquema(sigEsquema);
+    setColores(sigColores);
+    setTallas(sigTallas);
+    setEspecificaciones(sigEspecs);
+    toast.success("Configuración de este artículo guardada");
+  }
 
   return (
     <div className="space-y-4">
@@ -260,8 +294,9 @@ function ArticulosAdmin() {
                   nombre,
                   sku: clave,
                   esquemaConteo: esquema,
-                  colores,
-                  tallas,
+                  colores: unirLista(colores),
+                  tallas: unirLista(tallas),
+                  especificaciones: unirLista(especificaciones),
                 });
                 toast.success(
                   ficha === "nuevo"
@@ -281,8 +316,8 @@ function ArticulosAdmin() {
                 {ficha === "nuevo" ? "Alta de artículo" : "Ficha del artículo"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Clave primero. Las tallas y colores son de este artículo, no de
-                todo el catálogo.
+                Clave y nombre aquí. El engrane de cada bloque abre su lista,
+                solo de este artículo.
               </p>
             </div>
             <div className="space-y-1">
@@ -307,54 +342,32 @@ function ArticulosAdmin() {
                 autoComplete="off"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="esquema-articulo">Esquema de conteo</Label>
-              <select
-                id="esquema-articulo"
-                className="h-11 w-full rounded-lg border bg-background px-3"
-                value={esquema}
-                onChange={(e) => setEsquema(e.target.value as EsquemaConteo)}
-              >
-                <option value="nino">Ropa niño (tallas 0–60 pares)</option>
-                <option value="letra">Letra (EXCHICO…ADULTO)</option>
-                <option value="accesorio">Accesorio (sin talla)</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="colores-articulo">
-                Colores de este artículo (separados por coma)
-              </Label>
-              <Input
-                id="colores-articulo"
-                className="h-11"
-                value={colores}
-                onChange={(e) => setColores(e.target.value)}
-                placeholder="Ej. blanco, rosa, azul"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="tallas-articulo">
-                Tallas / especificaciones de este artículo (opcional, coma)
-              </Label>
-              <Input
-                id="tallas-articulo"
-                className="h-11"
-                value={tallas}
-                onChange={(e) => setTallas(e.target.value)}
-                placeholder={
-                  esquema === "nino"
-                    ? "Vacío = 0,2,4…60"
-                    : esquema === "letra"
-                      ? "Vacío = EXCHICO…ADULTO"
-                      : "Vacío = sin talla"
-                }
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Vista previa de tallas:{" "}
-              {previewTallas.length ? previewTallas.join(", ") : "sin talla"}
-              {previewTallas.length >= 8 ? "…" : ""}
-            </p>
+
+            <BloqueConfig
+              titulo="Esquema de conteo"
+              vacio="Aún no hay esquema. Pulsa el engrane."
+              items={[etiquetaEsquema(esquema)]}
+              onConfigurar={() => setPanel("esquema")}
+            />
+            <BloqueConfig
+              titulo="Colores"
+              vacio="Aún no hay colores en este artículo. Pulsa el engrane para agregar."
+              items={colores}
+              onConfigurar={() => setPanel("colores")}
+            />
+            <BloqueConfig
+              titulo="Tallas"
+              vacio="Aún no hay tallas en este artículo. Pulsa el engrane. No se arma una tabla global."
+              items={tallas}
+              onConfigurar={() => setPanel("tallas")}
+            />
+            <BloqueConfig
+              titulo="Especificaciones"
+              vacio="Aún no hay especificaciones. Pulsa el engrane para crear la lista de este artículo."
+              items={especificaciones}
+              onConfigurar={() => setPanel("especificaciones")}
+            />
+
             <Button type="submit" className="h-11 w-full" disabled={guardando}>
               {guardando
                 ? "Guardando…"
@@ -374,10 +387,79 @@ function ArticulosAdmin() {
         ) : (
           <p className="hidden rounded-xl border border-dashed p-6 text-sm text-muted-foreground md:block">
             Elige un artículo de la lista o pulsa Artículo nuevo. Aquí verás su
-            Clave, nombre y especificaciones.
+            Clave, nombre y el engrane de cada lista.
           </p>
         )}
       </div>
+
+      {panel === "esquema" ? (
+        <DialogoEsquema
+          abierto
+          onCerrar={() => setPanel(null)}
+          actual={esquema}
+          onGuardar={(sig, plantilla) => {
+            void persistir({
+              esquema: sig,
+              tallas: plantilla !== undefined ? plantilla : tallas,
+            })
+              .then(() => setPanel(null))
+              .catch((err) =>
+                toast.error(err instanceof Error ? err.message : "Error"),
+              );
+          }}
+        />
+      ) : null}
+      {panel === "colores" ? (
+        <DialogoListaArticulo
+          abierto
+          onCerrar={() => setPanel(null)}
+          titulo="Colores de este artículo"
+          descripcion="Lista propia. Edita, reemplaza o suma colores. No es una matriz de todo el catálogo."
+          placeholder="Ej. blanco, rosa, azul"
+          valores={colores}
+          onGuardar={(items) => {
+            void persistir({ colores: items })
+              .then(() => setPanel(null))
+              .catch((err) =>
+                toast.error(err instanceof Error ? err.message : "Error"),
+              );
+          }}
+        />
+      ) : null}
+      {panel === "tallas" ? (
+        <DialogoListaArticulo
+          abierto
+          onCerrar={() => setPanel(null)}
+          titulo="Tallas de este artículo"
+          descripcion="Solo las tallas de esta ficha. Puedes copiar una plantilla desde esquema de conteo."
+          placeholder="Ej. 4, 6, 8 o CHICO"
+          valores={tallas}
+          onGuardar={(items) => {
+            void persistir({ tallas: items })
+              .then(() => setPanel(null))
+              .catch((err) =>
+                toast.error(err instanceof Error ? err.message : "Error"),
+              );
+          }}
+        />
+      ) : null}
+      {panel === "especificaciones" ? (
+        <DialogoListaArticulo
+          abierto
+          onCerrar={() => setPanel(null)}
+          titulo="Especificaciones de este artículo"
+          descripcion="Notas o medidas extra de esta ficha: manga, forro, paquete, etc."
+          placeholder="Ej. manga corta, con gorro"
+          valores={especificaciones}
+          onGuardar={(items) => {
+            void persistir({ especificaciones: items })
+              .then(() => setPanel(null))
+              .catch((err) =>
+                toast.error(err instanceof Error ? err.message : "Error"),
+              );
+          }}
+        />
+      ) : null}
     </div>
   );
 }
