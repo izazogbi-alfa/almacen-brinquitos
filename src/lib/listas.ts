@@ -26,3 +26,17 @@ export function quitarDeLista(items: string[], valor: string): string[] {
   const clave = valor.toLocaleLowerCase("es");
   return items.filter((x) => x.toLocaleLowerCase("es") !== clave);
 }
+
+export function moverEnLista<T>(
+  items: T[],
+  indice: number,
+  direccion: -1 | 1,
+): T[] {
+  const destino = indice + direccion;
+  if (destino < 0 || destino >= items.length) return items;
+  const siguiente = [...items];
+  const actual = siguiente[indice];
+  siguiente[indice] = siguiente[destino];
+  siguiente[destino] = actual;
+  return siguiente;
+}

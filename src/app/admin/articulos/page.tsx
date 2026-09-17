@@ -463,9 +463,6 @@ function ArticulosAdmin() {
               <p className="text-sm font-semibold">Así se cuenta</p>
               <p className="text-sm">
                 <span className="font-medium">{resumen.esquemaNombre}</span>
-                {resumen.esquemaDetalle
-                  ? ` — ${resumen.esquemaDetalle}`
-                  : null}
               </p>
               <p className="text-sm">
                 Colores:{" "}

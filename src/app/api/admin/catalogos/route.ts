@@ -26,7 +26,6 @@ export async function POST(request: Request) {
         ? body.esquemas.map((e, i) => ({
             id: (e.id || `esq-${i + 1}`).trim(),
             nombre: (e.nombre || "Esquema").trim(),
-            detalle: (e.detalle || "").trim(),
             tallas: Array.isArray(e.tallas)
               ? e.tallas.map((t) => t.trim()).filter(Boolean)
               : parseLista(String(e.tallas ?? "")),

@@ -18,7 +18,6 @@ export type EsquemaConteo = string;
 export type EsquemaCatalogo = {
   id: string;
   nombre: string;
-  detalle?: string;
   tallas: string[];
 };
 

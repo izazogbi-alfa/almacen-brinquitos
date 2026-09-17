@@ -87,7 +87,6 @@ export function resumenConteo(
   const tallasVista = tallas.length > 0 ? tallas : tallasEsquema;
   return {
     esquemaNombre: esquema?.nombre ?? "Sin esquema",
-    esquemaDetalle: esquema?.detalle?.trim() || "",
     sinTalla: tallasVista.length === 0,
     colores,
     tallas: tallasVista,

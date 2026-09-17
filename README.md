@@ -10,11 +10,11 @@ App **móvil primero** para Brinquitos. Español. Sesión con usuario y contrase
 | Operador | `almacen1` | `almacen1` | Existencias + recepción |
 | Operador | `almacen2` | `almacen2` | Solo existencias |
 
-Iza arma las listas en **Configuración**. Quien solo cuenta o recibe **elige** de esas listas; no las define.
+Iza arma las listas en **Configuración**. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. Se puede reordenar con subir/bajar. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. Quien solo cuenta o recibe **elige** de esas listas; no las define.
 
 ## Cómo probar
 
-**Como Iza:** entra → **Configuración** y arma esquemas, colores, tallas y especificaciones → **Artículos** (10 por página, Clave y nombre) → abre una ficha → elige cómo se cuenta ese artículo (esquema y listas) → **Guardar ficha** → escribe tu contraseña. Luego **Pedidos** Nuevo → sucursal → busca → elige color, tallas y cantidades.
+**Como Iza:** entra → **Configuración** → arma o reordena y pulsa **Guardar** en cada bloque → **Artículos** (10 por página, Clave y nombre, sin engranes) → abre una ficha → elige cómo se cuenta ese artículo → **Guardar ficha**. Luego **Pedidos** Nuevo → sucursal → busca → elige color, tallas y cantidades.
 
 **Como operador:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. No aparece Configuración ni Artículos.
 

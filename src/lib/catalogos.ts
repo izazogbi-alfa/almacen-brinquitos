@@ -6,19 +6,16 @@ export const ESQUEMAS_INICIALES: EsquemaCatalogo[] = [
   {
     id: "nino",
     nombre: "Ropa de niño",
-    detalle: "Plantilla 0, 2, 4 … 60.",
     tallas: [...TALLAS_NINO],
   },
   {
     id: "letra",
     nombre: "Talla de letra",
-    detalle: "EXCHICO, CHICO, MEDIANO, GRANDE, EXGRANDE, ADULTO.",
     tallas: [...TALLAS_LETRA],
   },
   {
     id: "accesorio",
     nombre: "Accesorio",
-    detalle: "Se cuenta sin talla.",
     tallas: [],
   },
 ];
@@ -53,7 +50,6 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
       ? raw.esquemas.map((e) => ({
           id: e.id?.trim() || `esq-${Date.now()}`,
           nombre: e.nombre?.trim() || "Esquema",
-          detalle: e.detalle?.trim() || "",
           tallas: Array.isArray(e.tallas) ? e.tallas.filter(Boolean) : [],
         }))
       : base.esquemas;

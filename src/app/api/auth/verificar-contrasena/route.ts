@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   try {
     if (!contrasenaCoincide(user.id, password)) {
       return NextResponse.json(
-        { error: "Contraseña incorrecta. El esquema no se quitó." },
+        { error: "Contraseña incorrecta. No se quitó." },
         { status: 401 },
       );
     }
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "No se pudo comprobar la contraseña. El esquema no se quitó.",
+          "No se pudo comprobar la contraseña. No se quitó.",
       },
       { status: 500 },
     );

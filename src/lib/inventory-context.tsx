@@ -77,7 +77,7 @@ type InventoryValue = {
     especificaciones?: string[];
     password: string;
   }) => Promise<void>;
-  guardarCatalogos: (catalogos: Catalogos) => Promise<void>;
+  guardarCatalogos: (catalogos: Partial<Catalogos>) => Promise<void>;
 };
 
 const InventoryContext = createContext<InventoryValue | null>(null);
@@ -233,7 +233,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const guardarCatalogos = useCallback(
-    async (siguiente: Catalogos) => {
+    async (siguiente: Partial<Catalogos>) => {
       const res = await fetch("/api/admin/catalogos", {
         method: "POST",
         credentials: "include",
