@@ -8,8 +8,12 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import { fechaClave, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdf } from "@/lib/pdf";
+import { descargarPdfBloques } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
+import {
+  bloquesDesdeCeldas,
+  type CeldaPlana,
+} from "@/lib/tabla-bloques";
 
 function ExistenciasContent() {
   const {
@@ -43,17 +47,28 @@ function ExistenciasContent() {
     );
   }
 
+  function celdasDelDia(): CeldaPlana[] {
+    return delDia.map((m) => {
+      const prod = productos.find((p) => p.id === m.productoId);
+      return {
+        productoId: m.productoId,
+        sku: prod?.sku ?? "",
+        nombre: m.productoNombre ?? prod?.nombre ?? "",
+        color: m.color ?? "Único",
+        sucursalId: m.sucursalId,
+        sucursalNombre: m.sucursalNombre,
+        talla: m.talla ?? "",
+        cantidad: m.existenciaDespues ?? m.cantidad,
+      };
+    });
+  }
+
   function pdfDelDia() {
-    descargarPdf(
+    descargarPdfBloques(
       `existencias-${hoy}.pdf`,
       `Brinquitos · Existencias ${hoy}`,
-      [
-        `Quien cierra: ${user?.nombre ?? "—"}`,
-        ...delDia.map(
-          (m) =>
-            `${formatoFechaHora(m.timestamp)} · ${m.tipo === "conteo" ? "Conteo" : "Salida"} · ${m.productoNombre ?? ""} · ${m.sucursalNombre ?? ""} · ${m.talla ?? "—"} ${m.color ?? ""} · ${m.existenciaDespues ?? m.cantidad} · ${m.userName}`,
-        ),
-      ],
+      [`Quien cierra: ${user?.nombre ?? "—"}`],
+      bloquesDesdeCeldas(celdasDelDia()),
     );
   }
 
@@ -70,8 +85,9 @@ function ExistenciasContent() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Color, talla y cantidad del esquema de la ficha. Cada color
-            confirmado baja a la tabla.
+            Color, talla y cantidad del esquema de la ficha. La tabla agrupa
+            la misma prenda: clave arriba, colores en filas, tallas en
+            columnas.
           </p>
         )}
       </div>
@@ -142,11 +158,6 @@ function ExistenciasContent() {
           acento="azul"
           usuarioNombre={user?.nombre}
           guardando={guardando}
-          extraAfter={
-            <Button type="button" variant="ghost" className="w-full" onClick={pdfDelDia}>
-              Descargar PDF
-            </Button>
-          }
           onCommit={async (p) => {
             setGuardando(true);
             try {

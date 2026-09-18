@@ -7,10 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { AsyncGate, EmptyView } from "@/components/status-views";
+import { TablaPrendas } from "@/components/tabla-prendas";
 import { etiquetaEstado, formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdf } from "@/lib/pdf";
+import { descargarPdfBloques } from "@/lib/pdf";
 import { puede, puedeAutorizarPedidos } from "@/lib/modulos";
+import {
+  bloquesDesdeCeldas,
+  lineasDesdeCeldasPlanas,
+} from "@/lib/tabla-bloques";
 
 function DetallePedidoContent() {
   const params = useParams<{ id: string }>();
@@ -36,20 +41,37 @@ function DetallePedidoContent() {
   }
 
   const actual = pedido;
+  const celdas = actual.lineas.map((l, idx) => {
+    const prod = productos.find((x) => x.id === l.productoId);
+    return {
+      key: `${l.productoId}-${idx}`,
+      productoId: l.productoId,
+      sku: prod?.sku ?? l.productoId,
+      nombre: prod?.nombre ?? l.productoId,
+      color: l.color ?? "Único",
+      sucursalId: l.sucursalId,
+      sucursalNombre: l.sucursalNombre,
+      talla: l.talla ?? "",
+      cantidad: l.cantidad,
+    };
+  });
+  const lineasTabla = lineasDesdeCeldasPlanas(celdas);
+  const notasPdf = [
+    `Proveedor: ${actual.proveedor}`,
+    `Estado: ${etiquetaEstado(actual.estado)}`,
+    `Armó: ${actual.userName} · ${formatoFecha(actual.fecha)}`,
+    actual.autorizadoPorNombre
+      ? `Autorizó: ${actual.autorizadoPorNombre} · ${formatoFechaHora(actual.autorizadoEn ?? actual.fecha)}`
+      : "Aún sin autorizar",
+  ];
 
   function pdf() {
-    descargarPdf(`${actual.folio}.pdf`, `Brinquitos · ${actual.folio}`, [
-      `Proveedor: ${actual.proveedor}`,
-      `Estado: ${etiquetaEstado(actual.estado)}`,
-      `Armó: ${actual.userName} · ${formatoFecha(actual.fecha)}`,
-      actual.autorizadoPorNombre
-        ? `Autorizó: ${actual.autorizadoPorNombre} · ${formatoFechaHora(actual.autorizadoEn ?? actual.fecha)}`
-        : "Aún sin autorizar",
-      ...actual.lineas.map((l) => {
-        const prod = productos.find((x) => x.id === l.productoId);
-        return `${prod?.nombre ?? l.productoId} · ${l.sucursalNombre ?? "—"} · ${l.talla ?? "—"} ${l.color ?? ""} · ${l.cantidad} pza`;
-      }),
-    ]);
+    descargarPdfBloques(
+      `${actual.folio}.pdf`,
+      `Brinquitos · ${actual.folio}`,
+      notasPdf,
+      bloquesDesdeCeldas(celdas),
+    );
   }
 
   return (
@@ -88,33 +110,14 @@ function DetallePedidoContent() {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full min-w-[28rem] text-left text-sm">
-          <thead className="bg-muted/60">
-            <tr>
-              <th className="p-2">Artículo</th>
-              <th className="p-2">Sucursal</th>
-              <th className="p-2">Talla</th>
-              <th className="p-2">Color</th>
-              <th className="p-2">Cant.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pedido.lineas.map((linea, idx) => {
-              const producto = productos.find((p) => p.id === linea.productoId);
-              return (
-                <tr key={`${linea.productoId}-${idx}`} className="border-t">
-                  <td className="p-2">{producto?.nombre ?? linea.productoId}</td>
-                  <td className="p-2">{linea.sucursalNombre ?? "—"}</td>
-                  <td className="p-2">{linea.talla || "—"}</td>
-                  <td className="p-2">{linea.color || "—"}</td>
-                  <td className="p-2">{linea.cantidad}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <TablaPrendas
+        lineas={lineasTabla}
+        vacioDetalle="Este pedido no tiene artículos."
+        pdfArchivo={`${actual.folio}.pdf`}
+        pdfTitulo={`Brinquitos · ${actual.folio}`}
+        pdfNotas={notasPdf}
+        mostrarPdf={false}
+      />
 
       <Button type="button" variant="outline" className="h-11 w-full" onClick={pdf}>
         Descargar PDF

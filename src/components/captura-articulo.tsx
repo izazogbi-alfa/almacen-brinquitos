@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Minus, Plus, Search, Trash2 } from "lucide-react";
+import { Minus, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyView } from "@/components/status-views";
 import { FotoProducto } from "@/components/foto-producto";
+import { TablaPrendas } from "@/components/tabla-prendas";
+import type { LineaColorTabla } from "@/lib/tabla-bloques";
 import {
   SUCURSALES,
   cantidadEn,
@@ -48,17 +50,7 @@ export type CapturaPayload = {
 
 type ParTalla = { talla: string; cantidad: number };
 
-export type LineaTabla = {
-  key: string;
-  productoId: string;
-  sku: string;
-  nombre: string;
-  color: string;
-  especificacion?: string;
-  sucursalId: string;
-  sucursalNombre: string;
-  pares: ParTalla[];
-};
+export type LineaTabla = LineaColorTabla;
 
 const SUCURSAL_KEY = "almacen_sucursal";
 
@@ -71,6 +63,9 @@ export function CapturaArticulo({
   onTablaChange,
   guardando,
   extraAfter,
+  pdfTitulo,
+  pdfArchivo,
+  pdfNotas,
 }: {
   productos: Producto[];
   modo: ModoCaptura;
@@ -80,6 +75,9 @@ export function CapturaArticulo({
   onTablaChange?: (lineas: LineaTabla[]) => void;
   guardando?: boolean;
   extraAfter?: ReactNode;
+  pdfTitulo?: string;
+  pdfArchivo?: string;
+  pdfNotas?: string[];
 }) {
   const { catalogos } = useInventory();
   const [sucursalId, setSucursalId] = useState("");
@@ -339,7 +337,7 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Se usa el esquema guardado en la ficha (el mismo en existencias, pedidos y recepción). Elige color y tallas; cada color confirmado baja a la tabla."
+              detalle="Se usa el esquema guardado en la ficha (el mismo en existencias, pedidos y recepción). Elige un color, luego las tallas y cantidades. La tabla crece: clave arriba, colores en filas, tallas en columnas."
             />
           ) : !listasListas ? (
             <EmptyView
@@ -556,66 +554,36 @@ export function CapturaArticulo({
 
           <div>
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
-            {lineas.length === 0 ? (
-              <EmptyView
-                titulo="Todavía no hay líneas"
-                detalle="Confirma un color para que la fila aparezca aquí."
-              />
-            ) : (
-              <div className="-mx-1 overflow-x-auto rounded-xl border">
-                <table className="min-w-max border-collapse text-sm">
-                  <tbody>
-                    {lineas.map((ln) => (
-                      <tr key={ln.key} className="border-b last:border-0">
-                        <td className="w-32 min-w-32 border-r px-2 py-2 align-top">
-                          <p className="font-semibold leading-tight">{ln.sku}</p>
-                          <p className="text-xs text-muted-foreground leading-tight">
-                            {ln.nombre}
-                          </p>
-                        </td>
-                        <td className="border-r px-2 py-2 capitalize">
-                          {ln.color}
-                          {ln.especificacion ? (
-                            <span className="block text-xs text-muted-foreground normal-case">
-                              {ln.especificacion}
-                            </span>
-                          ) : null}
-                        </td>
-                        {ln.pares.flatMap((p) => [
-                          <td
-                            key={`${ln.key}-${p.talla}-t`}
-                            className="border-r bg-muted/50 px-2 py-2 text-center font-medium"
-                          >
-                            {p.talla || "Cant."}
-                          </td>,
-                          <td
-                            key={`${ln.key}-${p.talla}-q`}
-                            className="border-r px-2 py-2 text-center"
-                          >
-                            {p.cantidad}
-                          </td>,
-                        ])}
-                        <td className="px-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Quitar línea"
-                            onClick={() =>
-                              publicarTabla(
-                                lineas.filter((x) => x.key !== ln.key),
-                              )
-                            }
-                          >
-                            <Trash2 />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <p className="mb-2 text-xs text-muted-foreground">
+              Misma prenda, distintos colores: un bloque. Colores de arriba
+              hacia abajo. Tallas de izquierda a derecha. Solo lo que
+              confirmaste (no se arma una matriz vacía).
+            </p>
+            <TablaPrendas
+              lineas={lineas}
+              acento={acento}
+              vacioDetalle="Confirma un color para que aparezca aquí, debajo de la clave."
+              pdfArchivo={
+                pdfArchivo ??
+                (modo === "entrada"
+                  ? "entrada-tabla.pdf"
+                  : modo === "pedido"
+                    ? "pedido-tabla.pdf"
+                    : "existencias-tabla.pdf")
+              }
+              pdfTitulo={
+                pdfTitulo ??
+                (modo === "entrada"
+                  ? "Brinquitos · Entrada"
+                  : modo === "pedido"
+                    ? "Brinquitos · Pedido"
+                    : "Brinquitos · Existencias")
+              }
+              pdfNotas={pdfNotas}
+              onQuitarFila={(keys) =>
+                publicarTabla(lineas.filter((x) => !keys.includes(x.key)))
+              }
+            />
           </div>
           {extraAfter}
         </>

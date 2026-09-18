@@ -37,16 +37,16 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay u
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `XC1092`, `camisa`).
 3. El esquema ya viene de la ficha. Elige color, talla y cantidad de esas listas.
-4. Confirma el color. Abajo crece una tabla (no una matriz vacía).
-5. PDF del día.
+4. Confirma el color. Abajo crece un **bloque** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas** (de arriba hacia abajo), **tallas en columnas**. La misma prenda con otro color se suma al mismo bloque.
+5. **Descargar PDF de esta tabla** (mismo formato). En **Hoy**, **Descargar PDF del día**.
 
 ## Recepción
 
-Misma captura, título **Entrada de mercancía**, color verde.
+Misma captura y misma tabla, título **Entrada de mercancía**, color verde. El PDF de entradas usa el mismo bloque.
 
 ## Pedidos
 
-Misma captura y misma tabla si el módulo está marcado. Estado *Por autorizar* hasta que una administradora autoriza.
+Misma captura y misma tabla si el módulo está marcado. Al guardar, el detalle y el PDF del folio también agrupan por prenda (colores en filas, tallas en columnas). Estado *Por autorizar* hasta que una administradora autoriza.
 
 ## Cómo correrlo
 

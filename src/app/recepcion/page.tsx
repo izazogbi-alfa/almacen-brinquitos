@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
-import { fechaClave, formatoFechaHora } from "@/lib/format";
+import { fechaClave } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdf } from "@/lib/pdf";
+import { descargarPdfBloques } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
+import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
 
 function RecepcionContent() {
   const { productos, movimientos, user, entrada } = useInventory();
@@ -29,13 +30,26 @@ function RecepcionContent() {
   }
 
   function pdf() {
-    descargarPdf(`entrada-${hoy}.pdf`, `Brinquitos · Entrada ${hoy}`, [
-      `Quien recibe: ${user?.nombre ?? "—"}`,
-      ...delDia.map(
-        (m) =>
-          `${formatoFechaHora(m.timestamp)} · ${m.productoNombre ?? ""} · ${m.sucursalNombre ?? ""} · ${m.talla ?? "—"} ${m.color ?? ""} · +${m.cantidad} · ${m.userName}`,
+    descargarPdfBloques(
+      `entrada-${hoy}.pdf`,
+      `Brinquitos · Entrada ${hoy}`,
+      [`Quien recibe: ${user?.nombre ?? "—"}`],
+      bloquesDesdeCeldas(
+        delDia.map((m) => {
+          const prod = productos.find((p) => p.id === m.productoId);
+          return {
+            productoId: m.productoId,
+            sku: prod?.sku ?? "",
+            nombre: m.productoNombre ?? prod?.nombre ?? "",
+            color: m.color ?? "Único",
+            sucursalId: m.sucursalId,
+            sucursalNombre: m.sucursalNombre,
+            talla: m.talla ?? "",
+            cantidad: m.cantidad,
+          };
+        }),
       ),
-    ]);
+    );
   }
 
   return (
@@ -45,8 +59,8 @@ function RecepcionContent() {
           Entrada de mercancía
         </h2>
         <p className="text-sm text-emerald-800/80">
-          Misma captura que existencias, en verde. El esquema es el de la ficha.
-          Elige sucursal y confirma.
+          Misma captura que existencias, en verde. Tabla: clave arriba,
+          colores en filas, tallas en columnas.
         </p>
       </div>
       <CapturaArticulo

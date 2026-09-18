@@ -71,8 +71,8 @@ function NuevoPedidoContent() {
         </h2>
         <p className="text-sm text-muted-foreground">
           Color, talla y cantidad del esquema de la ficha (el mismo que
-          existencias y recepción). Cada color confirmado baja a la tabla. Iza
-          autoriza.
+          existencias y recepción). Misma prenda, distintos colores: un
+          bloque. Iza autoriza.
         </p>
       </div>
       <div className="space-y-2">
