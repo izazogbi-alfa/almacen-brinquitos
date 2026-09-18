@@ -4,6 +4,7 @@ import { FileDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyView } from "@/components/status-views";
 import { descargarPdfBloques } from "@/lib/pdf";
+import { useInventory } from "@/lib/inventory-context";
 import {
   bloquesDesdeLineasColor,
   etiquetaColor,
@@ -31,7 +32,8 @@ export function TablaPrendas({
   acento?: "azul" | "verde";
   mostrarPdf?: boolean;
 }) {
-  const bloques = bloquesDesdeLineasColor(lineas);
+  const { productos, catalogos } = useInventory();
+  const bloques = bloquesDesdeLineasColor(lineas, { productos, catalogos });
   const verde = acento === "verde";
   const conPdf = mostrarPdf;
 

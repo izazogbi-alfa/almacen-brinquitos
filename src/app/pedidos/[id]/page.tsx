@@ -19,7 +19,7 @@ import {
 
 function DetallePedidoContent() {
   const params = useParams<{ id: string }>();
-  const { pedidos, productos, user, autorizarPedido } = useInventory();
+  const { pedidos, productos, catalogos, user, autorizarPedido } = useInventory();
   const pedido = pedidos.find((p) => p.id === params.id);
 
   if (!puede(user, "pedidos")) {
@@ -70,7 +70,7 @@ function DetallePedidoContent() {
       `${actual.folio}.pdf`,
       `Brinquitos · ${actual.folio}`,
       notasPdf,
-      bloquesDesdeCeldas(celdas),
+      bloquesDesdeCeldas(celdas, { productos, catalogos }),
     );
   }
 

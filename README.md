@@ -37,7 +37,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay u
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `XC1092`, `camisa`).
 3. El esquema ya viene de la ficha. Elige color, talla y cantidad de esas listas.
-4. Confirma el color. Abajo crece un **bloque** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas** (de arriba hacia abajo), **tallas en columnas**. La misma prenda con otro color se suma al mismo bloque.
+4. Confirma el color. Abajo crece un **bloque** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas** (de arriba hacia abajo), **tallas en columnas** en el **mismo orden del esquema** (Configuración → Listas de captura). La misma prenda con otro color se suma al mismo bloque.
 5. **Descargar PDF de esta tabla** (mismo formato). En **Hoy**, **Descargar PDF del día**.
 
 ## Recepción

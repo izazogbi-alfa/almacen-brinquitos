@@ -12,7 +12,7 @@ import { puede } from "@/lib/modulos";
 import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
 
 function RecepcionContent() {
-  const { productos, movimientos, user, entrada } = useInventory();
+  const { productos, movimientos, user, catalogos, entrada } = useInventory();
   const [guardando, setGuardando] = useState(false);
   const hoy = fechaClave();
   const delDia = movimientos.filter(
@@ -48,6 +48,7 @@ function RecepcionContent() {
             cantidad: m.cantidad,
           };
         }),
+        { productos, catalogos },
       ),
     );
   }

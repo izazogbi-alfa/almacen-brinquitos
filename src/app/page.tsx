@@ -21,6 +21,7 @@ function ExistenciasContent() {
     movimientos,
     cierres,
     user,
+    catalogos,
     contar,
     retirar,
     cerrarDia,
@@ -68,7 +69,7 @@ function ExistenciasContent() {
       `existencias-${hoy}.pdf`,
       `Brinquitos · Existencias ${hoy}`,
       [`Quien cierra: ${user?.nombre ?? "—"}`],
-      bloquesDesdeCeldas(celdasDelDia()),
+      bloquesDesdeCeldas(celdasDelDia(), { productos, catalogos }),
     );
   }
 

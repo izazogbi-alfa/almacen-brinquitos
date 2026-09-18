@@ -1,3 +1,6 @@
+import { tallasDeEsquema } from "@/lib/catalogos";
+import type { Catalogos, Producto } from "@/lib/types";
+
 export type ParTalla = { talla: string; cantidad: number };
 
 export type LineaColorTabla = {
@@ -41,7 +44,37 @@ export type CeldaPlana = {
   sucursalNombre?: string;
   talla: string;
   cantidad: number;
+  ordenTallas?: string[];
 };
+
+export type ContextoTallas = {
+  productos: Producto[];
+  catalogos: Catalogos;
+};
+
+export function ordenTallasDeProducto(
+  producto: Producto | undefined,
+  catalogos: Catalogos,
+) {
+  if (!producto) return [];
+  return tallasDeEsquema(catalogos, producto.esquemaConteo);
+}
+
+export function conOrdenDeEsquema(
+  celdas: CeldaPlana[],
+  ctx: ContextoTallas,
+): CeldaPlana[] {
+  return celdas.map((c) => {
+    if (c.ordenTallas?.length) return c;
+    const prod = ctx.productos.find(
+      (p) => p.id === c.productoId || p.sku === c.sku,
+    );
+    return {
+      ...c,
+      ordenTallas: ordenTallasDeProducto(prod, ctx.catalogos),
+    };
+  });
+}
 
 function claveBloque(c: {
   productoId?: string;
@@ -51,30 +84,60 @@ function claveBloque(c: {
   return `${c.productoId || c.sku}::${c.sucursalId || ""}`;
 }
 
-function ordenTallas(tallas: string[]) {
-  const vistas = new Set<string>();
-  const out: string[] = [];
-  for (const t of tallas) {
-    const k = t || "Cant.";
-    if (vistas.has(k)) continue;
-    vistas.add(k);
-    out.push(k);
-  }
-  return out;
+function etiquetaTalla(talla: string) {
+  return talla || "Cant.";
 }
 
-export function bloquesDesdeCeldas(celdas: CeldaPlana[]): BloquePrenda[] {
+function claveTalla(talla: string) {
+  return (talla === "Cant." ? "" : talla).toLocaleLowerCase("es");
+}
+
+/** Columnas = solo tallas capturadas, en el orden del esquema (Configuración). */
+export function ordenarTallasPorEsquema(
+  capturadas: string[],
+  ordenEsquema: string[] | undefined,
+): string[] {
+  const vistas: string[] = [];
+  const seen = new Set<string>();
+  for (const t of capturadas) {
+    const k = etiquetaTalla(t);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    vistas.push(k);
+  }
+  if (!ordenEsquema?.length) return vistas;
+  const rank = new Map(
+    ordenEsquema.map((t, i) => [claveTalla(t), i] as const),
+  );
+  return [...vistas].sort((a, b) => {
+    const ia = rank.get(claveTalla(a));
+    const ib = rank.get(claveTalla(b));
+    if (ia == null && ib == null) {
+      return vistas.indexOf(a) - vistas.indexOf(b);
+    }
+    if (ia == null) return 1;
+    if (ib == null) return -1;
+    return ia - ib;
+  });
+}
+
+export function bloquesDesdeCeldas(
+  celdas: CeldaPlana[],
+  ctx?: ContextoTallas,
+): BloquePrenda[] {
+  const lista = ctx ? conOrdenDeEsquema(celdas, ctx) : celdas;
   const orden: string[] = [];
   const mapa = new Map<
     string,
     {
       bloque: Omit<BloquePrenda, "tallas" | "filas">;
       tallas: string[];
+      ordenEsquema: string[];
       filas: Map<string, FilaColorBloque>;
     }
   >();
 
-  for (const c of celdas) {
+  for (const c of lista) {
     const bk = claveBloque(c);
     if (!mapa.has(bk)) {
       orden.push(bk);
@@ -88,11 +151,15 @@ export function bloquesDesdeCeldas(celdas: CeldaPlana[]): BloquePrenda[] {
           sucursalNombre: c.sucursalNombre ?? "",
         },
         tallas: [],
+        ordenEsquema: c.ordenTallas ?? [],
         filas: new Map(),
       });
     }
     const g = mapa.get(bk)!;
-    const talla = c.talla || "Cant.";
+    if (!g.ordenEsquema.length && c.ordenTallas?.length) {
+      g.ordenEsquema = c.ordenTallas;
+    }
+    const talla = etiquetaTalla(c.talla);
     g.tallas.push(talla);
     const fk = `${c.color}::${c.especificacion ?? ""}`;
     const previa = g.filas.get(fk);
@@ -113,7 +180,7 @@ export function bloquesDesdeCeldas(celdas: CeldaPlana[]): BloquePrenda[] {
     const g = mapa.get(k)!;
     return {
       ...g.bloque,
-      tallas: ordenTallas(g.tallas),
+      tallas: ordenarTallasPorEsquema(g.tallas, g.ordenEsquema),
       filas: [...g.filas.values()],
     };
   });
@@ -121,6 +188,7 @@ export function bloquesDesdeCeldas(celdas: CeldaPlana[]): BloquePrenda[] {
 
 export function bloquesDesdeLineasColor(
   lineas: LineaColorTabla[],
+  ctx?: ContextoTallas,
 ): BloquePrenda[] {
   return bloquesDesdeCeldas(
     lineas.flatMap((ln) =>
@@ -137,6 +205,7 @@ export function bloquesDesdeLineasColor(
         cantidad: p.cantidad,
       })),
     ),
+    ctx,
   );
 }
 
