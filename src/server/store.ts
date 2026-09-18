@@ -17,6 +17,17 @@ import { normalizarCatalogos } from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
 import { completarModulos } from "@/lib/modulos";
+import {
+  archivoCatalogosEmpaquetado,
+  archivoCatalogosLocal,
+  aplicarCatalogosAlStore,
+  catalogosDesdeCookies,
+  guardarCatalogosDuraderos,
+  leerCatalogosArchivo,
+  leerCatalogosDuraderos,
+  mejorCatalogos,
+  type CatalogosPersistidos,
+} from "@/server/catalogos-persist";
 
 export type UsuarioInterno = {
   id: string;
@@ -40,6 +51,7 @@ export type AppStore = {
   ultimoGuardado: Guardado | null;
   catalogOrigen?: string;
   catalogos: Catalogos;
+  catalogosGuardadosEn?: string | null;
 };
 
 const CATALOG_ORIGEN = "iza-csv-v1";
@@ -99,6 +111,7 @@ function seedStore(): AppStore {
   } catch (error) {
     console.error("catalog seed skipped", error);
   }
+  const archivos = catalogosDeArchivos();
   return {
     users: seedUsers(),
     sessions: [],
@@ -117,8 +130,30 @@ function seedStore(): AppStore {
     movimientos: [],
     cierres: [],
     ultimoGuardado: null,
-    catalogos: normalizarCatalogos(null),
+    catalogos: archivos?.catalogos ?? normalizarCatalogos(null),
+    catalogosGuardadosEn: archivos?.savedAt ?? null,
   };
+}
+
+function catalogosDeArchivos(): CatalogosPersistidos | null {
+  return mejorCatalogos(
+    leerCatalogosArchivo(archivoCatalogosLocal()),
+    leerCatalogosArchivo(archivoCatalogosEmpaquetado()),
+  );
+}
+
+function overlayCatalogosDeArchivo(parsed: AppStore) {
+  const archivos = catalogosDeArchivos();
+  if (!archivos) return;
+  if (!parsed.catalogos) {
+    aplicarCatalogosAlStore(parsed, archivos);
+    return;
+  }
+  const actual = parsed.catalogosGuardadosEn;
+  if (!actual) return;
+  if (Date.parse(archivos.savedAt) > Date.parse(actual)) {
+    aplicarCatalogosAlStore(parsed, archivos);
+  }
 }
 
 function loadRaw(): AppStore {
@@ -144,6 +179,7 @@ function loadRaw(): AppStore {
   const catalogosAntes = parsed.catalogos;
   parsed.catalogos = normalizarCatalogos(parsed.catalogos);
   if (!catalogosAntes) extra = true;
+  overlayCatalogosDeArchivo(parsed);
   parsed.users = (parsed.users ?? []).map((u) => {
     const modulos = completarModulos(u);
     const iguales =
@@ -232,6 +268,38 @@ function persistStore(store: AppStore) {
 function saveRaw(store: AppStore) {
   memoryStore = store;
   persistStore(store);
+}
+
+export async function hidratarCatalogos(
+  leerCookie: (name: string) => string | undefined,
+) {
+  const store = loadRaw();
+  const mejor = mejorCatalogos(
+    store.catalogosGuardadosEn
+      ? {
+          catalogos: store.catalogos,
+          savedAt: store.catalogosGuardadosEn,
+        }
+      : null,
+    catalogosDesdeCookies(leerCookie),
+    await leerCatalogosDuraderos(),
+  );
+  if (mejor) aplicarCatalogosAlStore(store, mejor);
+  memoryStore = store;
+  return store;
+}
+
+export async function guardarCatalogosEnStore(catalogos: Catalogos) {
+  const data: CatalogosPersistidos = {
+    catalogos,
+    savedAt: new Date().toISOString(),
+  };
+  const remoto = await guardarCatalogosDuraderos(data);
+  const store = withStore((s) => {
+    aplicarCatalogosAlStore(s, data);
+    return s;
+  });
+  return { store, data, remoto };
 }
 
 export function withStore<T>(fn: (store: AppStore) => T): T {

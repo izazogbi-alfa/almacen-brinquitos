@@ -45,18 +45,21 @@ export function catalogosVacios(): Catalogos {
 export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
   const base = catalogosVacios();
   if (!raw) return base;
-  const esquemas =
-    raw.esquemas?.length > 0
-      ? raw.esquemas.map((e) => ({
-          id: e.id?.trim() || `esq-${Date.now()}`,
-          nombre: e.nombre?.trim() || "Esquema",
-          tallas: Array.isArray(e.tallas) ? e.tallas.filter(Boolean) : [],
-        }))
-      : base.esquemas;
+  const esquemas = Array.isArray(raw.esquemas)
+    ? raw.esquemas.map((e) => ({
+        id: e.id?.trim() || `esq-${Date.now()}`,
+        nombre: e.nombre?.trim() || "Esquema",
+        tallas: Array.isArray(e.tallas) ? e.tallas.filter(Boolean) : [],
+      }))
+    : base.esquemas;
   return {
-    esquemas,
-    colores: raw.colores?.length ? raw.colores.filter(Boolean) : base.colores,
-    tallas: raw.tallas?.length ? raw.tallas.filter(Boolean) : base.tallas,
+    esquemas: esquemas.length > 0 ? esquemas : base.esquemas,
+    colores: Array.isArray(raw.colores)
+      ? raw.colores.filter(Boolean)
+      : base.colores,
+    tallas: Array.isArray(raw.tallas)
+      ? raw.tallas.filter(Boolean)
+      : base.tallas,
     especificaciones: Array.isArray(raw.especificaciones)
       ? raw.especificaciones.filter(Boolean)
       : [],

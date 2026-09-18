@@ -21,6 +21,7 @@ import type {
   AppStatus,
 } from "@/lib/types";
 import { catalogosVacios } from "@/lib/catalogos";
+import { puede } from "@/lib/modulos";
 
 type NuevaLinea = {
   productoId: string;
@@ -89,6 +90,39 @@ type InventoryValue = {
   guardarCatalogos: (catalogos: Partial<Catalogos>) => Promise<void>;
 };
 
+const LS_CATALOGOS = "brq_catalogos";
+
+function leerCatalogosLocal(): {
+  savedAt: string;
+  catalogos: Catalogos;
+} | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LS_CATALOGOS);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      savedAt?: string;
+      catalogos?: Catalogos;
+    };
+    if (!parsed?.catalogos || !parsed.savedAt) return null;
+    return { savedAt: parsed.savedAt, catalogos: parsed.catalogos };
+  } catch {
+    return null;
+  }
+}
+
+function escribirCatalogosLocal(savedAt: string, catalogos: Catalogos) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      LS_CATALOGOS,
+      JSON.stringify({ savedAt, catalogos }),
+    );
+  } catch {
+    /* quota */
+  }
+}
+
 const InventoryContext = createContext<InventoryValue | null>(null);
 
 async function parseError(res: Response) {
@@ -126,6 +160,41 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setRecepciones(data.recepciones);
     setMovimientos(data.movimientos ?? []);
     setCierres(data.cierres ?? []);
+    const serverAt =
+      typeof data.catalogosGuardadosEn === "string"
+        ? data.catalogosGuardadosEn
+        : "";
+    const local = leerCatalogosLocal();
+    if (
+      local &&
+      puede(data.user, "configuracion") &&
+      (!serverAt || Date.parse(local.savedAt) > Date.parse(serverAt))
+    ) {
+      const push = await fetch("/api/admin/catalogos", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(local.catalogos),
+      });
+      if (push.ok) {
+        const saved = (await push.json()) as {
+          catalogos?: Catalogos;
+          catalogosGuardadosEn?: string;
+        };
+        if (saved.catalogos) {
+          setCatalogos(saved.catalogos);
+          if (saved.catalogosGuardadosEn) {
+            escribirCatalogosLocal(saved.catalogosGuardadosEn, saved.catalogos);
+          }
+        }
+      }
+    } else if (
+      data.catalogos &&
+      serverAt &&
+      Date.parse(serverAt) > 0
+    ) {
+      escribirCatalogosLocal(serverAt, data.catalogos);
+    }
   }, [pathname, router]);
 
   useEffect(() => {
@@ -275,6 +344,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(siguiente),
       });
       if (!res.ok) throw new Error(await parseError(res));
+      const saved = (await res.json()) as {
+        catalogos?: Catalogos;
+        catalogosGuardadosEn?: string;
+      };
+      if (saved.catalogos) {
+        setCatalogos(saved.catalogos);
+        if (saved.catalogosGuardadosEn) {
+          escribirCatalogosLocal(saved.catalogosGuardadosEn, saved.catalogos);
+        }
+      }
       await recargar();
     },
     [recargar],

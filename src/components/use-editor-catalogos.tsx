@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { EmptyView } from "@/components/status-views";
 import { useInventory } from "@/lib/inventory-context";
@@ -21,13 +21,20 @@ export function useEditorCatalogos() {
   const [draft, setDraft] = useState<Catalogos>(catalogos);
   const [guardando, setGuardando] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (guardando) return;
+    setDraft(catalogos);
+  }, [catalogos, guardando]);
+
   async function guardarBloque(clave: string, payload: Partial<Catalogos>) {
     setGuardando(clave);
     try {
       await guardarCatalogos(payload);
       toast.success("Guardado");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error");
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo guardar las listas.",
+      );
     } finally {
       setGuardando(null);
     }

@@ -1,6 +1,9 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exigirUsuario, jsonUsuario } from "@/server/auth";
-import { readStore } from "@/server/store";
+import { hidratarCatalogos } from "@/server/store";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const { user, error } = await exigirUsuario();
@@ -10,7 +13,8 @@ export async function GET() {
       NextResponse.json({ error: "Inicia sesión para continuar." }, { status: 401 })
     );
   }
-  const store = readStore();
+  const jar = await cookies();
+  const store = await hidratarCatalogos((name) => jar.get(name)?.value);
   return NextResponse.json({
     user: jsonUsuario(user),
     productos: store.productos,
@@ -20,5 +24,6 @@ export async function GET() {
     cierres: store.cierres.slice(0, 40),
     ultimoGuardado: store.ultimoGuardado,
     catalogos: store.catalogos,
+    catalogosGuardadosEn: store.catalogosGuardadosEn ?? null,
   });
 }
