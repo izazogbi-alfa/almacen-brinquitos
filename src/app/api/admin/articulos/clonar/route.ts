@@ -70,9 +70,14 @@ export async function POST(request: Request) {
   try {
     const actualizados = withStore((store) => {
       const catalogos = normalizarCatalogos(store.catalogos);
-      const esquemaId =
-        catalogos.esquemas.find((e) => e.id === body?.esquemaConteo?.trim())
-          ?.id ?? catalogos.esquemas[0]?.id ?? "accesorio";
+      const esquemaId = catalogos.esquemas.find(
+        (e) => e.id === body?.esquemaConteo?.trim(),
+      )?.id;
+      if (!esquemaId) {
+        throw new Error(
+          "Elige el esquema que mejor le queda. Ármalo en Configuración si aún no está.",
+        );
+      }
       const opcionesTalla = opcionesTallaArticulo(catalogos, esquemaId);
       const colores = filtrarEnCatalogo(catalogos.colores, body?.colores);
       const tallas = filtrarEnCatalogo(opcionesTalla, body?.tallas);

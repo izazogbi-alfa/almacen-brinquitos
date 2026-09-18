@@ -118,28 +118,27 @@ export function CapturaArticulo({
   const esquemaActivo = mostrado
     ? esquemaPorId(catalogos, mostrado.esquemaConteo)
     : undefined;
+  const sinEsquemaArticulo = Boolean(mostrado && !esquemaActivo);
   const colores = mostrado
     ? coloresDeCaptura(mostrado, catalogos)
     : catalogos.colores.length
       ? catalogos.colores
       : ["Único"];
-  const encabezados = mostrado
+  const encabezados = mostrado && esquemaActivo
     ? tallasDeCaptura(mostrado, catalogos, mostrado.esquemaConteo)
-    : (esquemaActivo?.tallas ?? []);
+    : [];
   const specsCaptura = mostrado
     ? especificacionesDeCaptura(mostrado, catalogos)
     : catalogos.especificaciones;
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
-  const listasListas =
-    catalogos.esquemas.length > 0 && colores.length > 0;
+  const listasListas = colores.length > 0;
 
   function preparar(producto: Producto, sucId = sucursalId) {
-    const esq =
-      esquemaPorId(catalogos, producto.esquemaConteo)?.id ??
-      catalogos.esquemas[0]?.id ??
-      "";
-    const heads = tallasDeCaptura(producto, catalogos, esq);
+    const esq = esquemaPorId(catalogos, producto.esquemaConteo);
+    const heads = esq
+      ? tallasDeCaptura(producto, catalogos, esq.id)
+      : [];
     const paleta = coloresDeCaptura(producto, catalogos);
     const c0 = paleta[0] ?? "Único";
     const t0 = heads[0] ?? "";
@@ -337,17 +336,22 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Se usa el esquema guardado en la ficha (el mismo en existencias, pedidos y recepción). Elige un color, luego las tallas y cantidades. La tabla crece: clave arriba, colores en filas, tallas en columnas."
-            />
-          ) : !listasListas ? (
-            <EmptyView
-              titulo="Faltan listas"
-              detalle="Iza debe armar esquema y colores en Configuración. Aquí solo se elige, no se crean."
+              detalle="Si el artículo ya tiene esquema (Artículos → Agregar esquemas), elige un color, luego las tallas y cantidades. La tabla crece: clave arriba, colores en filas, tallas en columnas."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
               titulo="No hay coincidencias"
               detalle={`Nada con “${consulta}”.`}
+            />
+          ) : mostrado && (unico || activo) && sinEsquemaArticulo ? (
+            <EmptyView
+              titulo="Este artículo no tiene esquema"
+              detalle={`${mostrado.sku} ${mostrado.nombre} todavía no tiene esquema de conteo. Iza debe ir a Artículos, abrir la ficha y pulsar Agregar esquemas (después de armar los esquemas en Configuración → Listas de captura). No se usa un esquema de fábrica.`}
+            />
+          ) : !listasListas ? (
+            <EmptyView
+              titulo="Faltan listas"
+              detalle="Iza debe armar colores en Configuración. Aquí solo se elige, no se crean."
             />
           ) : mostrado && (unico || activo) ? (
             <Card className={verde ? "border-emerald-700/40" : undefined}>

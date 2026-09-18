@@ -53,6 +53,7 @@ export function tallasDeCaptura(
   esquemaId?: string | null,
 ) {
   const id = esquemaId || producto.esquemaConteo;
+  if (!esquemaPorId(catalogos, id)) return [];
   if (
     producto.tallas?.length &&
     (!esquemaId || esquemaId === producto.esquemaConteo)

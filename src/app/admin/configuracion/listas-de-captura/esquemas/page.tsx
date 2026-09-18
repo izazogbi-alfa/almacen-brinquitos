@@ -26,7 +26,7 @@ function PaginaEsquemas() {
     <div className="space-y-4">
       <CabeceraConfiguracion
         titulo="Esquemas de conteo"
-        descripcion="Cómo se cuenta: niño, letra, accesorio u otro que tú armes. Cada bloque se guarda con su botón Guardar."
+        descripcion="Tú armas los esquemas. No hay listas de fábrica (niño 0–60, letra, accesorio). Cada bloque se guarda con su botón Guardar."
       />
       <section className="space-y-3 rounded-xl border p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -52,16 +52,23 @@ function PaginaEsquemas() {
             Esquema
           </Button>
         </div>
-        <ListaOrdenable
-          items={draft.esquemas}
-          getKey={(e) => e.id}
-          etiqueta={(e) => e.nombre}
-          onReorder={setEsquemas}
-        />
+        {draft.esquemas.length === 0 ? (
+          <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+            Aún no hay esquemas. Pulsa Esquema, ponle nombre y tallas, y
+            Guardar. Luego asígnalos en Artículos → Agregar esquemas.
+          </p>
+        ) : (
+          <ListaOrdenable
+            items={draft.esquemas}
+            getKey={(e) => e.id}
+            etiqueta={(e) => e.nombre}
+            onReorder={setEsquemas}
+          />
+        )}
         <Button
           type="button"
           className="h-12 w-full"
-          disabled={guardando === "esquemas-orden"}
+          disabled={guardando === "esquemas-orden" || draft.esquemas.length === 0}
           onClick={() =>
             void guardarBloque("esquemas-orden", { esquemas: draft.esquemas })
           }
@@ -73,7 +80,7 @@ function PaginaEsquemas() {
             <EditorEsquema
               key={e.id}
               esquema={e}
-              sePuedeEliminar={draft.esquemas.length > 1}
+              sePuedeEliminar
               guardando={guardando === `esquema-${e.id}`}
               onChange={(sig) =>
                 setEsquemas(draft.esquemas.map((x, j) => (j === i ? sig : x)))

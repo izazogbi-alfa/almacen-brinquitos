@@ -36,9 +36,6 @@ export async function POST(request: Request) {
             : parseLista(String(e.tallas ?? "")),
         }))
       : base.esquemas;
-    if (esquemas.length === 0) {
-      throw new Error("Deja al menos un esquema de conteo.");
-    }
     const ids = new Set<string>();
     for (const e of esquemas) {
       if (ids.has(e.id)) throw new Error("Hay esquemas con el mismo id.");

@@ -149,7 +149,9 @@ export function EditorEsquema({
         Ordénalas arrastrando las fichas.
       </p>
       {esquema.tallas.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sin tallas (accesorio).</p>
+        <p className="text-sm text-muted-foreground">
+          Sin tallas: se cuenta solo con color y cantidad.
+        </p>
       ) : (
         <ListaOrdenable
           items={esquema.tallas}

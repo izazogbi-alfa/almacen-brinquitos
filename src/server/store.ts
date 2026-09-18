@@ -13,7 +13,10 @@ import type {
   Recepcion,
   RolUsuario,
 } from "@/lib/types";
-import { normalizarCatalogos } from "@/lib/catalogos";
+import {
+  normalizarCatalogos,
+  sanitizarArticuloSinFabrica,
+} from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
 import { completarModulos } from "@/lib/modulos";
@@ -105,13 +108,16 @@ function seedUsers(): UsuarioInterno[] {
 }
 
 function seedStore(): AppStore {
+  const archivos = catalogosDeArchivos();
+  const catalogos = normalizarCatalogos(archivos?.catalogos ?? null);
   let productos: Producto[] = [];
   try {
-    productos = leerCatalogoIza();
+    productos = leerCatalogoIza().map((p) =>
+      sanitizarArticuloSinFabrica(p, catalogos),
+    );
   } catch (error) {
     console.error("catalog seed skipped", error);
   }
-  const archivos = catalogosDeArchivos();
   return {
     users: seedUsers(),
     sessions: [],
@@ -130,7 +136,7 @@ function seedStore(): AppStore {
     movimientos: [],
     cierres: [],
     ultimoGuardado: null,
-    catalogos: archivos?.catalogos ?? normalizarCatalogos(null),
+    catalogos,
     catalogosGuardadosEn: archivos?.savedAt ?? null,
   };
 }
@@ -179,6 +185,13 @@ function loadRaw(): AppStore {
   const catalogosAntes = parsed.catalogos;
   parsed.catalogos = normalizarCatalogos(parsed.catalogos);
   if (!catalogosAntes) extra = true;
+  if (
+    catalogosAntes &&
+    JSON.stringify(catalogosAntes.esquemas ?? null) !==
+      JSON.stringify(parsed.catalogos.esquemas)
+  ) {
+    extra = true;
+  }
   overlayCatalogosDeArchivo(parsed);
   parsed.users = (parsed.users ?? []).map((u) => {
     const modulos = completarModulos(u);
@@ -204,7 +217,9 @@ function loadRaw(): AppStore {
   }
   const yaImportado = parsed.catalogOrigen === CATALOG_ORIGEN;
   if (!yaImportado) {
-    parsed.productos = catalogo;
+    parsed.productos = catalogo.map((c) =>
+      sanitizarArticuloSinFabrica(c, parsed.catalogos),
+    );
     parsed.pedidos = [];
     parsed.recepciones = [];
     parsed.movimientos = [];
@@ -219,22 +234,25 @@ function loadRaw(): AppStore {
       const prev = prevPorSku.get(c.sku.toUpperCase());
       if (!prev) {
         extra = true;
-        return c;
+        return sanitizarArticuloSinFabrica(c, parsed.catalogos);
       }
-      return {
-        ...c,
-        id: prev.id,
-        esquemaConteo: prev.esquemaConteo ?? c.esquemaConteo,
-        tallas: prev.tallas?.length ? prev.tallas : c.tallas,
-        colores: prev.colores?.length ? prev.colores : c.colores,
-        especificaciones: prev.especificaciones?.length
-          ? prev.especificaciones
-          : c.especificaciones,
-        existenciasSucursal: prev.existenciasSucursal ?? [],
-        existencia: prev.existencia,
-        variantes: prev.variantes,
-        foto: prev.foto || c.foto,
-      };
+      return sanitizarArticuloSinFabrica(
+        {
+          ...c,
+          id: prev.id,
+          esquemaConteo: prev.esquemaConteo,
+          tallas: prev.tallas?.length ? prev.tallas : undefined,
+          colores: prev.colores?.length ? prev.colores : c.colores,
+          especificaciones: prev.especificaciones?.length
+            ? prev.especificaciones
+            : c.especificaciones,
+          existenciasSucursal: prev.existenciasSucursal ?? [],
+          existencia: prev.existencia,
+          variantes: prev.variantes,
+          foto: prev.foto || c.foto,
+        },
+        parsed.catalogos,
+      );
     });
   }
   let fotos: Record<string, string> = {};
@@ -245,11 +263,18 @@ function loadRaw(): AppStore {
   }
   parsed.productos = (parsed.productos ?? []).map((p) => {
     const foto = p.foto || fotos[p.sku] || fotos[p.sku.toUpperCase()];
-    if (foto && p.foto !== foto) {
+    const limpio = sanitizarArticuloSinFabrica(
+      foto && p.foto !== foto ? { ...p, foto } : p,
+      parsed.catalogos,
+    );
+    if (
+      limpio.esquemaConteo !== p.esquemaConteo ||
+      (limpio.tallas?.length ?? 0) !== (p.tallas?.length ?? 0) ||
+      (foto && p.foto !== foto)
+    ) {
       extra = true;
-      return { ...p, foto };
     }
-    return p;
+    return limpio;
   });
   if (extra) saveRaw(parsed);
   memoryStore = parsed;
@@ -285,6 +310,10 @@ export async function hidratarCatalogos(
     await leerCatalogosDuraderos(),
   );
   if (mejor) aplicarCatalogosAlStore(store, mejor);
+  store.catalogos = normalizarCatalogos(store.catalogos);
+  store.productos = store.productos.map((p) =>
+    sanitizarArticuloSinFabrica(p, store.catalogos),
+  );
   memoryStore = store;
   return store;
 }

@@ -1,29 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { EsquemaConteo, Producto } from "@/lib/types";
+import type { Producto } from "@/lib/types";
 
 const META =
   /^(clave|existencia|departamento|precio|categor[íi]a|cat[áa]logo)\b/i;
-
-export function esquemaPorNombre(nombre: string): EsquemaConteo {
-  const u = nombre.toUpperCase();
-  if (
-    /EXCHICO|CHICO|MEDIANO|GRANDE|EXGRANDE|\bADULTO\b|CH-MED|MED-GDE|CH\/M\/G|\bCH\b.+\bGDE\b/.test(
-      u,
-    )
-  ) {
-    return "letra";
-  }
-  if (/\d+\s*AL\s*\d+|1-2-3/.test(u)) return "nino";
-  if (
-    /CAMISA|PANTAL|FALDA|VESTIDO|BLUSA|CHALECO|ROP[OÓ]N|TRAJE|SHORT|SUDADERA|PLAYER|POLO|SU[EÉ]TER|ABRIGO|CHAMARRA|MAMEL|BODY|CONJUNTO|OVEROL|SACO|FILIPINA|ENTERIZO|BATA|LEOTARDO|CALCET|CALZA|ZAPAT|FAJA|PETO|MALLA/.test(
-      u,
-    )
-  ) {
-    return "nino";
-  }
-  return "accesorio";
-}
 
 function celdasUtiles(line: string): string[] {
   return line
@@ -56,7 +36,6 @@ export function parseCatalogoCsv(text: string): Producto[] {
     }
     if (!nombre) continue;
 
-    const esquema = esquemaPorNombre(nombre);
     productos.push({
       id: `p-${clave.replace(/[^a-zA-Z0-9_-]/g, "_")}`,
       sku: clave,
@@ -66,7 +45,6 @@ export function parseCatalogoCsv(text: string): Producto[] {
       existencia: 0,
       minimo: 0,
       ubicacion: "",
-      esquemaConteo: esquema,
       colores: ["Único"],
       existenciasSucursal: [],
     });

@@ -63,7 +63,7 @@ function parsePersistido(raw: unknown): CatalogosPersistidos | null {
     esquemas?: Catalogos["esquemas"];
   };
   const catalogos = normalizarCatalogos(
-    obj.catalogos ?? (obj.esquemas ? (obj as Catalogos) : null),
+    obj.catalogos ?? (obj.esquemas ? (obj as Catalogos) : undefined),
   );
   const savedAt =
     typeof obj.savedAt === "string" && obj.savedAt ? obj.savedAt : "";
@@ -422,7 +422,7 @@ export function aplicarCatalogosAlStore(
   store: { catalogos: Catalogos; catalogosGuardadosEn?: string | null },
   data: CatalogosPersistidos,
 ) {
-  store.catalogos = data.catalogos;
+  store.catalogos = normalizarCatalogos(data.catalogos);
   store.catalogosGuardadosEn = data.savedAt;
 }
 

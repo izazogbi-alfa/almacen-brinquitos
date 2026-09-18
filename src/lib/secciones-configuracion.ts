@@ -14,7 +14,7 @@ export const LISTAS_CAPTURA = [
     slug: "esquemas",
     href: "/admin/configuracion/listas-de-captura/esquemas",
     titulo: "Esquemas de conteo",
-    detalle: "Cómo se cuenta: niño, letra, accesorio u otro.",
+    detalle: "Tú los armas. Empiezan vacíos, sin niño 0–60 de fábrica.",
   },
   {
     slug: "colores",

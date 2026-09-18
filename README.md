@@ -24,7 +24,7 @@ La barra sigue diciendo **Usuarios**. Esa pantalla es un hub con botones grandes
 6. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
 7. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
 
-Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay uno: **Listas de captura**. Ahí están **Esquemas de conteo**, **Colores**, **Tallas** y **Especificaciones**. **Volver** en un editor regresa a Listas de captura; **Volver** ahí regresa a Configuración. Más módulos (sucursales, PDF) se suman después como botones hermanos en Configuración, no mezclados con esas cuatro listas (`src/lib/secciones-configuracion.ts`). Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. Si Guardar funciona, esas listas se quedan al recargar, al volver a entrar o en otra instancia del servidor. En el teléfono/computadora se guardan también de forma local. En un servidor local se escriben en `data/catalogos.json`. En Vercel la carpeta de la app es de solo lectura (el mismo tipo de fallo que el login 500): no se usa un `store.json` en memoria como si fuera permanente, y si el guardado no se pudo persistir verás un error en español, no un “Guardado” falso. El orden se cambia arrastrando fichas (con el nombre) dentro de un recuadro. Quitar un esquema, un color, una talla o una especificación pide la contraseña de la sesión y un **Sí / No**. En **Artículos**, la ficha tiene **Agregar esquemas**: ahí se elige el esquema de Configuración (el mismo para existencias, pedidos y recepción). **Clonar a otros artículos** copia esa asignación (no Clave ni nombre).
+Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay uno: **Listas de captura**. Ahí están **Esquemas de conteo**, **Colores**, **Tallas** y **Especificaciones**. Los **esquemas empiezan vacíos**: no hay “Ropa de niño 0–60”, talla de letra ni accesorio de fábrica. Ella los crea. Colores y tallas de paleta sí pueden venir con una lista de apoyo; no se restauran esquemas de fábrica si ella los dejó vacíos o guardó los suyos. **Volver** en un editor regresa a Listas de captura; **Volver** ahí regresa a Configuración. Cada esquema, y las secciones de colores, tallas y especificaciones, tiene su propio **Guardar**. En **Artículos**, el catálogo **no trae esquema**. La ficha tiene **Agregar esquemas**: ahí se elige el que ella armó (el mismo para existencias, pedidos y recepción). **Clonar a otros artículos** copia esa asignación (no Clave ni nombre).
 
 ## Cómo probar
 
@@ -36,7 +36,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay u
 
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `XC1092`, `camisa`).
-3. El esquema ya viene de la ficha. Elige color, talla y cantidad de esas listas.
+3. Si el artículo **no tiene esquema**, verás un aviso: hay que asignarlo en Artículos. Si ya lo tiene, elige color, talla y cantidad de esas listas.
 4. Confirma el color. Abajo crece un **bloque** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas** (de arriba hacia abajo), **tallas en columnas** en el **mismo orden del esquema** (Configuración → Listas de captura). La misma prenda con otro color se suma al mismo bloque.
 5. **Descargar PDF de esta tabla** (mismo formato). En **Hoy**, **Descargar PDF del día**.
 

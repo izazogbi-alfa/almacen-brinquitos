@@ -29,14 +29,11 @@ export function sucursalPorId(id: string) {
 }
 
 export function esquemaDe(producto: Producto) {
-  return producto.esquemaConteo ?? "accesorio";
+  return producto.esquemaConteo;
 }
 
 export function tallasProducto(producto: Producto): string[] {
   if (producto.tallas?.length) return producto.tallas;
-  const esquema = esquemaDe(producto);
-  if (esquema === "nino") return [...TALLAS_NINO];
-  if (esquema === "letra") return [...TALLAS_LETRA];
   return [];
 }
 

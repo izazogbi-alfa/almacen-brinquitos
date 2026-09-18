@@ -138,7 +138,11 @@ export function descargarPdfBloques(
   }
   y += 3;
   if (bloques.length === 0) {
-    doc.text(plano("Sin lineas en la tabla."), MARGEN, y);
+    doc.text(
+      plano("Sin lineas en la tabla. Un articulo sin esquema no usa tallas de fabrica."),
+      MARGEN,
+      y,
+    );
   } else {
     for (const bloque of bloques) {
       y = dibujarBloque(doc, bloque, y);
