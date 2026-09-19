@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsyncGate, EmptyView } from "@/components/status-views";
+import { EstadoSesion, useCierrePorInactividad } from "@/components/estado-sesion";
 import { etiquetaEstado, formatoFecha, formatoMoneda } from "@/lib/format";
 import { progresoRecepcion, totalPedido } from "@/lib/mock-data";
 import { useInventory } from "@/lib/inventory-context";
@@ -26,6 +27,7 @@ function PedidosContent() {
   const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["value"]>(
     "todos",
   );
+  useCierrePorInactividad("pedidos");
 
   const lista = useMemo(() => {
     return pedidos.filter((p) => {
@@ -57,6 +59,7 @@ function PedidosContent() {
           <p className="text-sm text-muted-foreground">
             Captura en tabla. Solo quien administra autoriza.
           </p>
+          <EstadoSesion modulo="pedidos" />
         </div>
         {puede(user, "pedidos") ? (
         <Link

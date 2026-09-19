@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { fechaClave } from "@/lib/format";
 import { pendienteDeLinea } from "@/lib/mock-data";
 import {
   ajustarCantidad,
@@ -16,6 +15,12 @@ import {
   siguienteFolio,
   withStore,
 } from "@/server/store";
+import {
+  aplicarCierresPorInactividad,
+  cerrarSesionModulo,
+  tocarSesionCaptura,
+} from "@/lib/sesion-store";
+import { esModuloSesion } from "@/lib/sesion-captura";
 
 function normalizarCeldas(
   body: {
@@ -89,6 +94,7 @@ export async function POST(request: Request) {
       sucursalNombre?: string;
     }[];
     pedidoId?: string;
+    modulo?: string;
   } | null;
 
   const accion = body?.accion;
@@ -99,43 +105,32 @@ export async function POST(request: Request) {
   try {
     const mods = modulosDe(user);
     const result = withStore((store) => {
-      if (accion === "retirar") {
-        if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
-        const producto = store.productos.find((p) => p.id === body?.productoId);
-        if (!producto) throw new Error("Producto no encontrado.");
-        const sucursalId = body?.sucursalId?.trim();
-        const sucursal = sucursalId ? sucursalPorId(sucursalId) : undefined;
-        if (!sucursal) {
-          throw new Error("Elige la sucursal.");
+      aplicarCierresPorInactividad(store);
+
+      if (accion === "latido-sesion") {
+        if (!esModuloSesion(body?.modulo)) {
+          throw new Error("Falta el módulo de la sesión.");
         }
-        const lista = normalizarCeldas(body, producto, "delta").filter(
-          (c) => c.cantidad > 0,
-        );
-        if (lista.length === 0) throw new Error("Indica al menos una pieza a sacar.");
-        for (const celda of lista) {
-          const { antes, despues } = ajustarCantidad(
-            producto,
-            sucursal.id,
-            celda.talla,
-            celda.color,
-            -celda.cantidad,
-          );
-          agregarMovimiento(store, user, {
-            tipo: "retiro",
-            productoId: producto.id,
-            productoNombre: producto.nombre,
-            cantidad: celda.cantidad,
-            existenciaAntes: antes,
-            existenciaDespues: despues,
-            talla: celda.talla || undefined,
-            color: celda.color,
-            sucursalId: sucursal.id,
-            sucursalNombre: sucursal.nombre,
-            nota: `Salida ${sucursal.nombre}${celda.talla ? ` · ${celda.talla}` : ""} · ${celda.color}`,
-          });
+        if (body.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
         }
+        if (body.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (body.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = tocarSesionCaptura(store, user, body.modulo);
         marcarGuardado(store, user);
-        return { ok: true };
+        return { sesion };
+      }
+
+      if (accion === "cerrar-sesion") {
+        if (!esModuloSesion(body?.modulo)) {
+          throw new Error("Falta el módulo de la sesión.");
+        }
+        const sesion = cerrarSesionModulo(store, user, body.modulo);
+        return { sesion, aviso: sesion ? "Sesión cerrada por inactividad" : null };
       }
 
       if (accion === "contar") {
@@ -149,6 +144,7 @@ export async function POST(request: Request) {
         }
         const lista = normalizarCeldas(body, producto, "contar");
         if (lista.length === 0) throw new Error("No hay celdas para guardar.");
+        const sesion = tocarSesionCaptura(store, user, "existencias");
         for (const celda of lista) {
           const antes = cantidadEn(producto, sucursal.id, celda.talla, celda.color);
           fijarConteo(
@@ -169,8 +165,10 @@ export async function POST(request: Request) {
             color: celda.color,
             sucursalId: sucursal.id,
             sucursalNombre: sucursal.nombre,
+            sesionId: sesion.id,
             nota: `Conteo ${sucursal.nombre}${celda.talla ? ` · ${celda.talla}` : ""} · ${celda.color}`,
           });
+          sesion.conteos += 1;
         }
         marcarGuardado(store, user);
         return { ok: true };
@@ -189,6 +187,7 @@ export async function POST(request: Request) {
           (c) => c.cantidad > 0,
         );
         if (lista.length === 0) throw new Error("Indica al menos una pieza de entrada.");
+        const sesion = tocarSesionCaptura(store, user, "recepcion");
         for (const celda of lista) {
           const { antes, despues } = ajustarCantidad(
             producto,
@@ -208,38 +207,13 @@ export async function POST(request: Request) {
             color: celda.color,
             sucursalId: sucursal.id,
             sucursalNombre: sucursal.nombre,
+            sesionId: sesion.id,
             nota: `Entrada ${sucursal.nombre}${celda.talla ? ` · ${celda.talla}` : ""} · ${celda.color}`,
           });
+          sesion.entradas += 1;
         }
         marcarGuardado(store, user);
         return { ok: true };
-      }
-
-      if (accion === "cerrar-dia") {
-        if (!mods.existencias) throw new Error("No tienes módulo de existencias.");
-        const fecha = fechaClave();
-        const delDia = store.movimientos.filter(
-          (m) =>
-            fechaClave(new Date(m.timestamp)) === fecha &&
-            (m.tipo === "retiro" || m.tipo === "conteo"),
-        );
-        const cierre = {
-          id: `cj-${Date.now()}`,
-          fecha,
-          timestamp: new Date().toISOString(),
-          userId: user.id,
-          userName: user.nombre,
-          retiros: delDia.filter((m) => m.tipo === "retiro").length,
-          conteos: delDia.filter((m) => m.tipo === "conteo").length,
-        };
-        store.cierres.unshift(cierre);
-        agregarMovimiento(store, user, {
-          tipo: "cierre" as const,
-          cantidad: delDia.length,
-          nota: "Cierre del día de existencias",
-        });
-        marcarGuardado(store, user);
-        return { cierre };
       }
 
       if (accion === "pedido") {
@@ -271,10 +245,13 @@ export async function POST(request: Request) {
           userName: user.nombre,
         };
         store.pedidos.unshift(pedido);
+        const sesion = tocarSesionCaptura(store, user, "pedidos");
+        sesion.pedidos += 1;
         agregarMovimiento(store, user, {
           tipo: "pedido",
           cantidad: lineas.reduce((a, l) => a + l.cantidad, 0),
           pedidoId: pedido.id,
+          sesionId: sesion.id,
           nota: `Pedido ${pedido.folio} (por autorizar)`,
         });
         marcarGuardado(store, user);
@@ -312,6 +289,7 @@ export async function POST(request: Request) {
         if (aplicadas.length === 0) {
           throw new Error("Indica al menos una cantidad a recibir.");
         }
+        const sesion = tocarSesionCaptura(store, user, "recepcion");
         for (const linea of aplicadas) {
           const original = pedido.lineas.find(
             (l) => l.productoId === linea.productoId,
@@ -336,8 +314,10 @@ export async function POST(request: Request) {
             existenciaAntes: antes,
             existenciaDespues: producto.existencia,
             pedidoId: pedido.id,
+            sesionId: sesion.id,
             nota: `Recepción ${pedido.folio}`,
           });
+          sesion.entradas += 1;
         }
         pedido.lineas = pedido.lineas.map((linea) => {
           const extra =

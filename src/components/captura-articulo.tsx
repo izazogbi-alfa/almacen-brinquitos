@@ -40,7 +40,7 @@ import {
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export type ModoCaptura = "contar" | "sacar" | "entrada" | "pedido";
+export type ModoCaptura = "contar" | "entrada" | "pedido";
 
 export type CeldaCaptura = {
   talla: string;
@@ -714,11 +714,9 @@ export function CapturaArticulo({
                   <Label htmlFor="cantidad-captura">
                     {modo === "contar"
                       ? "Piezas contadas"
-                      : modo === "sacar"
-                        ? "Piezas a sacar"
-                        : modo === "entrada"
-                          ? "Piezas de entrada"
-                          : "Cantidad"}
+                      : modo === "entrada"
+                        ? "Piezas de entrada"
+                        : "Cantidad"}
                   </Label>
                   <div className="flex items-center gap-2">
                     <Button

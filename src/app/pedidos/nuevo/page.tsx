@@ -13,14 +13,16 @@ import {
 } from "@/components/captura-articulo";
 import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
+import { EstadoSesion, useCierrePorInactividad } from "@/components/estado-sesion";
 
 function NuevoPedidoContent() {
   const router = useRouter();
-  const { productos, user, crearPedido } = useInventory();
+  const { productos, user, crearPedido, latidoSesion } = useInventory();
   const [proveedor, setProveedor] = useState("Proveedor Brinquitos");
   const [notas, setNotas] = useState("");
   const [tabla, setTabla] = useState<LineaTabla[]>([]);
   const [enviando, setEnviando] = useState(false);
+  useCierrePorInactividad("pedidos");
 
   if (!puede(user, "pedidos")) {
     return (
@@ -71,8 +73,9 @@ function NuevoPedidoContent() {
         </h2>
         <p className="text-sm text-muted-foreground">
           Marca varias prendas del mismo esquema. Color, luego tallas. Un
-          pedido y un PDF con todas. Iza autoriza.
+          pedido y un PDF con todas.           Iza autoriza.
         </p>
+        <EstadoSesion modulo="pedidos" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="proveedor">Proveedor</Label>
@@ -109,6 +112,7 @@ function NuevoPedidoContent() {
           </Button>
         }
         onCommit={() => {
+          void latidoSesion("pedidos");
           toast.success("Color agregado al pedido");
         }}
       />

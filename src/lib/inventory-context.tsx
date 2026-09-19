@@ -12,7 +12,6 @@ import {
 } from "react";
 import type {
   Catalogos,
-  CierreDia,
   Movimiento,
   Pedido,
   Producto,
@@ -20,6 +19,7 @@ import type {
   UsuarioPublico,
   AppStatus,
 } from "@/lib/types";
+import type { ModuloSesion, SesionCaptura } from "@/lib/sesion-captura";
 import { catalogosVacios } from "@/lib/catalogos";
 import { puede } from "@/lib/modulos";
 import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
@@ -44,14 +44,9 @@ type InventoryValue = {
   pedidos: Pedido[];
   recepciones: Recepcion[];
   movimientos: Movimiento[];
-  cierres: CierreDia[];
+  sesiones: SesionCaptura[];
   retry: () => void;
   logout: () => Promise<void>;
-  retirar: (
-    productoId: string,
-    sucursalId: string,
-    celdas: CeldaAccion[],
-  ) => Promise<void>;
   contar: (
     productoId: string,
     sucursalId: string,
@@ -62,7 +57,10 @@ type InventoryValue = {
     sucursalId: string,
     celdas: CeldaAccion[],
   ) => Promise<void>;
-  cerrarDia: () => Promise<void>;
+  latidoSesion: (modulo: ModuloSesion) => Promise<void>;
+  cerrarSesionInactividad: (modulo: ModuloSesion) => Promise<{
+    aviso: string | null;
+  }>;
   crearPedido: (input: {
     proveedor: string;
     notas: string;
@@ -186,7 +184,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [recepciones, setRecepciones] = useState<Recepcion[]>([]);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-  const [cierres, setCierres] = useState<CierreDia[]>([]);
+  const [sesiones, setSesiones] = useState<SesionCaptura[]>([]);
 
   const recargar = useCallback(async () => {
     const res = await fetch("/api/state", { credentials: "include" });
@@ -203,7 +201,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setPedidos(data.pedidos);
     setRecepciones(data.recepciones);
     setMovimientos(data.movimientos ?? []);
-    setCierres(data.cierres ?? []);
+    setSesiones(data.sesiones ?? []);
     pedirRespaldoDiarioSiAdmin(data.user?.rol);
     const serverAt =
       typeof data.catalogosGuardadosEn === "string"
@@ -344,13 +342,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [recargar],
   );
 
-  const retirar = useCallback(
-    async (productoId: string, sucursalId: string, celdas: CeldaAccion[]) => {
-      await postAccion({ accion: "retirar", productoId, sucursalId, celdas });
-    },
-    [postAccion],
-  );
-
   const contar = useCallback(
     async (productoId: string, sucursalId: string, celdas: CeldaAccion[]) => {
       await postAccion({ accion: "contar", productoId, sucursalId, celdas });
@@ -365,9 +356,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [postAccion],
   );
 
-  const cerrarDia = useCallback(async () => {
-    await postAccion({ accion: "cerrar-dia" });
-  }, [postAccion]);
+  const latidoSesion = useCallback(
+    async (modulo: ModuloSesion) => {
+      await postAccion({ accion: "latido-sesion", modulo });
+    },
+    [postAccion],
+  );
+
+  const cerrarSesionInactividad = useCallback(
+    async (modulo: ModuloSesion) => {
+      const data = (await postAccion({
+        accion: "cerrar-sesion",
+        modulo,
+      })) as { aviso?: string | null };
+      return { aviso: data.aviso ?? null };
+    },
+    [postAccion],
+  );
 
   const crearPedido = useCallback(
     async (input: {
@@ -489,13 +494,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       pedidos,
       recepciones,
       movimientos,
-      cierres,
+      sesiones,
       retry,
       logout,
-      retirar,
       contar,
       entrada,
-      cerrarDia,
+      latidoSesion,
+      cerrarSesionInactividad,
       crearPedido,
       autorizarPedido,
       guardarArticulo,
@@ -510,13 +515,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       pedidos,
       recepciones,
       movimientos,
-      cierres,
+      sesiones,
       retry,
       logout,
-      retirar,
       contar,
       entrada,
-      cerrarDia,
+      latidoSesion,
+      cerrarSesionInactividad,
       crearPedido,
       autorizarPedido,
       guardarArticulo,

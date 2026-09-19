@@ -46,15 +46,17 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay d
 2. Busca Clave o nombre (ej. `Baccus`, `XC1092`).
 3. **Marca varias** que usen el **mismo esquema** (mismas tallas, ej. 1, 1X, 2–18, 34–42, 44–50). Si una se cuenta distinto, sale un aviso y no se suma. Las que no tienen esquema quedan apagadas: hay que asignarlo en Artículos (no se usa fábrica).
 4. **Capturar las elegidas**: toca un **color** (botón grande) → se abre el **teclado numérico** → escribe la cantidad (ej. 12) → **Enter** confirma ese color (igual que **Confirmar este color**). Luego toca el siguiente color. Si el esquema tiene tallas (orden del esquema), Enter confirma la cantidad de la **talla activa**; puedes cambiar talla o seguir color → cantidad → Enter. Sin talla: color + cantidad + Enter. Cambia de prenda con las fichas de arriba. Abajo crece un **bloque por prenda** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas**, **tallas en columnas** en el **mismo orden del esquema**.
-5. **Descargar PDF de esta tabla** junta todas las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF del día** (todos los movimientos del día). El PDF es **carta US horizontal**. Las cajas de talla van en **una sola fila** (8–33 mm; si hay muchas se encogen hasta 8 mm, sin segunda fila).
+5. **Contar** deja la cantidad en piso. Ya no hay **Sacar**: el stock no baja por una salida aparte.
+6. Mientras capturas, sale **Sesión abierta**. A los **10 minutos sin capturar** se cierra sola (quién y cuándo), **Hoy** y el PDF de esa ventana se congelan, y aparece *Sesión cerrada por inactividad*. Puedes entrar otra vez el mismo día y seguir contando: se abre una sesión nueva. No hay botón de *Cerrar el día*.
+7. **Descargar PDF de esta tabla** junta las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF de esta sesión**. El PDF es **carta US horizontal**. Las cajas de talla van en **una sola fila** (8–33 mm; si hay muchas se encogen hasta 8 mm, sin segunda fila).
 
 ## Recepción
 
-Misma captura y misma tabla (varias prendas del mismo esquema, un PDF), título **Entrada de mercancía**, color verde. El PDF de entradas del día usa el mismo bloque (carta horizontal, tallas en una fila).
+Misma captura y misma tabla (varias prendas del mismo esquema, un PDF), título **Entrada de mercancía**, color verde. El PDF es de **esta sesión** (se cierra sola a los 10 minutos sin capturar, igual que existencias). Carta horizontal, tallas en una fila.
 
 ## Pedidos
 
-Misma captura y misma tabla si el módulo está marcado: varias prendas del mismo esquema en **un** pedido y **un** PDF. Al guardar, el detalle y el PDF del folio agrupan por prenda (colores en filas, tallas en una fila, carta horizontal). Estado *Por autorizar* hasta que una administradora autoriza.
+Misma captura y misma tabla si el módulo está marcado: varias prendas del mismo esquema en **un** pedido y **un** PDF. Al guardar, el detalle y el PDF del folio agrupan por prenda (colores en filas, tallas en una fila, carta horizontal). Estado *Por autorizar* hasta que una administradora autoriza. La captura de pedido también usa sesión de 10 minutos sin actividad.
 
 ## Cómo correrlo
 

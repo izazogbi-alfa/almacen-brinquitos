@@ -4,7 +4,6 @@ import { pedidosIniciales, recepcionesIniciales } from "@/lib/mock-data";
 import { leerCatalogoIza, leerFotosCatalogo } from "@/server/parse-catalogo";
 import type {
   Catalogos,
-  CierreDia,
   Guardado,
   ModulosUsuario,
   Movimiento,
@@ -13,6 +12,8 @@ import type {
   Recepcion,
   RolUsuario,
 } from "@/lib/types";
+import type { SesionCaptura } from "@/lib/sesion-captura";
+import { migrarSesiones } from "@/lib/sesion-store";
 import {
   aplicarAsignaciones,
   extraerAsignaciones,
@@ -65,7 +66,7 @@ export type AppStore = {
   pedidos: Pedido[];
   recepciones: Recepcion[];
   movimientos: Movimiento[];
-  cierres: CierreDia[];
+  sesiones: SesionCaptura[];
   ultimoGuardado: Guardado | null;
   catalogOrigen?: string;
   catalogos: Catalogos;
@@ -150,7 +151,7 @@ function seedStore(): AppStore {
       userName: "Carga inicial",
     })),
     movimientos: [],
-    cierres: [],
+    sesiones: [],
     ultimoGuardado: null,
     catalogos,
     catalogosGuardadosEn: archivos?.savedAt ?? null,
@@ -218,9 +219,8 @@ function loadRaw(): AppStore {
     memoryStore = seeded;
     return seeded;
   }
-  if (!parsed.cierres) parsed.cierres = [];
   if (!parsed.movimientos) parsed.movimientos = [];
-  let extra = false;
+  let extra = migrarSesiones(parsed);
   const catalogosAntes = parsed.catalogos;
   parsed.catalogos = normalizarCatalogos(parsed.catalogos);
   if (!catalogosAntes) extra = true;
@@ -262,7 +262,7 @@ function loadRaw(): AppStore {
     parsed.pedidos = [];
     parsed.recepciones = [];
     parsed.movimientos = [];
-    parsed.cierres = [];
+    parsed.sesiones = [];
     parsed.catalogOrigen = CATALOG_ORIGEN;
     extra = true;
   } else if (catalogo.length) {

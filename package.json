@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:pdf-layout": "node --experimental-strip-types scripts/test-pdf-layout.ts",
     "test:pdf-page": "node --experimental-strip-types scripts/test-pdf-jspdf.ts",
+    "test:sesion": "node --experimental-strip-types scripts/test-sesion-inactividad.ts",
     "test:persist": "node --experimental-strip-types scripts/test-catalogos-persist.ts && node --experimental-strip-types scripts/test-asignaciones-persist.ts && node --experimental-strip-types scripts/test-respaldos.ts"
   },
   "dependencies": {
