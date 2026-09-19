@@ -6,7 +6,9 @@
     "dev": "next dev --hostname 0.0.0.0 --port 4317",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 4317",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:pdf-layout": "node --experimental-strip-types scripts/test-pdf-layout.ts",
+    "test:pdf-page": "node --experimental-strip-types scripts/test-pdf-jspdf.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
