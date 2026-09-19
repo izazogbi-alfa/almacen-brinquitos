@@ -134,6 +134,7 @@ function PaginaRespaldos() {
   useEffect(() => {
     if (user?.rol !== "admin") return;
     let cancelado = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de copias desde el API
     void cargar().catch((err) => {
       if (!cancelado) {
         setErrorLista(

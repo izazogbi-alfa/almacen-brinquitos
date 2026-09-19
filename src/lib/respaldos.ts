@@ -1,13 +1,25 @@
-import { extraerAsignaciones } from "@/lib/asignaciones-articulos";
-import { normalizarCatalogos } from "@/lib/catalogos";
-import type { Catalogos, Producto } from "@/lib/types";
+import { extraerAsignaciones } from "./asignaciones-articulos";
+import { normalizarCatalogos } from "./catalogos";
+import type { Catalogos, Producto } from "./types";
+import {
+  LIMITE_RESPALDOS,
+  recortarColeccion,
+  recortarPorOrigen,
+  yaHayAutomaticoDelDia,
+  type OrigenRespaldo,
+} from "./respaldos-tope";
 
-export const LIMITE_RESPALDOS = 10;
+export {
+  LIMITE_RESPALDOS,
+  recortarColeccion,
+  recortarPorOrigen,
+  yaHayAutomaticoDelDia,
+};
+export type { OrigenRespaldo };
+
 export const KIND_RESPALDO = "brinquitos-respaldo";
 export const VERSION_RESPALDO = 1;
 export const ZONA_DIA = "America/Mexico_City";
-
-export type OrigenRespaldo = "manual" | "automatico";
 
 export type ResumenRespaldo = {
   esquemas: number;
@@ -75,33 +87,6 @@ export function resumenDe(
     especificaciones: catalogos.especificaciones.length,
     articulos: Object.keys(asignaciones).length,
   };
-}
-
-export function recortarPorOrigen(
-  items: RespaldoCompleto[],
-  origen: OrigenRespaldo,
-  limite = LIMITE_RESPALDOS,
-): RespaldoCompleto[] {
-  const delOrigen = items
-    .filter((it) => it.origen === origen)
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-  const keep = new Set(delOrigen.slice(0, limite).map((it) => it.id));
-  return items.filter((it) => it.origen !== origen || keep.has(it.id));
-}
-
-/** Tope 10 por origen (manual y automático diario por separado). Más viejo se borra. */
-export function recortarColeccion(items: RespaldoCompleto[]): RespaldoCompleto[] {
-  return recortarPorOrigen(
-    recortarPorOrigen(items, "manual"),
-    "automatico",
-  );
-}
-
-export function yaHayAutomaticoDelDia(
-  items: RespaldoCompleto[],
-  dia: string,
-): boolean {
-  return items.some((it) => it.origen === "automatico" && it.dia === dia);
 }
 
 export function nombreArchivoRespaldo(meta: Pick<RespaldoMeta, "dia" | "origen">) {
