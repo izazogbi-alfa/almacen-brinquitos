@@ -13,15 +13,36 @@ import {
 } from "@/components/captura-articulo";
 import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
-import { EstadoSesion, useCierrePorInactividad } from "@/components/estado-sesion";
+import {
+  BotonPendiente,
+  EstadoSesion,
+  useBorradorSesion,
+  useCierrePorInactividad,
+} from "@/components/estado-sesion";
+import { sesionAbiertaDe } from "@/lib/sesion-captura";
 
 function NuevoPedidoContent() {
   const router = useRouter();
-  const { productos, user, crearPedido, latidoSesion } = useInventory();
-  const [proveedor, setProveedor] = useState("Proveedor Brinquitos");
-  const [notas, setNotas] = useState("");
-  const [tabla, setTabla] = useState<LineaTabla[]>([]);
+  const { productos, user, crearPedido, latidoSesion, sesiones } =
+    useInventory();
+  const abierta = sesionAbiertaDe(sesiones, "pedidos");
+  const [proveedor, setProveedor] = useState(
+    abierta?.borrador?.proveedor || "Proveedor Brinquitos",
+  );
+  const [notas, setNotas] = useState(abierta?.borrador?.notasPedido || "");
+  const [tabla, setTabla] = useState<LineaTabla[]>(
+    abierta?.borrador?.lineas ?? [],
+  );
   const [enviando, setEnviando] = useState(false);
+  const guardarBorrador = useBorradorSesion(
+    "pedidos",
+    {
+      proveedor,
+      notasPedido: notas,
+      sucursalId: abierta?.borrador?.sucursalId,
+    },
+    { crearSiFalta: true },
+  );
   useCierrePorInactividad("pedidos");
 
   if (!puede(user, "pedidos")) {
@@ -73,10 +94,11 @@ function NuevoPedidoContent() {
         </h2>
         <p className="text-sm text-muted-foreground">
           Marca varias prendas del mismo esquema. Color, luego tallas. Un
-          pedido y un PDF con todas.           Iza autoriza.
+          pedido y un PDF con todas. Iza autoriza.
         </p>
         <EstadoSesion modulo="pedidos" />
       </div>
+      <BotonPendiente modulo="pedidos" />
       <div className="space-y-2">
         <Label htmlFor="proveedor">Proveedor</Label>
         <Input
@@ -96,11 +118,17 @@ function NuevoPedidoContent() {
         />
       </div>
       <CapturaArticulo
+        key={abierta?.id ?? "pedido-nuevo"}
         productos={productos}
         modo="pedido"
         acento="azul"
         usuarioNombre={user?.nombre}
-        onTablaChange={setTabla}
+        lineasIniciales={abierta?.borrador?.lineas}
+        sucursalInicial={abierta?.borrador?.sucursalId}
+        onTablaChange={(next) => {
+          setTabla(next);
+          guardarBorrador(next);
+        }}
         extraAfter={
           <Button
             type="button"
@@ -111,8 +139,12 @@ function NuevoPedidoContent() {
             {enviando ? "Guardando…" : "Guardar para autorizar"}
           </Button>
         }
-        onCommit={() => {
-          void latidoSesion("pedidos");
+        onCommit={async () => {
+          await latidoSesion("pedidos", {
+            proveedor,
+            notasPedido: notas,
+            lineas: tabla,
+          });
           toast.success("Color agregado al pedido");
         }}
       />

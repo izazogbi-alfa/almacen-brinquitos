@@ -18,6 +18,7 @@ import {
 import {
   aplicarCierresPorInactividad,
   cerrarSesionModulo,
+  reanudarSesionPendiente,
   tocarSesionCaptura,
 } from "@/lib/sesion-store";
 import { esModuloSesion } from "@/lib/sesion-captura";
@@ -95,6 +96,8 @@ export async function POST(request: Request) {
     }[];
     pedidoId?: string;
     modulo?: string;
+    borrador?: unknown;
+    crearSiFalta?: boolean;
   } | null;
 
   const accion = body?.accion;
@@ -120,7 +123,50 @@ export async function POST(request: Request) {
         if (body.modulo === "pedidos" && !mods.pedidos) {
           throw new Error("No tienes módulo de pedidos.");
         }
-        const sesion = tocarSesionCaptura(store, user, body.modulo);
+        const sesion = tocarSesionCaptura(store, user, body.modulo, new Date(), {
+          borrador: body.borrador,
+        });
+        marcarGuardado(store, user);
+        return { sesion };
+      }
+
+      if (accion === "guardar-borrador") {
+        if (!esModuloSesion(body?.modulo)) {
+          throw new Error("Falta el módulo de la sesión.");
+        }
+        if (body.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (body.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (body.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = tocarSesionCaptura(store, user, body.modulo, new Date(), {
+          crearSiFalta: false,
+          borrador: body.borrador,
+        });
+        return { sesion };
+      }
+
+      if (accion === "reanudar-sesion") {
+        if (!esModuloSesion(body?.modulo)) {
+          throw new Error("Falta el módulo de la sesión.");
+        }
+        if (body.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (body.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (body.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = reanudarSesionPendiente(store, user, body.modulo);
+        if (!sesion) {
+          throw new Error("No hay una captura pendiente en este módulo.");
+        }
         marcarGuardado(store, user);
         return { sesion };
       }
@@ -145,6 +191,7 @@ export async function POST(request: Request) {
         const lista = normalizarCeldas(body, producto, "contar");
         if (lista.length === 0) throw new Error("No hay celdas para guardar.");
         const sesion = tocarSesionCaptura(store, user, "existencias");
+        if (!sesion) throw new Error("No se pudo abrir la sesión.");
         for (const celda of lista) {
           const antes = cantidadEn(producto, sucursal.id, celda.talla, celda.color);
           fijarConteo(
@@ -188,6 +235,7 @@ export async function POST(request: Request) {
         );
         if (lista.length === 0) throw new Error("Indica al menos una pieza de entrada.");
         const sesion = tocarSesionCaptura(store, user, "recepcion");
+        if (!sesion) throw new Error("No se pudo abrir la sesión.");
         for (const celda of lista) {
           const { antes, despues } = ajustarCantidad(
             producto,
@@ -246,6 +294,7 @@ export async function POST(request: Request) {
         };
         store.pedidos.unshift(pedido);
         const sesion = tocarSesionCaptura(store, user, "pedidos");
+        if (!sesion) throw new Error("No se pudo abrir la sesión.");
         sesion.pedidos += 1;
         agregarMovimiento(store, user, {
           tipo: "pedido",
@@ -290,6 +339,7 @@ export async function POST(request: Request) {
           throw new Error("Indica al menos una cantidad a recibir.");
         }
         const sesion = tocarSesionCaptura(store, user, "recepcion");
+        if (!sesion) throw new Error("No se pudo abrir la sesión.");
         for (const linea of aplicadas) {
           const original = pedido.lineas.find(
             (l) => l.productoId === linea.productoId,

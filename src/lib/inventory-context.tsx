@@ -19,7 +19,7 @@ import type {
   UsuarioPublico,
   AppStatus,
 } from "@/lib/types";
-import type { ModuloSesion, SesionCaptura } from "@/lib/sesion-captura";
+import type { ModuloSesion, SesionCaptura, BorradorSesion } from "@/lib/sesion-captura";
 import { catalogosVacios } from "@/lib/catalogos";
 import { puede } from "@/lib/modulos";
 import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
@@ -57,7 +57,15 @@ type InventoryValue = {
     sucursalId: string,
     celdas: CeldaAccion[],
   ) => Promise<void>;
-  latidoSesion: (modulo: ModuloSesion) => Promise<void>;
+  latidoSesion: (
+    modulo: ModuloSesion,
+    borrador?: BorradorSesion,
+  ) => Promise<void>;
+  guardarBorradorSesion: (
+    modulo: ModuloSesion,
+    borrador: BorradorSesion,
+  ) => Promise<void>;
+  reanudarSesionPendiente: (modulo: ModuloSesion) => Promise<SesionCaptura>;
   cerrarSesionInactividad: (modulo: ModuloSesion) => Promise<{
     aviso: string | null;
   }>;
@@ -357,8 +365,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const latidoSesion = useCallback(
+    async (modulo: ModuloSesion, borrador?: BorradorSesion) => {
+      await postAccion({ accion: "latido-sesion", modulo, borrador });
+    },
+    [postAccion],
+  );
+
+  const guardarBorradorSesion = useCallback(
+    async (modulo: ModuloSesion, borrador: BorradorSesion) => {
+      await postAccion({ accion: "guardar-borrador", modulo, borrador });
+    },
+    [postAccion],
+  );
+
+  const reanudarSesionPendiente = useCallback(
     async (modulo: ModuloSesion) => {
-      await postAccion({ accion: "latido-sesion", modulo });
+      const data = (await postAccion({
+        accion: "reanudar-sesion",
+        modulo,
+      })) as { sesion: SesionCaptura };
+      return data.sesion;
     },
     [postAccion],
   );
@@ -500,6 +526,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       contar,
       entrada,
       latidoSesion,
+      guardarBorradorSesion,
+      reanudarSesionPendiente,
       cerrarSesionInactividad,
       crearPedido,
       autorizarPedido,
@@ -521,6 +549,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       contar,
       entrada,
       latidoSesion,
+      guardarBorradorSesion,
+      reanudarSesionPendiente,
       cerrarSesionInactividad,
       crearPedido,
       autorizarPedido,

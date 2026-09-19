@@ -1,0 +1,20 @@
+/** RGB 0–255. Paleta Brinquitos (teal + ámbar) para el PDF compartido. */
+export const PDF_COLORES = {
+  tituloFondo: [13, 148, 136] as const,
+  tituloTexto: [255, 255, 255] as const,
+  franjaTituloMm: 14,
+  claveFondo: [15, 118, 110] as const,
+  claveTexto: [255, 255, 255] as const,
+  subClave: [204, 251, 241] as const,
+  headerFondo: [17, 94, 89] as const,
+  headerTexto: [255, 255, 255] as const,
+  tallaHeaderFondo: [217, 119, 6] as const,
+  tallaHeaderTexto: [255, 255, 255] as const,
+  colorColFondo: [255, 247, 237] as const,
+  tallaPar: [240, 253, 250] as const,
+  tallaImpar: [255, 255, 255] as const,
+  totalFondo: [6, 78, 75] as const,
+  totalTexto: [255, 255, 255] as const,
+  borde: [13, 148, 136] as const,
+  nota: [51, 65, 85] as const,
+};

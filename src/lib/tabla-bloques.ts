@@ -215,6 +215,21 @@ export function etiquetaColor(fila: FilaColorBloque) {
     : fila.color;
 }
 
+export function totalesDeBloque(bloque: BloquePrenda) {
+  const porTalla: Record<string, number> = {};
+  let piezas = 0;
+  for (const t of bloque.tallas) {
+    let n = 0;
+    for (const fila of bloque.filas) {
+      const v = fila.porTalla[t];
+      if (typeof v === "number") n += v;
+    }
+    porTalla[t] = n;
+    piezas += n;
+  }
+  return { porTalla, piezas };
+}
+
 export function lineasDesdeCeldasPlanas(
   celdas: CeldaPlana[],
 ): LineaColorTabla[] {

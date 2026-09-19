@@ -37,6 +37,7 @@ import {
   motivoNoSePuedeElegir,
   notasPdfSeleccion,
 } from "@/lib/seleccion-mismo-esquema";
+import { siguienteTallaEnEsquema } from "@/lib/captura-tallas";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,8 @@ export function CapturaArticulo({
   pdfTitulo,
   pdfArchivo,
   pdfNotas,
+  lineasIniciales,
+  sucursalInicial,
 }: {
   productos: Producto[];
   modo: ModoCaptura;
@@ -85,14 +88,23 @@ export function CapturaArticulo({
   pdfTitulo?: string;
   pdfArchivo?: string;
   pdfNotas?: string[];
+  lineasIniciales?: LineaTabla[];
+  sucursalInicial?: string;
 }) {
   const { catalogos } = useInventory();
-  const [sucursalId, setSucursalId] = useState("");
+  const [sucursalId, setSucursalId] = useState(sucursalInicial ?? "");
   const [q, setQ] = useState("");
   const [consulta, setConsulta] = useState("");
   const [buscado, setBuscado] = useState(false);
-  const [elegidosIds, setElegidosIds] = useState<string[]>([]);
-  const [activoId, setActivoId] = useState<string | null>(null);
+  const [elegidosIds, setElegidosIds] = useState<string[]>(() => {
+    const ids = (lineasIniciales ?? [])
+      .map((l) => l.productoId)
+      .filter(Boolean);
+    return [...new Set(ids)];
+  });
+  const [activoId, setActivoId] = useState<string | null>(
+    lineasIniciales?.[0]?.productoId ?? null,
+  );
   const [mostrandoCaptura, setMostrandoCaptura] = useState(false);
   const [errorEsquema, setErrorEsquema] = useState("");
   const [color, setColor] = useState("");
@@ -100,7 +112,7 @@ export function CapturaArticulo({
   const [especificacion, setEspecificacion] = useState("");
   const [cantidad, setCantidad] = useState("1");
   const [borrador, setBorrador] = useState<ParTalla[]>([]);
-  const [lineas, setLineas] = useState<LineaTabla[]>([]);
+  const [lineas, setLineas] = useState<LineaTabla[]>(lineasIniciales ?? []);
   const [confirmar, setConfirmar] = useState(false);
   const cantidadRef = useRef<HTMLInputElement>(null);
 
@@ -330,10 +342,12 @@ export function CapturaArticulo({
   }
 
   function cambiarColor(c: string) {
+    const primera = encabezados[0] ?? "";
     setColor(c);
+    setTalla(primera);
     setBorrador([]);
     if (mostrado && sucursalId && modo === "contar") {
-      setCantidad(String(cantidadEn(mostrado, sucursalId, tallaActiva, c)));
+      setCantidad(String(cantidadEn(mostrado, sucursalId, primera, c)));
     } else {
       setCantidad("1");
     }
@@ -366,16 +380,6 @@ export function CapturaArticulo({
     return base;
   }
 
-  function agregarTalla() {
-    const n = Number(cantidad);
-    if (!Number.isFinite(n) || n < 0) return;
-    if (modo !== "contar" && n <= 0) return;
-    setBorrador((prev) => {
-      const resto = prev.filter((p) => p.talla !== tallaActiva);
-      return [...resto, { talla: tallaActiva, cantidad: n }];
-    });
-  }
-
   const paresConfirmables = paresListos();
   const payload: CapturaPayload | null =
     mostrado && sucursal && paresConfirmables.length > 0
@@ -395,6 +399,19 @@ export function CapturaArticulo({
     guardarCantidadDeTalla(tallaActiva, cantidad);
     if (!payload) return;
     setConfirmar(true);
+  }
+
+  function avanzarTallaOConfirmarColor() {
+    const n = Number(cantidad);
+    if (!Number.isFinite(n) || n < 0) return;
+    if (modo !== "contar" && n <= 0) return;
+    const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
+    if (next) {
+      cambiarTalla(next);
+      if (modo !== "contar") setCantidad("1");
+      return;
+    }
+    pedirConfirmacionColor();
   }
 
   function publicarTabla(next: LineaTabla[]) {
@@ -445,7 +462,16 @@ export function CapturaArticulo({
     );
     setBorrador([]);
     setConfirmar(false);
-    setCantidad(modo === "contar" ? "0" : "1");
+    const primera = encabezados[0] ?? "";
+    setTalla(primera);
+    if (modo === "contar" && mostrado && sucursal) {
+      setCantidad(
+        String(cantidadEn(mostrado, sucursal.id, primera, colorActivo)),
+      );
+    } else {
+      setCantidad(modo === "contar" ? "0" : "1");
+    }
+    enfocarCantidad();
   }
 
   const notasPdfTabla = [
@@ -634,9 +660,10 @@ export function CapturaArticulo({
                 <div className="space-y-1.5">
                   <Label>Color</Label>
                   <p className="text-xs text-muted-foreground">
-                    Toca un color. Se abre el teclado numérico. Escribe la
-                    cantidad (ej. 12) y pulsa Enter: confirma ese color, igual
-                    que Confirmar este color. Luego toca el siguiente.
+                    Toca un color. Se abre el teclado. Escribe la cantidad y
+                    pulsa Enter: guarda esa talla y pasa a la siguiente del
+                    mismo color. En la última talla, Enter confirma el color.
+                    Luego toca el siguiente color.
                   </p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {colores.map((c) => (
@@ -659,8 +686,9 @@ export function CapturaArticulo({
                   <div className="space-y-1.5">
                     <Label>Talla (orden del esquema)</Label>
                     <p className="text-xs text-muted-foreground">
-                      Enter confirma la cantidad de la talla activa. Cambia de
-                      talla si hace falta, o sigue color → cantidad → Enter.
+                      Enter guarda la talla activa y salta a la siguiente. En
+                      la última, Enter confirma el color (igual que Confirmar
+                      este color).
                     </p>
                     <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
                       {encabezados.map((t) => (
@@ -708,7 +736,7 @@ export function CapturaArticulo({
                   className="space-y-2"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    pedirConfirmacionColor();
+                    avanzarTallaOConfirmarColor();
                   }}
                 >
                   <Label htmlFor="cantidad-captura">
@@ -745,7 +773,7 @@ export function CapturaArticulo({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          pedirConfirmacionColor();
+                          avanzarTallaOConfirmarColor();
                         }
                       }}
                     />
@@ -762,18 +790,26 @@ export function CapturaArticulo({
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Teclado numérico. Enter confirma este color.
+                    Teclado numérico. Enter: siguiente talla. Última talla:
+                    confirma el color.
                   </p>
                 </form>
                 <Button
                   type="button"
                   variant="outline"
                   className="h-11 w-full"
-                  onClick={agregarTalla}
+                  onClick={avanzarTallaOConfirmarColor}
                 >
-                  {encabezados.some((t) => t !== "")
-                    ? `Agregar talla ${tallaActiva || ""}`
-                    : "Agregar cantidad"}
+                  {(() => {
+                    const next = siguienteTallaEnEsquema(
+                      encabezados,
+                      tallaActiva,
+                    );
+                    if (next) return `Siguiente talla: ${next}`;
+                    return encabezados.some((t) => t !== "")
+                      ? `Última talla · confirmar ${colorActivo}`
+                      : "Agregar cantidad";
+                  })()}
                 </Button>
                 {paresConfirmables.length > 0 ? (
                   <p className="text-sm">
@@ -786,8 +822,8 @@ export function CapturaArticulo({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Toca un color, escribe la cantidad y pulsa Enter (o
-                    Confirmar este color) para bajarlo a la tabla.
+                    Toca un color, escribe la cantidad y pulsa Enter. Pasa
+                    sola a la siguiente talla del mismo color.
                   </p>
                 )}
                 <Button

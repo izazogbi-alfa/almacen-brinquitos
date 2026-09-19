@@ -7,8 +7,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import {
+  BotonPendiente,
   EstadoSesion,
   movimientosDeSesionVisible,
+  useBorradorSesion,
   useCierrePorInactividad,
 } from "@/components/estado-sesion";
 import { formatoFechaHora } from "@/lib/format";
@@ -19,16 +21,18 @@ import {
   bloquesDesdeCeldas,
   type CeldaPlana,
 } from "@/lib/tabla-bloques";
-import { sesionVisibleHoy } from "@/lib/sesion-captura";
+import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
 
 function ExistenciasContent() {
   const { productos, movimientos, sesiones, user, catalogos, contar } =
     useInventory();
   const [vista, setVista] = useState<"contar" | "hoy">("contar");
   const [guardando, setGuardando] = useState(false);
+  const guardarBorrador = useBorradorSesion("existencias");
 
   useCierrePorInactividad("existencias", () => setVista("hoy"));
 
+  const abierta = sesionAbiertaDe(sesiones, "existencias");
   const sesion = sesionVisibleHoy(sesiones, "existencias");
   const deSesion = movimientosDeSesionVisible(
     movimientos,
@@ -88,10 +92,15 @@ function ExistenciasContent() {
           Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
           Color, luego tallas. Contar deja la cantidad en piso. Al rato sin
           tocar, la lista de Hoy se congela; puedes volver a contar cuando
-          quieras.
+          quieras. Si quedó a medias, usa el botón ámbar: es la misma lista,
+          no un día nuevo.
         </p>
       </div>
 
+      <BotonPendiente
+        modulo="existencias"
+        onReanudada={() => setVista("contar")}
+      />
       <Tabs value={vista} onValueChange={(v) => setVista(v as typeof vista)}>
         <TabsList className="w-full">
           <TabsTrigger value="contar">Contar</TabsTrigger>
@@ -128,11 +137,15 @@ function ExistenciasContent() {
         </div>
       ) : (
         <CapturaArticulo
+          key={abierta?.id ?? "existencias-nueva"}
           productos={productos}
           modo="contar"
           acento="azul"
           usuarioNombre={user?.nombre}
           guardando={guardando}
+          lineasIniciales={abierta?.borrador?.lineas}
+          sucursalInicial={abierta?.borrador?.sucursalId}
+          onTablaChange={guardarBorrador}
           onCommit={async (p) => {
             setGuardando(true);
             try {

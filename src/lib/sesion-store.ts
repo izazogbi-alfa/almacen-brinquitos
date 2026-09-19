@@ -1,6 +1,10 @@
 import {
   SESION_INACTIVIDAD_MS,
+  sanitizarBorrador,
+  sesionPendienteDe,
+  sesionTieneTrabajo,
   sesionVencidaPorInactividad,
+  type BorradorSesion,
   type ModuloSesion,
   type SesionCaptura,
 } from "./sesion-captura";
@@ -96,6 +100,7 @@ export function aplicarCierresPorInactividad(
     }
     sesion.cerradaEn = iso;
     sesion.motivoCierre = "inactividad";
+    sesion.pendiente = sesionTieneTrabajo(sesion);
     const dueño =
       store.users.find((u) => u.id === sesion.userId) ?? {
         id: sesion.userId,
@@ -118,6 +123,7 @@ export function cerrarSesionModulo(
   if (!abierta) return null;
   abierta.cerradaEn = ahora.toISOString();
   abierta.motivoCierre = "inactividad";
+  abierta.pendiente = sesionTieneTrabajo(abierta);
   pushCierre(store, user, abierta, modulo);
   store.ultimoGuardado = {
     timestamp: ahora.toISOString(),
@@ -132,11 +138,17 @@ export function tocarSesionCaptura(
   user: UsuarioMin,
   modulo: ModuloSesion,
   ahora = new Date(),
-): SesionCaptura {
+  opts?: { crearSiFalta?: boolean; borrador?: unknown },
+): SesionCaptura | null {
   aplicarCierresPorInactividad(store, ahora);
   const iso = ahora.toISOString();
+  const crearSiFalta = opts?.crearSiFalta !== false;
   let abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
   if (!abierta) {
+    if (!crearSiFalta) {
+      if (opts?.borrador != null) return null;
+      return null;
+    }
     abierta = {
       id: `ss-${ahora.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
       modulo,
@@ -152,5 +164,31 @@ export function tocarSesionCaptura(
   } else {
     abierta.ultimaActividad = iso;
   }
+  if (opts?.borrador !== undefined) {
+    abierta.borrador = sanitizarBorrador(opts.borrador);
+  }
   return abierta;
 }
+
+/** Reabre la sesión pendiente del módulo. No crea un día / id nuevo. */
+export function reanudarSesionPendiente(
+  store: StoreConSesiones,
+  user: UsuarioMin,
+  modulo: ModuloSesion,
+  ahora = new Date(),
+): SesionCaptura | null {
+  aplicarCierresPorInactividad(store, ahora);
+  const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  if (abierta) return null;
+  const pendiente = sesionPendienteDe(store.sesiones, modulo);
+  if (!pendiente) return null;
+  delete pendiente.cerradaEn;
+  delete pendiente.motivoCierre;
+  pendiente.pendiente = false;
+  pendiente.ultimaActividad = ahora.toISOString();
+  pendiente.userId = user.id;
+  pendiente.userName = user.nombre;
+  return pendiente;
+}
+
+export type { BorradorSesion };

@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import {
+  BotonPendiente,
   EstadoSesion,
   movimientosDeSesionVisible,
+  useBorradorSesion,
   useCierrePorInactividad,
 } from "@/components/estado-sesion";
 import { formatoFechaHora } from "@/lib/format";
@@ -15,14 +17,16 @@ import { useInventory } from "@/lib/inventory-context";
 import { descargarPdfBloques } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
 import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
-import { sesionVisibleHoy } from "@/lib/sesion-captura";
+import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
 
 function RecepcionContent() {
   const { productos, movimientos, sesiones, user, catalogos, entrada } =
     useInventory();
   const [guardando, setGuardando] = useState(false);
+  const guardarBorrador = useBorradorSesion("recepcion");
   useCierrePorInactividad("recepcion");
 
+  const abierta = sesionAbiertaDe(sesiones, "recepcion");
   const sesion = sesionVisibleHoy(sesiones, "recepcion");
   const deSesion = movimientosDeSesionVisible(
     movimientos,
@@ -80,15 +84,21 @@ function RecepcionContent() {
         <p className="mt-1 text-sm text-emerald-800/80">
           Misma captura que existencias, en verde. Marca varias prendas del
           mismo esquema; el PDF junta esta sesión. A los 10 minutos sin
-          capturar, la lista se congela. Puedes entrar de nuevo cuando quieras.
+          capturar, la lista se congela. Si quedó a medias, el botón ámbar
+          reabre esa misma entrada.
         </p>
       </div>
+      <BotonPendiente modulo="recepcion" />
       <CapturaArticulo
+        key={abierta?.id ?? "recepcion-nueva"}
         productos={productos}
         modo="entrada"
         acento="verde"
         usuarioNombre={user?.nombre}
         guardando={guardando}
+        lineasIniciales={abierta?.borrador?.lineas}
+        sucursalInicial={abierta?.borrador?.sucursalId}
+        onTablaChange={guardarBorrador}
         extraAfter={
           deSesion.length > 0 ? (
             <Button
