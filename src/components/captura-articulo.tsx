@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Minus, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -102,6 +102,7 @@ export function CapturaArticulo({
   const [borrador, setBorrador] = useState<ParTalla[]>([]);
   const [lineas, setLineas] = useState<LineaTabla[]>([]);
   const [confirmar, setConfirmar] = useState(false);
+  const cantidadRef = useRef<HTMLInputElement>(null);
 
   const sucursal = sucursalPorId(sucursalId);
   const verde = acento === "verde";
@@ -308,6 +309,26 @@ export function CapturaArticulo({
     setErrorEsquema("");
   }
 
+  function enfocarCantidad() {
+    window.setTimeout(() => {
+      const el = cantidadRef.current;
+      if (!el) return;
+      el.focus();
+      el.select();
+    }, 50);
+  }
+
+  function guardarCantidadDeTalla(tallaGuardar: string, valor: string) {
+    const n = Number(valor);
+    if (!Number.isFinite(n) || n < 0) return;
+    if (modo !== "contar" && n <= 0) return;
+    if (!tallaGuardar && encabezados.some((t) => t !== "")) return;
+    setBorrador((prev) => {
+      const resto = prev.filter((p) => p.talla !== tallaGuardar);
+      return [...resto, { talla: tallaGuardar, cantidad: n }];
+    });
+  }
+
   function cambiarColor(c: string) {
     setColor(c);
     setBorrador([]);
@@ -316,13 +337,18 @@ export function CapturaArticulo({
     } else {
       setCantidad("1");
     }
+    enfocarCantidad();
   }
 
   function cambiarTalla(t: string) {
+    if (t !== tallaActiva) {
+      guardarCantidadDeTalla(tallaActiva, cantidad);
+    }
     setTalla(t);
     if (mostrado && sucursalId && modo === "contar") {
       setCantidad(String(cantidadEn(mostrado, sucursalId, t, colorActivo)));
     }
+    enfocarCantidad();
   }
 
   function paresListos(): ParTalla[] {
@@ -364,6 +390,12 @@ export function CapturaArticulo({
           })),
         }
       : null;
+
+  function pedirConfirmacionColor() {
+    guardarCantidadDeTalla(tallaActiva, cantidad);
+    if (!payload) return;
+    setConfirmar(true);
+  }
 
   function publicarTabla(next: LineaTabla[]) {
     setLineas(next);
@@ -531,7 +563,7 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Marca varias prendas que se cuentan igual (mismo esquema, ej. 1, 1X, 2–18, 34–42, 44–50). Luego color, tallas y cantidades. Un PDF junta todas. Si no hay esquema, hay que asignarlo en Artículos."
+              detalle="Marca varias prendas que se cuentan igual (mismo esquema, ej. 1, 1X, 2–18, 34–42, 44–50). Luego toca un color, escribe la cantidad y pulsa Enter. Un PDF junta todas. Si no hay esquema, hay que asignarlo en Artículos."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -601,13 +633,21 @@ export function CapturaArticulo({
                 ) : null}
                 <div className="space-y-1.5">
                   <Label>Color</Label>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Toca un color. Se abre el teclado numérico. Escribe la
+                    cantidad (ej. 12) y pulsa Enter: confirma ese color, igual
+                    que Confirmar este color. Luego toca el siguiente.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {colores.map((c) => (
                       <Button
                         key={c}
                         type="button"
                         variant={c === colorActivo ? "default" : "outline"}
-                        className={cn("h-10 capitalize", c === colorActivo && btn)}
+                        className={cn(
+                          "h-14 min-h-14 w-full text-base capitalize",
+                          c === colorActivo && btn,
+                        )}
                         onClick={() => cambiarColor(c)}
                       >
                         {c}
@@ -617,7 +657,11 @@ export function CapturaArticulo({
                 </div>
                 {encabezados.some((t) => t !== "") ? (
                   <div className="space-y-1.5">
-                    <Label>Talla</Label>
+                    <Label>Talla (orden del esquema)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Enter confirma la cantidad de la talla activa. Cambia de
+                      talla si hace falta, o sigue color → cantidad → Enter.
+                    </p>
                     <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
                       {encabezados.map((t) => (
                         <Button
@@ -637,7 +681,7 @@ export function CapturaArticulo({
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Este esquema no usa talla: solo cantidad y color.
+                    Este esquema no usa talla: color, cantidad y Enter bastan.
                   </p>
                 )}
                 {specsCaptura.length > 0 ? (
@@ -660,8 +704,14 @@ export function CapturaArticulo({
                     </div>
                   </div>
                 ) : null}
-                <div className="space-y-2">
-                  <Label>
+                <form
+                  className="space-y-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    pedirConfirmacionColor();
+                  }}
+                >
+                  <Label htmlFor="cantidad-captura">
                     {modo === "contar"
                       ? "Piezas contadas"
                       : modo === "sacar"
@@ -683,10 +733,23 @@ export function CapturaArticulo({
                       <Minus />
                     </Button>
                     <Input
+                      ref={cantidadRef}
+                      id="cantidad-captura"
+                      type="text"
                       inputMode="numeric"
-                      className="h-11 text-center text-lg"
+                      pattern="[0-9]*"
+                      enterKeyHint="done"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      className="h-12 text-center text-xl"
                       value={cantidad}
                       onChange={(e) => setCantidad(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          pedirConfirmacionColor();
+                        }
+                      }}
                     />
                     <Button
                       type="button"
@@ -700,7 +763,10 @@ export function CapturaArticulo({
                       <Plus />
                     </Button>
                   </div>
-                </div>
+                  <p className="text-xs text-muted-foreground">
+                    Teclado numérico. Enter confirma este color.
+                  </p>
+                </form>
                 <Button
                   type="button"
                   variant="outline"
@@ -722,15 +788,15 @@ export function CapturaArticulo({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Elige color, talla y cantidad de las listas de este
-                    artículo. Confirma el color para bajarlo a la tabla.
+                    Toca un color, escribe la cantidad y pulsa Enter (o
+                    Confirmar este color) para bajarlo a la tabla.
                   </p>
                 )}
                 <Button
                   type="button"
                   className={cn("h-11 w-full", btn)}
                   disabled={!payload}
-                  onClick={() => setConfirmar(true)}
+                  onClick={() => pedirConfirmacionColor()}
                 >
                   Confirmar este color
                 </Button>

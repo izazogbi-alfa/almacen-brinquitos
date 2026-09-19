@@ -28,7 +28,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay u
 
 ## Cómo probar
 
-**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → marca varias del mismo esquema → color y talla.
+**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → marca varias del mismo esquema → color → cantidad → Enter.
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
@@ -37,7 +37,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay u
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `Baccus`, `XC1092`).
 3. **Marca varias** que usen el **mismo esquema** (mismas tallas, ej. 1, 1X, 2–18, 34–42, 44–50). Si una se cuenta distinto, sale un aviso y no se suma. Las que no tienen esquema quedan apagadas: hay que asignarlo en Artículos (no se usa fábrica).
-4. **Capturar las elegidas**: color, luego tallas y cantidades. Cambia de prenda con las fichas de arriba. Confirma el color. Abajo crece un **bloque por prenda** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas**, **tallas en columnas** en el **mismo orden del esquema**.
+4. **Capturar las elegidas**: toca un **color** (botón grande) → se abre el **teclado numérico** → escribe la cantidad (ej. 12) → **Enter** confirma ese color (igual que **Confirmar este color**). Luego toca el siguiente color. Si el esquema tiene tallas (orden del esquema), Enter confirma la cantidad de la **talla activa**; puedes cambiar talla o seguir color → cantidad → Enter. Sin talla: color + cantidad + Enter. Cambia de prenda con las fichas de arriba. Abajo crece un **bloque por prenda** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas**, **tallas en columnas** en el **mismo orden del esquema**.
 5. **Descargar PDF de esta tabla** junta todas las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF del día** (todos los movimientos del día, mismo formato).
 
 ## Recepción
