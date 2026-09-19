@@ -27,6 +27,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/icons") ||
     pathname.startsWith("/productos") ||
     pathname.startsWith("/api/auth/login") ||
+    pathname.startsWith("/api/cron/") ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest"
   ) {

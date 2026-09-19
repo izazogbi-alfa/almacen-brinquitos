@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList } from "lucide-react";
+import { Archive, ClipboardList } from "lucide-react";
 import { BotonHub } from "@/components/boton-hub";
 import { AsyncGate } from "@/components/status-views";
 import { SinAccesoConfiguracion } from "@/components/use-editor-catalogos";
@@ -10,6 +10,7 @@ import { SECCIONES_CONFIGURACION } from "@/lib/secciones-configuracion";
 
 const ICONOS = {
   "listas-de-captura": ClipboardList,
+  respaldos: Archive,
 } as const;
 
 function HubConfiguracion() {
@@ -31,7 +32,9 @@ function HubConfiguracion() {
         </p>
       </div>
       <div className="grid gap-3">
-        {SECCIONES_CONFIGURACION.map((seccion) => (
+        {SECCIONES_CONFIGURACION.filter(
+          (seccion) => !seccion.soloAdmin || user?.rol === "admin",
+        ).map((seccion) => (
           <BotonHub
             key={seccion.slug}
             href={seccion.href}

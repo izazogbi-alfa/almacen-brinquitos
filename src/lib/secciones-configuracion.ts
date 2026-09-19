@@ -5,6 +5,14 @@ export const SECCIONES_CONFIGURACION = [
     href: "/admin/configuracion/listas-de-captura",
     titulo: "Listas de captura",
     detalle: "Esquemas, colores, tallas y especificaciones que se eligen al capturar.",
+    soloAdmin: false,
+  },
+  {
+    slug: "respaldos",
+    href: "/admin/configuracion/respaldos",
+    titulo: "Respaldos",
+    detalle: "Copia diaria automática y Guardar ahora en la carpeta de tu PC.",
+    soloAdmin: true,
   },
 ] as const;
 

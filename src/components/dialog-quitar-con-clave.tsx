@@ -33,13 +33,17 @@ export function DialogQuitarConClave({
   idCampo,
   onNo,
   onSi,
-}: {
+  onConfirmarConClave,
+  etiquetaSi = "Sí",
+} : {
   abierto: boolean;
   titulo: string;
   descripcion: string;
   idCampo: string;
   onNo: () => void;
-  onSi: () => void | Promise<void>;
+  onSi?: () => void | Promise<void>;
+  onConfirmarConClave?: (password: string) => void | Promise<void>;
+  etiquetaSi?: string;
 }) {
   const [password, setPassword] = useState("");
   const [errorClave, setErrorClave] = useState("");
@@ -60,9 +64,14 @@ export function DialogQuitarConClave({
     setVerificando(true);
     setErrorClave("");
     try {
-      await verificarContrasenaSesion(password);
-      setPassword("");
-      await onSi();
+      if (onConfirmarConClave) {
+        await onConfirmarConClave(password);
+        setPassword("");
+      } else {
+        await verificarContrasenaSesion(password);
+        setPassword("");
+        await onSi?.();
+      }
     } catch (err) {
       setErrorClave(
         err instanceof Error ? err.message : "Contraseña incorrecta. No se quitó.",
@@ -122,7 +131,7 @@ export function DialogQuitarConClave({
               className="h-11 w-full sm:w-auto"
               disabled={verificando}
             >
-              {verificando ? "Comprobando…" : "Sí"}
+              {verificando ? "Comprobando…" : etiquetaSi}
             </Button>
           </DialogFooter>
         </form>

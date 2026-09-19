@@ -3,5 +3,11 @@
     "deploymentEnabled": {
       "catalogos-data": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/respaldo-diario",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }

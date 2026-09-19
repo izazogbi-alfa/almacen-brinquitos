@@ -149,6 +149,26 @@ function escribirAsignacionesLocal(data: AsignacionesPersistidas) {
 
 const InventoryContext = createContext<InventoryValue | null>(null);
 
+let diaRespaldoPedido: string | null = null;
+
+function pedirRespaldoDiarioSiAdmin(rol: string | undefined) {
+  if (rol !== "admin" || typeof window === "undefined") return;
+  const dia = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  if (diaRespaldoPedido === dia) return;
+  diaRespaldoPedido = dia;
+  void fetch("/api/admin/respaldos/diario", {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {
+    diaRespaldoPedido = null;
+  });
+}
+
 async function parseError(res: Response) {
   const data = (await res.json().catch(() => null)) as { error?: string } | null;
   return data?.error ?? "No se pudo completar la acción.";
@@ -184,6 +204,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setRecepciones(data.recepciones);
     setMovimientos(data.movimientos ?? []);
     setCierres(data.cierres ?? []);
+    pedirRespaldoDiarioSiAdmin(data.user?.rol);
     const serverAt =
       typeof data.catalogosGuardadosEn === "string"
         ? data.catalogosGuardadosEn
