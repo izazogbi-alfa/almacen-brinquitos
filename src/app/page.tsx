@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
-import { fechaClave, formatoFechaHora } from "@/lib/format";
+import {
+  BotonPendiente,
+  EstadoSesion,
+  movimientosDeSesionVisible,
+  useBorradorSesion,
+  useCierrePorInactividad,
+} from "@/components/estado-sesion";
+import { formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
 import { descargarPdfBloques } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
@@ -14,30 +21,25 @@ import {
   bloquesDesdeCeldas,
   type CeldaPlana,
 } from "@/lib/tabla-bloques";
+import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
 
 function ExistenciasContent() {
-  const {
-    productos,
-    movimientos,
-    cierres,
-    user,
-    catalogos,
-    contar,
-    retirar,
-    cerrarDia,
-  } = useInventory();
-  const [vista, setVista] = useState<"contar" | "sacar" | "hoy">("contar");
+  const { productos, movimientos, sesiones, user, catalogos, contar } =
+    useInventory();
+  const [vista, setVista] = useState<"contar" | "hoy">("contar");
   const [guardando, setGuardando] = useState(false);
-  const [cerrando, setCerrando] = useState(false);
+  const guardarBorrador = useBorradorSesion("existencias");
 
-  const hoy = fechaClave();
-  const delDia = movimientos.filter(
-    (m) =>
-      fechaClave(new Date(m.timestamp)) === hoy &&
-      (m.tipo === "conteo" || m.tipo === "retiro"),
+  useCierrePorInactividad("existencias", () => setVista("hoy"));
+
+  const abierta = sesionAbiertaDe(sesiones, "existencias");
+  const sesion = sesionVisibleHoy(sesiones, "existencias");
+  const deSesion = movimientosDeSesionVisible(
+    movimientos,
+    sesiones,
+    "existencias",
+    "conteo",
   );
-  const cierresHoy = cierres.filter((c) => c.fecha === hoy);
-  const ultimoCierreHoy = cierresHoy[0];
 
   if (!puede(user, "existencias")) {
     return (
@@ -48,11 +50,11 @@ function ExistenciasContent() {
     );
   }
 
-  function celdasDelDia(): CeldaPlana[] {
-    return delDia.map((m) => {
+  function celdasDeSesion(): CeldaPlana[] {
+    return deSesion.map((m) => {
       const prod = productos.find((p) => p.id === m.productoId);
       return {
-        productoId: m.productoId,
+        productoId: m.productoId ?? "",
         sku: prod?.sku ?? "",
         nombre: m.productoNombre ?? prod?.nombre ?? "",
         color: m.color ?? "Único",
@@ -64,12 +66,18 @@ function ExistenciasContent() {
     });
   }
 
-  function pdfDelDia() {
+  function pdfDeSesion() {
+    const cuando = sesion?.cerradaEn || sesion?.ultimaActividad;
     descargarPdfBloques(
-      `existencias-${hoy}.pdf`,
-      `Brinquitos · Existencias ${hoy}`,
-      [`Quien cierra: ${user?.nombre ?? "—"}`],
-      bloquesDesdeCeldas(celdasDelDia(), { productos, catalogos }),
+      `existencias-${sesion?.id ?? "sesion"}.pdf`,
+      "Brinquitos · Existencias",
+      [
+        `Quién captura: ${user?.nombre ?? "—"}`,
+        sesion
+          ? `Sesión ${sesion.cerradaEn ? "cerrada" : "abierta"} · ${formatoFechaHora(cuando ?? sesion.abiertaEn)}`
+          : "Sin sesión todavía",
+      ],
+      bloquesDesdeCeldas(celdasDeSesion(), { productos, catalogos }),
     );
   }
 
@@ -79,67 +87,42 @@ function ExistenciasContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-teal-900">
           Existencias
         </h2>
-        {ultimoCierreHoy ? (
-          <p className="text-sm text-teal-800">
-            Hoy cerrado por {ultimoCierreHoy.userName} ·{" "}
-            {formatoFechaHora(ultimoCierreHoy.timestamp)}
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
-            Color, luego tallas. Tabla: clave arriba, colores en filas, tallas
-            en columnas en el orden del esquema.
-          </p>
-        )}
+        <EstadoSesion modulo="existencias" />
+        <p className="mt-1 text-sm text-muted-foreground">
+          Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
+          Color, luego tallas. Contar deja la cantidad en piso. Al rato sin
+          tocar, la lista de Hoy se congela; puedes volver a contar cuando
+          quieras. Si quedó a medias, usa el botón ámbar: es la misma lista,
+          no un día nuevo.
+        </p>
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        className="h-11 w-full"
-        disabled={cerrando}
-        onClick={async () => {
-          setCerrando(true);
-          try {
-            await cerrarDia();
-            toast.success("Día cerrado");
-            setVista("hoy");
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "No se pudo cerrar.");
-          } finally {
-            setCerrando(false);
-          }
-        }}
-      >
-        {cerrando ? "Guardando…" : "Cerrar el día"}
-      </Button>
-
+      <BotonPendiente
+        modulo="existencias"
+        onReanudada={() => setVista("contar")}
+      />
       <Tabs value={vista} onValueChange={(v) => setVista(v as typeof vista)}>
         <TabsList className="w-full">
           <TabsTrigger value="contar">Contar</TabsTrigger>
-          <TabsTrigger value="sacar">Sacar</TabsTrigger>
           <TabsTrigger value="hoy">Hoy</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {vista === "hoy" ? (
         <div className="space-y-4">
-          <Button type="button" variant="outline" className="w-full" onClick={pdfDelDia}>
-            Descargar PDF del día
+          <Button type="button" variant="outline" className="w-full" onClick={pdfDeSesion}>
+            Descargar PDF de esta sesión
           </Button>
-          {cierresHoy.length === 0 && delDia.length === 0 ? (
+          {deSesion.length === 0 ? (
             <EmptyView
-              titulo="Sin movimientos hoy"
-              detalle="Los conteos y salidas quedan a tu nombre con sucursal y hora."
+              titulo="Sin conteos en esta sesión"
+              detalle="Los conteos quedan a tu nombre con sucursal y hora. Sacar ya no existe: solo se actualiza al contar."
             />
           ) : (
             <ul className="space-y-2">
-              {delDia.map((m) => (
+              {deSesion.map((m) => (
                 <li key={m.id} className="rounded-xl border p-3 text-sm">
-                  <p className="font-medium">
-                    {m.tipo === "conteo" ? "Conteo" : "Salida"} ·{" "}
-                    {m.productoNombre}
-                  </p>
+                  <p className="font-medium">Conteo · {m.productoNombre}</p>
                   <p className="text-muted-foreground">
                     {m.sucursalNombre} · {m.userName} ·{" "}
                     {formatoFechaHora(m.timestamp)}
@@ -154,21 +137,20 @@ function ExistenciasContent() {
         </div>
       ) : (
         <CapturaArticulo
+          key={abierta?.id ?? "existencias-nueva"}
           productos={productos}
-          modo={vista}
+          modo="contar"
           acento="azul"
           usuarioNombre={user?.nombre}
           guardando={guardando}
+          lineasIniciales={abierta?.borrador?.lineas}
+          sucursalInicial={abierta?.borrador?.sucursalId}
+          onTablaChange={guardarBorrador}
           onCommit={async (p) => {
             setGuardando(true);
             try {
-              if (vista === "contar") {
-                await contar(p.producto.id, p.sucursalId, p.celdas);
-                toast.success(`Conteo en ${p.sucursalNombre}`);
-              } else {
-                await retirar(p.producto.id, p.sucursalId, p.celdas);
-                toast.success(`Salida en ${p.sucursalNombre}`);
-              }
+              await contar(p.producto.id, p.sucursalId, p.celdas);
+              toast.success(`Conteo en ${p.sucursalNombre}`);
             } catch (err) {
               toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
             } finally {

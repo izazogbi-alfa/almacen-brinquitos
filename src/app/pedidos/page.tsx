@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsyncGate, EmptyView } from "@/components/status-views";
+import { EstadoSesion, BotonPendiente, useCierrePorInactividad } from "@/components/estado-sesion";
 import { etiquetaEstado, formatoFecha, formatoMoneda } from "@/lib/format";
 import { progresoRecepcion, totalPedido } from "@/lib/mock-data";
 import { useInventory } from "@/lib/inventory-context";
@@ -22,10 +24,12 @@ const FILTROS = [
 ] as const;
 
 function PedidosContent() {
+  const router = useRouter();
   const { pedidos, user } = useInventory();
   const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["value"]>(
     "todos",
   );
+  useCierrePorInactividad("pedidos");
 
   const lista = useMemo(() => {
     return pedidos.filter((p) => {
@@ -57,6 +61,7 @@ function PedidosContent() {
           <p className="text-sm text-muted-foreground">
             Captura en tabla. Solo quien administra autoriza.
           </p>
+          <EstadoSesion modulo="pedidos" />
         </div>
         {puede(user, "pedidos") ? (
         <Link
@@ -68,6 +73,11 @@ function PedidosContent() {
         </Link>
         ) : null}
       </div>
+
+      <BotonPendiente
+        modulo="pedidos"
+        onReanudada={() => router.push("/pedidos/nuevo")}
+      />
 
       <Tabs value={filtro} onValueChange={(v) => setFiltro(v as typeof filtro)}>
         <TabsList className="w-full">

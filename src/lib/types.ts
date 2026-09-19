@@ -134,6 +134,7 @@ export type Movimiento = {
   color?: string;
   sucursalId?: string;
   sucursalNombre?: string;
+  sesionId?: string;
 };
 
 export type Guardado = {
@@ -142,14 +143,6 @@ export type Guardado = {
   userName: string;
 };
 
-export type CierreDia = {
-  id: string;
-  fecha: string;
-  timestamp: string;
-  userId: string;
-  userName: string;
-  retiros: number;
-  conteos: number;
-};
+export type { ModuloSesion, SesionCaptura } from "./sesion-captura";
 
 export type AppStatus = "loading" | "ready" | "error";

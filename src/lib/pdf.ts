@@ -1,8 +1,10 @@
 import { jsPDF } from "jspdf";
 import {
   etiquetaColor,
+  totalesDeBloque,
   type BloquePrenda,
 } from "@/lib/tabla-bloques";
+import { PDF_COLORES } from "@/lib/pdf-colores";
 import {
   layoutCajasTalla,
   PDF_JSPDF,
@@ -11,6 +13,18 @@ import {
 
 function plano(texto: string) {
   return texto.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+}
+
+function fill(doc: jsPDF, rgb: readonly [number, number, number]) {
+  doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+}
+
+function stroke(doc: jsPDF, rgb: readonly [number, number, number]) {
+  doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
+}
+
+function ink(doc: jsPDF, rgb: readonly [number, number, number]) {
+  doc.setTextColor(rgb[0], rgb[1], rgb[2]);
 }
 
 function nuevoDoc() {
@@ -22,106 +36,149 @@ export function descargarPdf(
   titulo: string,
   lineas: string[],
 ) {
+  construirPdfLineas(titulo, lineas).save(archivo);
+}
+
+export function construirPdfLineas(titulo: string, lineas: string[]) {
   const doc = nuevoDoc();
   const anchoUtil = doc.internal.pageSize.getWidth() - PDF_MARGEN_MM * 2;
   const altoPagina = doc.internal.pageSize.getHeight();
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text(plano(titulo), PDF_MARGEN_MM, 16);
+  const y0 = dibujarEncabezadoPagina(doc, titulo);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  let y = 24;
+  ink(doc, PDF_COLORES.nota);
+  let y = y0;
   for (const linea of lineas) {
     const wrapped = doc.splitTextToSize(plano(linea), anchoUtil);
     for (const row of wrapped) {
       if (y > altoPagina - 12) {
         doc.addPage();
-        y = 16;
+        y = dibujarEncabezadoPagina(doc, titulo);
+        ink(doc, PDF_COLORES.nota);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
       }
       doc.text(row, PDF_MARGEN_MM, y);
       y += 6;
     }
   }
-  doc.save(archivo);
+  return doc;
 }
 
 const ALTO_FILA = 8;
+const ALTO_CLAVE = 12;
 
 function asegurarEspacio(
   doc: jsPDF,
   y: number,
   alto: number,
+  titulo: string,
 ): number {
   const limite = doc.internal.pageSize.getHeight() - 10;
   if (y + alto <= limite) return y;
   doc.addPage();
-  return 14;
+  return dibujarEncabezadoPagina(doc, titulo);
 }
 
-function dibujarBloque(doc: jsPDF, bloque: BloquePrenda, y0: number) {
+function dibujarEncabezadoPagina(doc: jsPDF, titulo: string) {
+  const w = doc.internal.pageSize.getWidth();
+  const h = PDF_COLORES.franjaTituloMm;
+  fill(doc, PDF_COLORES.tituloFondo);
+  doc.rect(0, 0, w, h, "F");
+  ink(doc, PDF_COLORES.tituloTexto);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text(plano(titulo), PDF_MARGEN_MM, 9);
+  ink(doc, [15, 23, 42]);
+  return h + 6;
+}
+
+function dibujarBloque(
+  doc: jsPDF,
+  bloque: BloquePrenda,
+  y0: number,
+  tituloPagina: string,
+) {
   let y = y0;
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
   const anchoPagina = doc.internal.pageSize.getWidth();
   const layout = layoutCajasTalla(tallas.length, anchoPagina, PDF_MARGEN_MM);
-  const { colColor, colTalla } = layout;
+  const { colColor, colTalla, anchoTabla } = layout;
+  const totales = totalesDeBloque({ ...bloque, tallas });
 
-  y = asegurarEspacio(doc, y, 16);
+  y = asegurarEspacio(doc, y, ALTO_CLAVE + 8, tituloPagina);
+  fill(doc, PDF_COLORES.claveFondo);
+  stroke(doc, PDF_COLORES.borde);
+  doc.rect(PDF_MARGEN_MM, y - 4, anchoTabla, ALTO_CLAVE + 2, "FD");
+  ink(doc, PDF_COLORES.claveTexto);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text(plano(bloque.sku), PDF_MARGEN_MM, y);
-  y += 5;
+  doc.text(plano(bloque.sku), PDF_MARGEN_MM + 2, y + 2, {
+    maxWidth: Math.max(8, anchoTabla - 4),
+  });
+  y += 6;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
+  ink(doc, PDF_COLORES.subClave);
   const sub = [bloque.nombre, bloque.sucursalNombre]
     .filter(Boolean)
     .join(" · ");
   if (sub) {
-    const wrapped = doc.splitTextToSize(
-      plano(sub),
-      layout.anchoUtil,
-    );
-    doc.text(wrapped, PDF_MARGEN_MM, y);
-    y += wrapped.length * 4 + 2;
+    const wrapped = doc.splitTextToSize(plano(sub), Math.max(8, anchoTabla - 4));
+    doc.text(wrapped[0] ?? "", PDF_MARGEN_MM + 2, y + 1, {
+      maxWidth: Math.max(8, anchoTabla - 4),
+    });
+    y += 5;
   }
+  y += 4;
 
-  const altoTabla = ALTO_FILA * (bloque.filas.length + 1);
-  y = asegurarEspacio(doc, y, altoTabla + 4);
-
-  const filas = [
-    ["Color", ...tallas.map((t) => t || "Cant.")],
-    ...bloque.filas.map((f) => [
-      etiquetaColor(f),
-      ...tallas.map((t) => {
-        const n = f.porTalla[t];
-        return n == null ? "" : String(n);
-      }),
-    ]),
+  const filasDatos = bloque.filas.map((f) => [
+    etiquetaColor(f),
+    ...tallas.map((t) => {
+      const n = f.porTalla[t];
+      return n == null ? "" : String(n);
+    }),
+  ]);
+  const filaHeader = ["Color", ...tallas.map((t) => t || "Cant.")];
+  const filaTotal = [
+    "Total",
+    ...tallas.map((t) => String(totales.porTalla[t] ?? 0)),
   ];
+  const filas = [filaHeader, ...filasDatos, filaTotal];
+  const altoTabla = ALTO_FILA * filas.length;
+  y = asegurarEspacio(doc, y, altoTabla + 6, tituloPagina);
 
-  const fuenteTalla =
-    colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
+  const fuenteTalla = colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
   const fuenteColor = colColor < 22 ? 6 : 8;
 
   filas.forEach((cells, ri) => {
+    const esHeader = ri === 0;
+    const esTotal = ri === filas.length - 1;
     let x = PDF_MARGEN_MM;
     cells.forEach((cell, ci) => {
       const w = ci === 0 ? colColor : colTalla;
-      doc.setDrawColor(40);
-      doc.setFillColor(
-        ri === 0 ? 230 : 255,
-        ri === 0 ? 230 : 255,
-        ri === 0 ? 230 : 255,
-      );
+      stroke(doc, PDF_COLORES.borde);
+      if (esHeader && ci === 0) fill(doc, PDF_COLORES.headerFondo);
+      else if (esHeader) fill(doc, PDF_COLORES.tallaHeaderFondo);
+      else if (esTotal) fill(doc, PDF_COLORES.totalFondo);
+      else if (ci === 0) fill(doc, PDF_COLORES.colorColFondo);
+      else fill(doc, ri % 2 === 0 ? PDF_COLORES.tallaPar : PDF_COLORES.tallaImpar);
       doc.rect(x, y, w, ALTO_FILA, "FD");
+      if (esHeader && ci === 0) ink(doc, PDF_COLORES.headerTexto);
+      else if (esHeader) ink(doc, PDF_COLORES.tallaHeaderTexto);
+      else if (esTotal) ink(doc, PDF_COLORES.totalTexto);
+      else ink(doc, [15, 23, 42]);
       doc.setFont(
         "helvetica",
-        ri === 0 || ci === 0 ? "bold" : "normal",
+        esHeader || esTotal || ci === 0 ? "bold" : "normal",
       );
       doc.setFontSize(ci === 0 ? fuenteColor : fuenteTalla);
       const txt = plano(cell);
       if (ci === 0) {
         if (w >= 4) {
-          doc.text(txt, x + 1.2, y + 5.4, { maxWidth: Math.max(2, w - 2.2) });
+          doc.text(txt, x + 1.2, y + 5.4, {
+            maxWidth: Math.max(2, w - 2.2),
+          });
         }
       } else {
         doc.text(txt, x + w / 2, y + 5.4, {
@@ -134,27 +191,32 @@ function dibujarBloque(doc: jsPDF, bloque: BloquePrenda, y0: number) {
     y += ALTO_FILA;
   });
 
+  ink(doc, PDF_COLORES.nota);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  y += 4;
+  doc.text(plano(`Total piezas: ${totales.piezas}`), PDF_MARGEN_MM, y);
   return y + 6;
 }
 
-export function descargarPdfBloques(
-  archivo: string,
+export function construirPdfBloques(
   titulo: string,
   notas: string[],
   bloques: BloquePrenda[],
 ) {
   const doc = nuevoDoc();
   const anchoUtil = doc.internal.pageSize.getWidth() - PDF_MARGEN_MM * 2;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text(plano(titulo), PDF_MARGEN_MM, 14);
-  let y = 20;
+  let y = dibujarEncabezadoPagina(doc, titulo);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
+  ink(doc, PDF_COLORES.nota);
   for (const nota of notas) {
     const wrapped = doc.splitTextToSize(plano(nota), anchoUtil);
     for (const row of wrapped) {
-      y = asegurarEspacio(doc, y, 5);
+      y = asegurarEspacio(doc, y, 5, titulo);
+      ink(doc, PDF_COLORES.nota);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
       doc.text(row, PDF_MARGEN_MM, y);
       y += 4.5;
     }
@@ -168,8 +230,17 @@ export function descargarPdfBloques(
     );
   } else {
     for (const bloque of bloques) {
-      y = dibujarBloque(doc, bloque, y);
+      y = dibujarBloque(doc, bloque, y, titulo);
     }
   }
-  doc.save(archivo);
+  return doc;
+}
+
+export function descargarPdfBloques(
+  archivo: string,
+  titulo: string,
+  notas: string[],
+  bloques: BloquePrenda[],
+) {
+  construirPdfBloques(titulo, notas, bloques).save(archivo);
 }

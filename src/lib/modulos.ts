@@ -51,7 +51,7 @@ export const OPCIONES_MODULO: {
   {
     clave: "existencias",
     etiqueta: "Existencias",
-    detalle: "Contar y sacar",
+    detalle: "Contar existencias",
   },
   {
     clave: "recepcion",

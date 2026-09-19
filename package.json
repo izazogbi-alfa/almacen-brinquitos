@@ -9,6 +9,9 @@
     "lint": "eslint",
     "test:pdf-layout": "node --experimental-strip-types scripts/test-pdf-layout.ts",
     "test:pdf-page": "node --experimental-strip-types scripts/test-pdf-jspdf.ts",
+    "test:sesion": "node --experimental-strip-types scripts/test-sesion-inactividad.ts && node --experimental-strip-types scripts/test-sesion-pendiente.ts",
+    "test:pdf-colores": "node --experimental-strip-types scripts/test-pdf-colores.ts",
+    "test:captura-tallas": "node --experimental-strip-types scripts/test-captura-tallas.ts",
     "test:persist": "node --experimental-strip-types scripts/test-catalogos-persist.ts && node --experimental-strip-types scripts/test-asignaciones-persist.ts && node --experimental-strip-types scripts/test-respaldos.ts"
   },
   "dependencies": {
