@@ -22,6 +22,7 @@ import type {
 } from "@/lib/types";
 import { catalogosVacios } from "@/lib/catalogos";
 import { puede } from "@/lib/modulos";
+import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
 
 type NuevaLinea = {
   productoId: string;
@@ -91,6 +92,7 @@ type InventoryValue = {
 };
 
 const LS_CATALOGOS = "brq_catalogos";
+const LS_ASIGNACIONES = "brq_asignaciones";
 
 function leerCatalogosLocal(): {
   savedAt: string;
@@ -118,6 +120,28 @@ function escribirCatalogosLocal(savedAt: string, catalogos: Catalogos) {
       LS_CATALOGOS,
       JSON.stringify({ savedAt, catalogos }),
     );
+  } catch {
+    /* quota */
+  }
+}
+
+function leerAsignacionesLocal(): AsignacionesPersistidas | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LS_ASIGNACIONES);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AsignacionesPersistidas;
+    if (!parsed?.asignaciones || !parsed.savedAt) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function escribirAsignacionesLocal(data: AsignacionesPersistidas) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_ASIGNACIONES, JSON.stringify(data));
   } catch {
     /* quota */
   }
@@ -194,6 +218,62 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       Date.parse(serverAt) > 0
     ) {
       escribirCatalogosLocal(serverAt, data.catalogos);
+    }
+
+    const serverAsigAt =
+      typeof data.asignacionesGuardadosEn === "string"
+        ? data.asignacionesGuardadosEn
+        : "";
+    const localAsig = leerAsignacionesLocal();
+    if (
+      localAsig &&
+      puede(data.user, "articulos") &&
+      (!serverAsigAt || Date.parse(localAsig.savedAt) > Date.parse(serverAsigAt))
+    ) {
+      const push = await fetch("/api/admin/articulos/asignaciones", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(localAsig),
+      });
+      if (push.ok) {
+        const saved = (await push.json()) as {
+          asignaciones?: AsignacionesPersistidas["asignaciones"];
+          asignacionesGuardadosEn?: string;
+        };
+        if (saved.asignacionesGuardadosEn && saved.asignaciones) {
+          escribirAsignacionesLocal({
+            savedAt: saved.asignacionesGuardadosEn,
+            asignaciones: saved.asignaciones,
+          });
+        }
+        const otra = await fetch("/api/state", { credentials: "include" });
+        if (otra.ok) {
+          const hidratado = await otra.json();
+          setProductos(hidratado.productos);
+          setCatalogos(hidratado.catalogos ?? catalogosVacios());
+        }
+      }
+    } else if (
+      Array.isArray(data.productos) &&
+      serverAsigAt &&
+      Date.parse(serverAsigAt) > 0
+    ) {
+      const asignaciones: AsignacionesPersistidas["asignaciones"] = {};
+      for (const p of data.productos as Producto[]) {
+        const esq = p.esquemaConteo?.trim();
+        if (!esq || !p.sku) continue;
+        asignaciones[p.sku.trim().toUpperCase()] = {
+          esquemaConteo: esq,
+          colores: [...(p.colores ?? [])],
+          tallas: [...(p.tallas ?? [])],
+          especificaciones: [...(p.especificaciones ?? [])],
+        };
+      }
+      escribirAsignacionesLocal({
+        savedAt: serverAsigAt,
+        asignaciones,
+      });
     }
   }, [pathname, router]);
 
@@ -307,7 +387,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(input),
       });
       if (!res.ok) throw new Error(await parseError(res));
-      const data = (await res.json()) as { producto: Producto };
+      const data = (await res.json()) as {
+        producto: Producto;
+        asignaciones?: AsignacionesPersistidas["asignaciones"];
+        asignacionesGuardadosEn?: string;
+      };
+      if (data.asignaciones && data.asignacionesGuardadosEn) {
+        escribirAsignacionesLocal({
+          savedAt: data.asignacionesGuardadosEn,
+          asignaciones: data.asignaciones,
+        });
+      }
       await recargar();
       return data.producto;
     },
@@ -330,6 +420,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(input),
       });
       if (!res.ok) throw new Error(await parseError(res));
+      const data = (await res.json()) as {
+        asignaciones?: AsignacionesPersistidas["asignaciones"];
+        asignacionesGuardadosEn?: string;
+      };
+      if (data.asignaciones && data.asignacionesGuardadosEn) {
+        escribirAsignacionesLocal({
+          savedAt: data.asignacionesGuardadosEn,
+          asignaciones: data.asignaciones,
+        });
+      }
       await recargar();
     },
     [recargar],

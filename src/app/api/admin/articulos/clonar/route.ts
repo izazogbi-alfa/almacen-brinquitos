@@ -1,11 +1,22 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
   filtrarEnCatalogo,
   opcionesTallaArticulo,
 } from "@/lib/asignacion-articulo";
 import { normalizarCatalogos } from "@/lib/catalogos";
+import { cookiesAsignaciones } from "@/server/asignaciones-persist";
 import { exigirModulo } from "@/server/auth";
-import { contrasenaCoincide, withStore } from "@/server/store";
+import {
+  ERROR_CLON_NO_PERSISTIO,
+  contrasenaCoincide,
+  guardarAsignacionesEnStore,
+  hidratarCatalogos,
+  withStore,
+} from "@/server/store";
+import type { Producto } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const { user, error } = await exigirModulo("articulos");
@@ -67,8 +78,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const jar = await cookies();
+  await hidratarCatalogos((name) => jar.get(name)?.value);
+  let snapshot: Producto[] | null = null;
+
   try {
     const actualizados = withStore((store) => {
+      snapshot = store.productos.map((p) => ({ ...p }));
       const catalogos = normalizarCatalogos(store.catalogos);
       const esquemaId = catalogos.esquemas.find(
         (e) => e.id === body?.esquemaConteo?.trim(),
@@ -105,7 +121,46 @@ export async function POST(request: Request) {
       }
       return tocados.length;
     });
-    return NextResponse.json({ actualizados });
+
+    const { data, remoto } = await guardarAsignacionesEnStore();
+    let cookieOk = false;
+    try {
+      for (const c of cookiesAsignaciones(data)) {
+        jar.set(c);
+      }
+      cookieOk = true;
+    } catch (cookieError) {
+      console.error("asignaciones cookie failed", cookieError);
+      if (!remoto.persistio) {
+        if (snapshot) {
+          withStore((store) => {
+            store.productos = snapshot as Producto[];
+          });
+        }
+        const msg =
+          cookieError instanceof Error
+            ? cookieError.message
+            : ERROR_CLON_NO_PERSISTIO;
+        return NextResponse.json({ error: msg }, { status: 500 });
+      }
+    }
+    if (!remoto.persistio && !cookieOk) {
+      if (snapshot) {
+        withStore((store) => {
+          store.productos = snapshot as Producto[];
+        });
+      }
+      return NextResponse.json(
+        { error: ERROR_CLON_NO_PERSISTIO },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      actualizados,
+      asignaciones: data.asignaciones,
+      asignacionesGuardadosEn: data.savedAt,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "No se pudo copiar." },

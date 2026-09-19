@@ -1,11 +1,46 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
   filtrarEnCatalogo,
   opcionesTallaArticulo,
 } from "@/lib/asignacion-articulo";
 import { normalizarCatalogos } from "@/lib/catalogos";
+import { cookiesAsignaciones } from "@/server/asignaciones-persist";
 import { exigirModulo } from "@/server/auth";
-import { contrasenaCoincide, withStore } from "@/server/store";
+import {
+  ERROR_ESQUEMA_NO_PERSISTIO,
+  contrasenaCoincide,
+  guardarAsignacionesEnStore,
+  hidratarCatalogos,
+  withStore,
+} from "@/server/store";
+import type { Producto } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+
+async function persistirEsquemas(jar: Awaited<ReturnType<typeof cookies>>) {
+  const { data, remoto } = await guardarAsignacionesEnStore();
+  let cookieOk = false;
+  try {
+    for (const c of cookiesAsignaciones(data)) {
+      jar.set(c);
+    }
+    cookieOk = true;
+  } catch (cookieError) {
+    console.error("asignaciones cookie failed", cookieError);
+    if (!remoto.persistio) {
+      const msg =
+        cookieError instanceof Error
+          ? cookieError.message
+          : ERROR_ESQUEMA_NO_PERSISTIO;
+      return { error: msg, data };
+    }
+  }
+  if (!remoto.persistio && !cookieOk) {
+    return { error: ERROR_ESQUEMA_NO_PERSISTIO, data };
+  }
+  return { data, error: null as string | null };
+}
 
 export async function POST(request: Request) {
   const { user, error } = await exigirModulo("articulos");
@@ -57,13 +92,19 @@ export async function POST(request: Request) {
     );
   }
 
+  const jar = await cookies();
+  await hidratarCatalogos((name) => jar.get(name)?.value);
+
+  const soloIdentidad = body?.soloIdentidad === true;
+  let snapshot: Producto[] | null = null;
+
   try {
     const producto = withStore((store) => {
       if (!clave) throw new Error("Escribe la Clave.");
       if (!nombre) throw new Error("Escribe el nombre.");
+      snapshot = store.productos.map((p) => ({ ...p }));
 
       const catalogos = normalizarCatalogos(store.catalogos);
-      const soloIdentidad = body?.soloIdentidad === true;
       const esquemaPedido = body?.esquemaConteo?.trim() ?? "";
       const esquemaId = catalogos.esquemas.find((e) => e.id === esquemaPedido)
         ?.id;
@@ -124,6 +165,24 @@ export async function POST(request: Request) {
       }
       return prev;
     });
+
+    if (!soloIdentidad) {
+      const persistido = await persistirEsquemas(jar);
+      if (persistido.error) {
+        if (snapshot) {
+          withStore((store) => {
+            store.productos = snapshot as Producto[];
+          });
+        }
+        return NextResponse.json({ error: persistido.error }, { status: 500 });
+      }
+      return NextResponse.json({
+        producto,
+        asignaciones: persistido.data.asignaciones,
+        asignacionesGuardadosEn: persistido.data.savedAt,
+      });
+    }
+
     return NextResponse.json({ producto });
   } catch (err) {
     return NextResponse.json(

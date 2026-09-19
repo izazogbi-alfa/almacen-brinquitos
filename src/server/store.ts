@@ -14,12 +14,27 @@ import type {
   RolUsuario,
 } from "@/lib/types";
 import {
+  aplicarAsignaciones,
+  extraerAsignaciones,
+  type AsignacionArticulo,
+  type AsignacionesPersistidas,
+} from "@/lib/asignaciones-articulos";
+import {
   normalizarCatalogos,
   sanitizarArticuloSinFabrica,
 } from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
 import { completarModulos } from "@/lib/modulos";
+import {
+  archivoAsignacionesEmpaquetado,
+  archivoAsignacionesLocal,
+  asignacionesDesdeCookies,
+  guardarAsignacionesDuraderas,
+  leerAsignacionesArchivo,
+  leerAsignacionesDuraderas,
+  mejorAsignaciones,
+} from "@/server/asignaciones-persist";
 import {
   archivoCatalogosEmpaquetado,
   archivoCatalogosLocal,
@@ -55,6 +70,7 @@ export type AppStore = {
   catalogOrigen?: string;
   catalogos: Catalogos;
   catalogosGuardadosEn?: string | null;
+  asignacionesGuardadosEn?: string | null;
 };
 
 const CATALOG_ORIGEN = "iza-csv-v1";
@@ -118,7 +134,7 @@ function seedStore(): AppStore {
   } catch (error) {
     console.error("catalog seed skipped", error);
   }
-  return {
+  const seeded: AppStore = {
     users: seedUsers(),
     sessions: [],
     productos,
@@ -138,7 +154,11 @@ function seedStore(): AppStore {
     ultimoGuardado: null,
     catalogos,
     catalogosGuardadosEn: archivos?.savedAt ?? null,
+    asignacionesGuardadosEn: null,
   };
+  const asignadas = asignacionesDeArchivos();
+  if (asignadas) aplicarAsignacionesAlStore(seeded, asignadas);
+  return seeded;
 }
 
 function catalogosDeArchivos(): CatalogosPersistidos | null {
@@ -146,6 +166,25 @@ function catalogosDeArchivos(): CatalogosPersistidos | null {
     leerCatalogosArchivo(archivoCatalogosLocal()),
     leerCatalogosArchivo(archivoCatalogosEmpaquetado()),
   );
+}
+
+function asignacionesDeArchivos(): AsignacionesPersistidas | null {
+  return mejorAsignaciones(
+    leerAsignacionesArchivo(archivoAsignacionesLocal()),
+    leerAsignacionesArchivo(archivoAsignacionesEmpaquetado()),
+  );
+}
+
+function aplicarAsignacionesAlStore(
+  store: AppStore,
+  data: AsignacionesPersistidas,
+) {
+  store.productos = aplicarAsignaciones(
+    store.productos,
+    data.asignaciones,
+    store.catalogos,
+  );
+  store.asignacionesGuardadosEn = data.savedAt;
 }
 
 function overlayCatalogosDeArchivo(parsed: AppStore) {
@@ -276,6 +315,17 @@ function loadRaw(): AppStore {
     }
     return limpio;
   });
+  const asignadasArchivo = asignacionesDeArchivos();
+  if (asignadasArchivo) {
+    const actual = parsed.asignacionesGuardadosEn;
+    if (
+      !actual ||
+      Date.parse(asignadasArchivo.savedAt) >= Date.parse(actual)
+    ) {
+      aplicarAsignacionesAlStore(parsed, asignadasArchivo);
+      extra = true;
+    }
+  }
   if (extra) saveRaw(parsed);
   memoryStore = parsed;
   return parsed;
@@ -299,7 +349,7 @@ export async function hidratarCatalogos(
   leerCookie: (name: string) => string | undefined,
 ) {
   const store = loadRaw();
-  const mejor = mejorCatalogos(
+  const mejorCatalogo = mejorCatalogos(
     store.catalogosGuardadosEn
       ? {
           catalogos: store.catalogos,
@@ -309,11 +359,26 @@ export async function hidratarCatalogos(
     catalogosDesdeCookies(leerCookie),
     await leerCatalogosDuraderos(),
   );
-  if (mejor) aplicarCatalogosAlStore(store, mejor);
+  if (mejorCatalogo) aplicarCatalogosAlStore(store, mejorCatalogo);
   store.catalogos = normalizarCatalogos(store.catalogos);
-  store.productos = store.productos.map((p) =>
-    sanitizarArticuloSinFabrica(p, store.catalogos),
+
+  const mejorAsig = mejorAsignaciones(
+    store.asignacionesGuardadosEn
+      ? {
+          savedAt: store.asignacionesGuardadosEn,
+          asignaciones: extraerAsignaciones(store.productos),
+        }
+      : null,
+    asignacionesDesdeCookies(leerCookie),
+    await leerAsignacionesDuraderas(),
   );
+  if (mejorAsig) {
+    aplicarAsignacionesAlStore(store, mejorAsig);
+  } else {
+    store.productos = store.productos.map((p) =>
+      sanitizarArticuloSinFabrica(p, store.catalogos),
+    );
+  }
   memoryStore = store;
   return store;
 }
@@ -330,6 +395,26 @@ export async function guardarCatalogosEnStore(catalogos: Catalogos) {
   });
   return { store, data, remoto };
 }
+
+export async function guardarAsignacionesEnStore(
+  asignaciones?: Record<string, AsignacionArticulo>,
+) {
+  const store = loadRaw();
+  const data: AsignacionesPersistidas = {
+    savedAt: new Date().toISOString(),
+    asignaciones: asignaciones ?? extraerAsignaciones(store.productos),
+  };
+  const remoto = await guardarAsignacionesDuraderas(data);
+  aplicarAsignacionesAlStore(store, data);
+  saveRaw(store);
+  return { store, data, remoto };
+}
+
+export const ERROR_ESQUEMA_NO_PERSISTIO =
+  "No se pudo guardar el esquema. El artículo no quedó persistido. Intenta de nuevo.";
+
+export const ERROR_CLON_NO_PERSISTIO =
+  "No se pudo copiar el esquema. Los cambios no quedaron persistidos. Intenta de nuevo.";
 
 export function withStore<T>(fn: (store: AppStore) => T): T {
   const store = loadRaw();

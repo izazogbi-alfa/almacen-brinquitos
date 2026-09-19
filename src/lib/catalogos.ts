@@ -98,13 +98,19 @@ export function tallasDeEsquema(
   return esquema.tallas;
 }
 
-/** Quita esquema de fábrica y tallas copiadas de esa semilla. Colores se quedan. */
+function esIdEsquemaFabrica(id: string) {
+  return ESQUEMAS_INICIALES.some((e) => e.id === id);
+}
+
+/** Quita esquema de fábrica y tallas copiadas de esa semilla. Colores se quedan.
+ *  No borra una asignación de Iza solo porque el catálogo aún no hidrató. */
 export function sanitizarArticuloSinFabrica(
   producto: Producto,
   catalogos: Catalogos,
 ): Producto {
   const id = producto.esquemaConteo?.trim();
   if (id && esquemaPorId(catalogos, id)) return producto;
+  if (id && !esIdEsquemaFabrica(id)) return producto;
   if (!id && !producto.tallas?.length) return producto;
   return {
     ...producto,

@@ -42,5 +42,6 @@ next-env.d.ts
 
 # runtime store
 /data/store.json
+/data/asignaciones-articulos.json
 
 *.xlsx

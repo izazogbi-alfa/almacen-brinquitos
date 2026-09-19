@@ -25,5 +25,6 @@ export async function GET() {
     ultimoGuardado: store.ultimoGuardado,
     catalogos: store.catalogos,
     catalogosGuardadosEn: store.catalogosGuardadosEn ?? null,
+    asignacionesGuardadosEn: store.asignacionesGuardadosEn ?? null,
   });
 }
