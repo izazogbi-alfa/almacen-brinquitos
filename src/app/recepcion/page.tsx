@@ -60,8 +60,9 @@ function RecepcionContent() {
           Entrada de mercancía
         </h2>
         <p className="text-sm text-emerald-800/80">
-          Misma captura que existencias, en verde. Tabla: clave arriba,
-          colores en filas, tallas en columnas.
+          Misma captura que existencias, en verde. Marca varias prendas del
+          mismo esquema; el PDF de la tabla y el de entradas las junta.
+          Tabla: clave arriba, colores en filas, tallas en columnas.
         </p>
       </div>
       <CapturaArticulo

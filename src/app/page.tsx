@@ -86,9 +86,9 @@ function ExistenciasContent() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Color, talla y cantidad del esquema de la ficha. La tabla agrupa
-            la misma prenda: clave arriba, colores en filas, tallas en
-            columnas.
+            Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
+            Color, luego tallas. Tabla: clave arriba, colores en filas, tallas
+            en columnas en el orden del esquema.
           </p>
         )}
       </div>

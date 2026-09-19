@@ -28,25 +28,25 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay u
 
 ## Cómo probar
 
-**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → color y talla de ese esquema.
+**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → marca varias del mismo esquema → color y talla.
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
 ## Existencias
 
 1. Elige sucursal.
-2. Busca Clave o nombre (ej. `XC1092`, `camisa`).
-3. Si el artículo **no tiene esquema**, verás un aviso: hay que asignarlo en Artículos. Si ya lo tiene, elige color, talla y cantidad de esas listas.
-4. Confirma el color. Abajo crece un **bloque** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas** (de arriba hacia abajo), **tallas en columnas** en el **mismo orden del esquema** (Configuración → Listas de captura). La misma prenda con otro color se suma al mismo bloque.
-5. **Descargar PDF de esta tabla** (mismo formato). En **Hoy**, **Descargar PDF del día**.
+2. Busca Clave o nombre (ej. `Baccus`, `XC1092`).
+3. **Marca varias** que usen el **mismo esquema** (mismas tallas, ej. 1, 1X, 2–18, 34–42, 44–50). Si una se cuenta distinto, sale un aviso y no se suma. Las que no tienen esquema quedan apagadas: hay que asignarlo en Artículos (no se usa fábrica).
+4. **Capturar las elegidas**: color, luego tallas y cantidades. Cambia de prenda con las fichas de arriba. Confirma el color. Abajo crece un **bloque por prenda** (no una matriz vacía): **Clave y nombre arriba**, **colores en filas**, **tallas en columnas** en el **mismo orden del esquema**.
+5. **Descargar PDF de esta tabla** junta todas las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF del día** (todos los movimientos del día, mismo formato).
 
 ## Recepción
 
-Misma captura y misma tabla, título **Entrada de mercancía**, color verde. El PDF de entradas usa el mismo bloque.
+Misma captura y misma tabla (varias prendas del mismo esquema, un PDF), título **Entrada de mercancía**, color verde. El PDF de entradas del día usa el mismo bloque.
 
 ## Pedidos
 
-Misma captura y misma tabla si el módulo está marcado. Al guardar, el detalle y el PDF del folio también agrupan por prenda (colores en filas, tallas en columnas). Estado *Por autorizar* hasta que una administradora autoriza.
+Misma captura y misma tabla si el módulo está marcado: varias prendas del mismo esquema en **un** pedido y **un** PDF. Al guardar, el detalle y el PDF del folio agrupan por prenda (colores en filas, tallas en columnas). Estado *Por autorizar* hasta que una administradora autoriza.
 
 ## Cómo correrlo
 

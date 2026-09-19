@@ -70,9 +70,8 @@ function NuevoPedidoContent() {
           Nuevo pedido
         </h2>
         <p className="text-sm text-muted-foreground">
-          Color, talla y cantidad del esquema de la ficha (el mismo que
-          existencias y recepción). Misma prenda, distintos colores: un
-          bloque. Iza autoriza.
+          Marca varias prendas del mismo esquema. Color, luego tallas. Un
+          pedido y un PDF con todas. Iza autoriza.
         </p>
       </div>
       <div className="space-y-2">
