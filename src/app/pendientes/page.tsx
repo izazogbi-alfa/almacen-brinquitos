@@ -31,7 +31,7 @@ function HubPendientes() {
     <div className="space-y-6">
       <div>
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-amber-800">
-          Pendientes
+          Registros
         </h2>
         <p className="text-sm text-muted-foreground">
           Pulsa un botón. A medias o ya terminadas, cada tipo está aparte.
@@ -39,7 +39,7 @@ function HubPendientes() {
       </div>
       {pendientes.length === 0 ? (
         <EmptyView
-          titulo="No hay pendientes"
+          titulo="No hay registros"
           detalle="Iza no te asignó Existencias, Recepción ni Pedidos."
         />
       ) : (

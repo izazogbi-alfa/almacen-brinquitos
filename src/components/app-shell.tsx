@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const nav = [
-    { href: "/pendientes", label: "Pendientes", icon: Clock },
+    { href: "/pendientes", label: "Registros", icon: Clock },
     puede(user, "existencias")
       ? { href: "/", label: "Existencias", icon: Package }
       : null,

@@ -72,7 +72,7 @@ function ListaPendientesModulo({
     return (
       <EmptyView
         titulo="Sin acceso"
-        detalle="Iza no te asignó este módulo. No sale en el menú ni en Pendientes."
+        detalle="Iza no te asignó este módulo. No sale en el menú ni en Registros."
       />
     );
   }
