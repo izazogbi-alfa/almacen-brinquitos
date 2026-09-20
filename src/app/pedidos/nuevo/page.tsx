@@ -15,6 +15,7 @@ import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
 import {
   BotonPendiente,
+  BotonTerminarSesion,
   EstadoSesion,
   useBorradorSesion,
   useCierrePorInactividad,
@@ -98,6 +99,7 @@ function NuevoPedidoContent() {
           pedido y un PDF con todas. Iza autoriza.
         </p>
         <EstadoSesion modulo="pedidos" />
+        <BotonTerminarSesion modulo="pedidos" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="proveedor">Proveedor</Label>

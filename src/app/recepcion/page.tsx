@@ -7,6 +7,7 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import {
   BotonPendiente,
+  BotonTerminarSesion,
   EstadoSesion,
   movimientosDeSesionVisible,
   useBorradorSesion,
@@ -82,6 +83,7 @@ function RecepcionContent() {
         </h2>
         <BotonPendiente modulo="recepcion" />
         <EstadoSesion modulo="recepcion" />
+        <BotonTerminarSesion modulo="recepcion" />
         <p className="mt-1 text-sm text-emerald-800/80">
           Misma captura que existencias, en verde. Marca varias prendas del
           mismo esquema; el PDF junta esta sesión. A los 10 minutos sin

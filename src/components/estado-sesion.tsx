@@ -12,10 +12,12 @@ import {
   msHastaCierre,
   sesionAbiertaDe,
   sesionPendienteDe,
+  sesionTieneTrabajo,
   sesionVisibleHoy,
   type BorradorSesion,
   type ModuloSesion,
 } from "@/lib/sesion-captura";
+import { seccionTerminadaDe } from "@/lib/secciones-pendientes";
 
 export function EstadoSesion({ modulo }: { modulo: ModuloSesion }) {
   const { sesiones } = useInventory();
@@ -30,7 +32,7 @@ export function EstadoSesion({ modulo }: { modulo: ModuloSesion }) {
     return (
       <p className="text-sm text-muted-foreground">
         Último cierre: {formatoFechaHora(ultima.cerradaEn)} · {ultima.userName}
-        {ultima.pendiente ? " · quedó pendiente" : ""}
+        {ultima.pendiente ? " · quedó pendiente" : sesionTieneTrabajo(ultima) ? " · quedó terminada" : ""}
       </p>
     );
   }
@@ -82,6 +84,42 @@ export function BotonPendiente({
         Quedó el {formatoFecha(pendiente.cerradaEn)}
       </p>
     </div>
+  );
+}
+
+export function BotonTerminarSesion({ modulo }: { modulo: ModuloSesion }) {
+  const { sesiones, terminarSesion } = useInventory();
+  const abierta = sesionAbiertaDe(sesiones, modulo);
+  const [ocupado, setOcupado] = useState(false);
+
+  if (!abierta || !sesionTieneTrabajo(abierta)) return null;
+
+  const archivo = seccionTerminadaDe(modulo);
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className="mt-2 h-auto min-h-12 w-full whitespace-normal py-3 text-base"
+      disabled={ocupado}
+      onClick={() => {
+        void (async () => {
+          setOcupado(true);
+          try {
+            await terminarSesion(modulo);
+            toast.success(`Listo. Quedó en ${archivo.titulo}.`);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "No se pudo terminar.",
+            );
+          } finally {
+            setOcupado(false);
+          }
+        })();
+      }}
+    >
+      {ocupado ? "Guardando…" : "Ya terminé"}
+    </Button>
   );
 }
 

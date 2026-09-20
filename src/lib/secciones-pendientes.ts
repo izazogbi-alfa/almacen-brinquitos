@@ -25,8 +25,37 @@ export const SECCIONES_PENDIENTES = [
   },
 ] as const;
 
+/** Archivo de capturas ya cerradas con trabajo (no pendientes). */
+export const SECCIONES_TERMINADAS = [
+  {
+    slug: "existencias-terminadas" as const,
+    modulo: "existencias" as ModuloSesion,
+    href: "/pendientes/existencias/terminadas",
+    titulo: "Existencias ya terminadas",
+    detalle: "Capturas de existencias que ya cerraste. Busca o borra.",
+  },
+  {
+    slug: "recepcion-terminadas" as const,
+    modulo: "recepcion" as ModuloSesion,
+    href: "/pendientes/recepcion/terminadas",
+    titulo: "Recepción ya terminada",
+    detalle: "Entradas que ya cerraste. Busca o borra.",
+  },
+  {
+    slug: "pedidos-terminados" as const,
+    modulo: "pedidos" as ModuloSesion,
+    href: "/pendientes/pedidos/terminadas",
+    titulo: "Pedidos ya terminados",
+    detalle: "Pedidos que ya cerraste. Busca o borra.",
+  },
+] as const;
+
 export const HREF_PENDIENTES = "/pendientes";
 
 export function seccionPendienteDe(modulo: ModuloSesion) {
   return SECCIONES_PENDIENTES.find((s) => s.modulo === modulo)!;
+}
+
+export function seccionTerminadaDe(modulo: ModuloSesion) {
+  return SECCIONES_TERMINADAS.find((s) => s.modulo === modulo)!;
 }

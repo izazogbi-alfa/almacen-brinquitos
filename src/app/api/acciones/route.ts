@@ -22,6 +22,8 @@ import {
   borrarSesionPendiente,
   cerrarSesionModulo,
   reanudarSesionPendiente,
+  terminarSesionModulo,
+  borrarSesionTerminada,
   tocarSesionCaptura,
 } from "@/lib/sesion-store";
 import { esModuloSesion } from "@/lib/sesion-captura";
@@ -224,6 +226,63 @@ export async function POST(request: Request) {
         return { sesion };
       }
 
+      if (accion === "terminar-sesion") {
+        if (!esModuloSesion(body?.modulo)) {
+          throw new Error("Falta el módulo de la sesión.");
+        }
+        if (body.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (body.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (body.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = terminarSesionModulo(store, user, body.modulo);
+        if (!sesion) {
+          throw new Error(
+            "No hay una captura abierta con trabajo para marcar como terminada.",
+          );
+        }
+        marcarGuardado(store, user);
+        return { sesion };
+      }
+
+      if (accion === "borrar-sesion-terminada") {
+        const sesionId =
+          typeof body?.sesionId === "string" ? body.sesionId.trim() : "";
+        if (!sesionId) {
+          throw new Error("Falta la captura terminada.");
+        }
+        const password = typeof body?.password === "string" ? body.password : "";
+        if (!password) {
+          throw new Error("Escribe tu contraseña.");
+        }
+        if (!contrasenaCoincide(user.id, password)) {
+          throw new Error("Contraseña incorrecta. No se quitó.");
+        }
+        const objetivo = store.sesiones.find((s) => s.id === sesionId);
+        if (!objetivo || !objetivo.cerradaEn || objetivo.pendiente) {
+          throw new Error("Esa captura terminada ya no está.");
+        }
+        if (objetivo.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (objetivo.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (objetivo.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = borrarSesionTerminada(store, sesionId);
+        if (!sesion) {
+          throw new Error("Esa captura terminada ya no está.");
+        }
+        marcarGuardado(store, user);
+        return { sesion };
+      }
+
       if (accion === "cerrar-sesion") {
         if (!esModuloSesion(body?.modulo)) {
           throw new Error("Falta el módulo de la sesión.");
@@ -380,6 +439,7 @@ export async function POST(request: Request) {
           nota: `Pedido ${pedido.folio} (por autorizar)`,
         });
         marcarGuardado(store, user);
+        terminarSesionModulo(store, user, "pedidos");
         return { pedido };
       }
 
