@@ -87,18 +87,13 @@ assert.equal(retomada?.cerradaEn, undefined);
 assert.equal(retomada?.pendiente, false);
 
 assert.equal(
-  etiquetaBotonPendiente(
-    "2026-09-18T22:00:00.000Z",
-    new Date("2026-09-19T16:00:00.000Z"),
-  ),
-  "Pendiente de ayer",
+  etiquetaBotonPendiente("existencias"),
+  "Seguir existencias pendientes",
 );
+assert.equal(etiquetaBotonPendiente("pedidos"), "Seguir pedidos pendientes");
 assert.equal(
-  etiquetaBotonPendiente(
-    "2026-09-19T15:00:00.000Z",
-    new Date("2026-09-19T16:00:00.000Z"),
-  ),
-  "Continuar pendiente",
+  etiquetaBotonPendiente("recepcion"),
+  "Seguir recepción pendiente",
 );
 
 console.log("ok sesion-pendiente");

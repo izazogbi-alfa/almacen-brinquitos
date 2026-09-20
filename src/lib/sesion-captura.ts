@@ -105,18 +105,15 @@ export function sesionPendienteDe(
   );
 }
 
-export function etiquetaBotonPendiente(
-  cerradaEn: string,
-  ahora = new Date(),
-) {
-  const diaMexico = (d: Date) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Mexico_City",
-    }).format(d);
-  const diaCierre = diaMexico(new Date(cerradaEn));
-  const hoy = diaMexico(ahora);
-  if (diaCierre < hoy) return "Pendiente de ayer";
-  return "Continuar pendiente";
+/** Texto fijo del botón de retomar. No cambia con la fecha. */
+export const ETIQUETAS_BOTON_PENDIENTE: Record<ModuloSesion, string> = {
+  existencias: "Seguir existencias pendientes",
+  pedidos: "Seguir pedidos pendientes",
+  recepcion: "Seguir recepción pendiente",
+};
+
+export function etiquetaBotonPendiente(modulo: ModuloSesion) {
+  return ETIQUETAS_BOTON_PENDIENTE[modulo];
 }
 
 function textoCorto(valor: unknown, max = 120) {
