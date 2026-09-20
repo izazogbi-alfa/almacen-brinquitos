@@ -2,11 +2,14 @@ import { cookiesAsignaciones } from "@/server/asignaciones-persist";
 import { cookiesCatalogos } from "@/server/catalogos-persist";
 import {
   aArchivo,
+  aplicarExistenciasRespaldo,
   diaCalendario,
   metaPublica,
+  parseArchivoRespaldo,
   recortarColeccion,
   snapshotDesdeStore,
   yaHayAutomaticoDelDia,
+  type ArchivoRespaldo,
   type OrigenRespaldo,
   type RespaldoCompleto,
   type RespaldoMeta,
@@ -19,6 +22,7 @@ import {
   guardarAsignacionesEnStore,
   guardarCatalogosEnStore,
   hidratarCatalogos,
+  withStore,
 } from "@/server/store";
 
 export type ResultadoNuevoRespaldo = {
@@ -59,6 +63,7 @@ export async function agregarRespaldo(input: {
   const nuevo = snapshotDesdeStore({
     catalogos: store.catalogos,
     productos: store.productos,
+    sesiones: store.sesiones,
     origen: input.origen,
   });
   coleccion.items = recortarColeccion([nuevo, ...coleccion.items]);
@@ -92,17 +97,26 @@ export async function obtenerRespaldo(
   return coleccion.items.find((it) => it.id === id) ?? null;
 }
 
-export async function restaurarRespaldo(id: string) {
-  const respaldo = await obtenerRespaldo(id);
-  if (!respaldo) {
-    throw new Error("No está esa copia. Elige otra de la lista.");
-  }
+async function aplicarArchivoRespaldo(archivo: ArchivoRespaldo) {
   const { data: catalogosData } = await guardarCatalogosEnStore(
-    respaldo.catalogos,
+    archivo.catalogos,
   );
   const { data: asigData } = await guardarAsignacionesEnStore(
-    respaldo.asignaciones,
+    archivo.asignaciones,
   );
+  if (archivo.existencias || archivo.sesiones) {
+    withStore((store) => {
+      if (archivo.existencias) {
+        store.productos = aplicarExistenciasRespaldo(
+          store.productos,
+          archivo.existencias,
+        );
+      }
+      if (archivo.sesiones) {
+        store.sesiones = archivo.sesiones;
+      }
+    });
+  }
   return {
     catalogos: catalogosData.catalogos,
     catalogosGuardadosEn: catalogosData.savedAt,
@@ -110,5 +124,25 @@ export async function restaurarRespaldo(id: string) {
     asignaciones: asigData.asignaciones,
     asignacionesGuardadosEn: asigData.savedAt,
     cookiesAsignaciones: cookiesAsignaciones(asigData),
+    restauroExistencias: Boolean(archivo.existencias),
+    restauroSesiones: Boolean(archivo.sesiones),
   };
+}
+
+export async function restaurarRespaldo(id: string) {
+  const respaldo = await obtenerRespaldo(id);
+  if (!respaldo) {
+    throw new Error("No está esa copia. Elige otra de la lista.");
+  }
+  return aplicarArchivoRespaldo(aArchivo(respaldo));
+}
+
+export async function restaurarDesdeArchivo(raw: unknown) {
+  const archivo = parseArchivoRespaldo(raw);
+  if (!archivo) {
+    throw new Error(
+      "No se pudo restaurar. Ese archivo no es un respaldo de Brinquitos.",
+    );
+  }
+  return aplicarArchivoRespaldo(archivo);
 }

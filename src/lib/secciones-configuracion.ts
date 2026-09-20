@@ -11,7 +11,7 @@ export const SECCIONES_CONFIGURACION = [
     slug: "respaldos",
     href: "/admin/configuracion/respaldos",
     titulo: "Respaldos",
-    detalle: "Copia diaria automática y Guardar ahora en la carpeta de tu PC.",
+    detalle: "Copia diaria, Guardar ahora y Restaurar respaldo.",
     soloAdmin: true,
   },
 ] as const;

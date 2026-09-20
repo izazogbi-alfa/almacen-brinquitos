@@ -1,15 +1,12 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exigirAdmin } from "@/server/auth";
-import { restaurarRespaldo } from "@/server/respaldos";
+import { restaurarDesdeArchivo } from "@/server/respaldos";
 import { contrasenaCoincide } from "@/server/store";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request) {
   const { user, error } = await exigirAdmin();
   if (!user) {
     return (
@@ -23,6 +20,7 @@ export async function POST(
 
   const body = (await request.json().catch(() => null)) as {
     password?: unknown;
+    archivo?: unknown;
   } | null;
   const password = typeof body?.password === "string" ? body.password : "";
   if (!password) {
@@ -40,22 +38,21 @@ export async function POST(
       );
     }
   } catch {
-    console.error("respaldo restore password failed");
+    console.error("respaldo file restore password failed");
     return NextResponse.json(
       { error: "No se pudo comprobar la contraseña. No se restauró." },
       { status: 500 },
     );
   }
 
-  const { id } = await context.params;
   try {
-    const restaurado = await restaurarRespaldo(id);
+    const restaurado = await restaurarDesdeArchivo(body?.archivo);
     const jar = await cookies();
     try {
       for (const c of restaurado.cookiesCatalogos) jar.set(c);
       for (const c of restaurado.cookiesAsignaciones) jar.set(c);
     } catch (cookieError) {
-      console.error("restore cookies failed", cookieError);
+      console.error("restore file cookies failed", cookieError);
     }
     return NextResponse.json({
       ok: true,
@@ -67,7 +64,7 @@ export async function POST(
       restauroSesiones: restaurado.restauroSesiones,
     });
   } catch (err) {
-    console.error("respaldo restore failed");
+    console.error("respaldo file restore failed");
     return NextResponse.json(
       {
         error:
@@ -75,7 +72,7 @@ export async function POST(
             ? err.message
             : "No se pudo restaurar. Nada se cambió.",
       },
-      { status: 500 },
+      { status: 400 },
     );
   }
 }

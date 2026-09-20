@@ -9,7 +9,7 @@ import {
   coleccionVacia,
   parseArchivoRespaldo,
   recortarColeccion,
-  resumenDe,
+  completoDesdeArchivo,
   type ColeccionRespaldos,
   type RespaldoCompleto,
 } from "@/lib/respaldos";
@@ -33,15 +33,7 @@ function parseColeccion(raw: unknown): ColeccionRespaldos | null {
       typeof it.id === "string" && it.id.trim()
         ? it.id.trim()
         : `rb-${items.length + 1}`;
-    items.push({
-      id,
-      createdAt: archivo.createdAt,
-      origen: archivo.origen,
-      dia: archivo.dia,
-      resumen: resumenDe(archivo.catalogos, archivo.asignaciones),
-      catalogos: archivo.catalogos,
-      asignaciones: archivo.asignaciones,
-    });
+    items.push(completoDesdeArchivo(archivo, id));
   }
   const savedAt =
     typeof obj.savedAt === "string" && obj.savedAt
