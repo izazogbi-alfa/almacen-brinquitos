@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Download, Save, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Download, FolderOpen, Save, RotateCcw } from "lucide-react";
 import { CabeceraConfiguracion } from "@/components/cabecera-configuracion";
 import { DialogQuitarConClave } from "@/components/dialog-quitar-con-clave";
 import { AsyncGate, EmptyView } from "@/components/status-views";
@@ -12,6 +12,8 @@ import { HREF_CONFIGURACION } from "@/lib/secciones-configuracion";
 import {
   LIMITE_RESPALDOS,
   nombreArchivoRespaldo,
+  parseArchivoRespaldo,
+  type ArchivoRespaldo,
   type RespaldoMeta,
 } from "@/lib/respaldos";
 import type { Catalogos } from "@/lib/types";
@@ -114,9 +116,16 @@ function PaginaRespaldos() {
   const { user } = useInventory();
   const [items, setItems] = useState<RespaldoMeta[] | null>(null);
   const [errorLista, setErrorLista] = useState("");
+  const [errorRestaurar, setErrorRestaurar] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState("");
   const [idRestaurar, setIdRestaurar] = useState<string | null>(null);
+  const [archivoElegido, setArchivoElegido] = useState<{
+    nombre: string;
+    datos: ArchivoRespaldo;
+  } | null>(null);
+  const [confirmaArchivo, setConfirmaArchivo] = useState(false);
+  const inputArchivo = useRef<HTMLInputElement>(null);
 
   const cargar = useCallback(async () => {
     setErrorLista("");
@@ -210,14 +219,50 @@ function PaginaRespaldos() {
     setAviso("Archivo listo en tu computadora.");
   }
 
+  async function leerArchivoLocal(file: File) {
+    setErrorRestaurar("");
+    setArchivoElegido(null);
+    try {
+      const texto = await file.text();
+      let raw: unknown;
+      try {
+        raw = JSON.parse(texto);
+      } catch {
+        throw new Error(
+          "Ese archivo no se pudo leer. Tiene que ser un JSON de respaldo.",
+        );
+      }
+      const parsed = parseArchivoRespaldo(raw);
+      if (!parsed) {
+        throw new Error("Ese archivo no es un respaldo válido. No se restauró.");
+      }
+      setArchivoElegido({ nombre: file.name, datos: parsed });
+    } catch (err) {
+      setErrorRestaurar(
+        err instanceof Error ? err.message : "No se pudo leer ese archivo.",
+      );
+    }
+  }
+
   async function restaurar(password: string) {
-    if (!idRestaurar) return;
-    const res = await fetch(`/api/admin/respaldos/${idRestaurar}/restaurar`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
+    setErrorRestaurar("");
+    const desdeArchivo = confirmaArchivo && archivoElegido;
+    const res = desdeArchivo
+      ? await fetch("/api/admin/respaldos/restaurar-archivo", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            password,
+            archivo: archivoElegido.datos,
+          }),
+        })
+      : await fetch(`/api/admin/respaldos/${idRestaurar}/restaurar`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
     const data = (await res.json().catch(() => ({}))) as {
       error?: string;
       catalogos?: Catalogos;
@@ -226,10 +271,13 @@ function PaginaRespaldos() {
       asignacionesGuardadosEn?: string;
     };
     if (!res.ok) {
-      throw new Error(data.error ?? "Contraseña incorrecta. No se restauró.");
+      const mensaje = data.error ?? "No se pudo restaurar. Nada se cambió.";
+      setErrorRestaurar(mensaje);
+      throw new Error(mensaje);
     }
     escribirLocalTrasRestaurar(data);
     setIdRestaurar(null);
+    setConfirmaArchivo(false);
     window.location.reload();
   }
 
@@ -240,7 +288,7 @@ function PaginaRespaldos() {
     <div className="space-y-5">
       <CabeceraConfiguracion
         titulo="Respaldos"
-        descripcion="Copia de esquemas, colores, tallas, especificaciones y qué esquema usa cada artículo (Baccus y el resto). Así no se pierden."
+        descripcion="Copia de esquemas, colores, tallas, especificaciones, qué esquema usa cada artículo, existencias y sesiones de captura (si esa copia las trae)."
         volverHref={HREF_CONFIGURACION}
       />
 
@@ -276,6 +324,65 @@ function PaginaRespaldos() {
         </p>
       </section>
 
+      <section className="space-y-3 rounded-2xl border-2 border-primary/40 p-4">
+        <h3 className="font-heading text-lg font-semibold">Restaurar respaldo</h3>
+        <p className="text-sm text-muted-foreground">
+          Elige una copia de la lista o un archivo de tu PC. Pide tu contraseña
+          y <strong>Sí</strong>. Solo se aplica lo que trae esa copia: no se
+          inventan existencias ni sesiones.
+        </p>
+        <input
+          ref={inputArchivo}
+          type="file"
+          accept="application/json,.json"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void leerArchivoLocal(file);
+          }}
+        />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 w-full gap-2 text-base"
+            onClick={() => inputArchivo.current?.click()}
+          >
+            <FolderOpen className="size-5" />
+            Elegir archivo de mi PC
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            className="h-12 w-full gap-2 text-base"
+            disabled={!archivoElegido}
+            onClick={() => {
+              setErrorRestaurar("");
+              setConfirmaArchivo(true);
+            }}
+          >
+            <RotateCcw className="size-5" />
+            Restaurar
+          </Button>
+        </div>
+        {archivoElegido ? (
+          <p className="text-sm" role="status">
+            Archivo listo: <span className="font-medium">{archivoElegido.nombre}</span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            En el teléfono o en la PC: elige el JSON que bajaste antes, luego
+            Restaurar.
+          </p>
+        )}
+        {errorRestaurar ? (
+          <p className="text-sm text-destructive" role="alert">
+            {errorRestaurar}
+          </p>
+        ) : null}
+      </section>
+
       {errorLista ? (
         <div className="space-y-2 rounded-2xl border border-destructive/30 p-4">
           <p className="text-sm text-destructive" role="alert">
@@ -305,8 +412,8 @@ function PaginaRespaldos() {
         <p className="text-sm text-muted-foreground">Cargando copias…</p>
       ) : items.length === 0 ? (
         <EmptyView
-          titulo="Aún no hay copias aquí"
-          detalle="Pulsa Guardar ahora. La del día aparece sola la primera vez que entres hoy, o cuando corra el reloj del servidor."
+          titulo="No hay respaldos"
+          detalle="Pulsa Guardar ahora, o espera la copia del día. También puedes restaurar un archivo de tu PC arriba."
         />
       ) : (
         <div className="space-y-4">
@@ -314,26 +421,49 @@ function PaginaRespaldos() {
             titulo={`Guardadas aquí (${manuales.length} de ${LIMITE_RESPALDOS})`}
             vacio="No hay copias manuales. Pulsa Guardar ahora."
             items={manuales}
-            onRestaurar={setIdRestaurar}
-            onBajar={(it) => void bajarCopia(it.id, it).catch((err) => setErrorLista(err instanceof Error ? err.message : "No se pudo bajar."))}
+            onRestaurar={(id) => {
+              setConfirmaArchivo(false);
+              setErrorRestaurar("");
+              setIdRestaurar(id);
+            }}
+            onBajar={(it) =>
+              void bajarCopia(it.id, it).catch((err) =>
+                setErrorLista(
+                  err instanceof Error ? err.message : "No se pudo bajar.",
+                ),
+              )
+            }
           />
           <ListaGrupo
             titulo={`Del día (${automaticos.length} de ${LIMITE_RESPALDOS})`}
             vacio="Hoy todavía no hay copia automática."
             items={automaticos}
-            onRestaurar={setIdRestaurar}
-            onBajar={(it) => void bajarCopia(it.id, it).catch((err) => setErrorLista(err instanceof Error ? err.message : "No se pudo bajar."))}
+            onRestaurar={(id) => {
+              setConfirmaArchivo(false);
+              setErrorRestaurar("");
+              setIdRestaurar(id);
+            }}
+            onBajar={(it) =>
+              void bajarCopia(it.id, it).catch((err) =>
+                setErrorLista(
+                  err instanceof Error ? err.message : "No se pudo bajar.",
+                ),
+              )
+            }
           />
         </div>
       )}
 
       <DialogQuitarConClave
-        abierto={Boolean(idRestaurar)}
-        titulo="¿Restaurar esta copia?"
-        descripcion="Tus listas y los esquemas de cada artículo se reemplazan por los de esa fecha. Escribe tu contraseña."
+        abierto={Boolean(idRestaurar) || confirmaArchivo}
+        titulo="¿Restaurar este respaldo?"
+        descripcion="Se aplica solo lo que trae esa copia (listas, esquemas, existencias y sesiones si van ahí). Escribe tu contraseña."
         idCampo="clave-restaurar-respaldo"
         etiquetaSi="Sí, restaurar"
-        onNo={() => setIdRestaurar(null)}
+        onNo={() => {
+          setIdRestaurar(null);
+          setConfirmaArchivo(false);
+        }}
         onConfirmarConClave={restaurar}
       />
     </div>

@@ -15,6 +15,10 @@ import type {
 import type { SesionCaptura } from "@/lib/sesion-captura";
 import { migrarSesiones } from "@/lib/sesion-store";
 import {
+  aplicarExistencias,
+  type ExistenciaRespaldo,
+} from "@/lib/respaldos";
+import {
   aplicarAsignaciones,
   extraerAsignaciones,
   type AsignacionArticulo,
@@ -394,6 +398,24 @@ export async function guardarCatalogosEnStore(catalogos: Catalogos) {
     return s;
   });
   return { store, data, remoto };
+}
+
+export function aplicarCargaRespaldo(input: {
+  existencias?: ExistenciaRespaldo[];
+  sesiones?: SesionCaptura[];
+}) {
+  if (input.existencias === undefined && input.sesiones === undefined) {
+    return loadRaw();
+  }
+  return withStore((store) => {
+    if (input.existencias) {
+      store.productos = aplicarExistencias(store.productos, input.existencias);
+    }
+    if (input.sesiones) {
+      store.sesiones = input.sesiones;
+    }
+    return store;
+  });
 }
 
 export async function guardarAsignacionesEnStore(

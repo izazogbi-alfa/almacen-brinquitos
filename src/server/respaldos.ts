@@ -4,9 +4,12 @@ import {
   aArchivo,
   diaCalendario,
   metaPublica,
+  parseArchivoRespaldo,
   recortarColeccion,
+  respaldoTieneDatos,
   snapshotDesdeStore,
   yaHayAutomaticoDelDia,
+  type ArchivoRespaldo,
   type OrigenRespaldo,
   type RespaldoCompleto,
   type RespaldoMeta,
@@ -16,6 +19,7 @@ import {
   leerColeccionRespaldos,
 } from "@/server/respaldos-persist";
 import {
+  aplicarCargaRespaldo,
   guardarAsignacionesEnStore,
   guardarCatalogosEnStore,
   hidratarCatalogos,
@@ -60,6 +64,7 @@ export async function agregarRespaldo(input: {
     catalogos: store.catalogos,
     productos: store.productos,
     origen: input.origen,
+    sesiones: store.sesiones,
   });
   coleccion.items = recortarColeccion([nuevo, ...coleccion.items]);
   coleccion.savedAt = nuevo.createdAt;
@@ -92,23 +97,58 @@ export async function obtenerRespaldo(
   return coleccion.items.find((it) => it.id === id) ?? null;
 }
 
+async function aplicarArchivoRespaldo(archivo: ArchivoRespaldo) {
+  if (!respaldoTieneDatos(archivo)) {
+    throw new Error("Ese respaldo viene vacío. No se restauró.");
+  }
+
+  let catalogos = archivo.catalogos;
+  let catalogosGuardadosEn: string | undefined;
+  let cookiesCat: ReturnType<typeof cookiesCatalogos> = [];
+  if (archivo.catalogos) {
+    const { data } = await guardarCatalogosEnStore(archivo.catalogos);
+    catalogos = data.catalogos;
+    catalogosGuardadosEn = data.savedAt;
+    cookiesCat = cookiesCatalogos(data);
+  }
+
+  let asignaciones = archivo.asignaciones;
+  let asignacionesGuardadosEn: string | undefined;
+  let cookiesAsig: ReturnType<typeof cookiesAsignaciones> = [];
+  if (archivo.asignaciones) {
+    const { data } = await guardarAsignacionesEnStore(archivo.asignaciones);
+    asignaciones = data.asignaciones;
+    asignacionesGuardadosEn = data.savedAt;
+    cookiesAsig = cookiesAsignaciones(data);
+  }
+
+  aplicarCargaRespaldo({
+    existencias: archivo.existencias,
+    sesiones: archivo.sesiones,
+  });
+
+  return {
+    catalogos,
+    catalogosGuardadosEn,
+    cookiesCatalogos: cookiesCat,
+    asignaciones,
+    asignacionesGuardadosEn,
+    cookiesAsignaciones: cookiesAsig,
+  };
+}
+
 export async function restaurarRespaldo(id: string) {
   const respaldo = await obtenerRespaldo(id);
   if (!respaldo) {
     throw new Error("No está esa copia. Elige otra de la lista.");
   }
-  const { data: catalogosData } = await guardarCatalogosEnStore(
-    respaldo.catalogos,
-  );
-  const { data: asigData } = await guardarAsignacionesEnStore(
-    respaldo.asignaciones,
-  );
-  return {
-    catalogos: catalogosData.catalogos,
-    catalogosGuardadosEn: catalogosData.savedAt,
-    cookiesCatalogos: cookiesCatalogos(catalogosData),
-    asignaciones: asigData.asignaciones,
-    asignacionesGuardadosEn: asigData.savedAt,
-    cookiesAsignaciones: cookiesAsignaciones(asigData),
-  };
+  return aplicarArchivoRespaldo(aArchivo(respaldo));
+}
+
+export async function restaurarDesdeArchivo(raw: unknown) {
+  const archivo = parseArchivoRespaldo(raw);
+  if (!archivo) {
+    throw new Error("Ese archivo no es un respaldo válido. No se restauró.");
+  }
+  return aplicarArchivoRespaldo(archivo);
 }

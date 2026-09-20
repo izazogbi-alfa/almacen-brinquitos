@@ -12,7 +12,7 @@
     "test:sesion": "node --experimental-strip-types scripts/test-sesion-inactividad.ts && node --experimental-strip-types scripts/test-sesion-pendiente.ts",
     "test:pdf-colores": "node --experimental-strip-types scripts/test-pdf-colores.ts",
     "test:captura-tallas": "node --experimental-strip-types scripts/test-captura-tallas.ts",
-    "test:persist": "node --experimental-strip-types scripts/test-catalogos-persist.ts && node --experimental-strip-types scripts/test-asignaciones-persist.ts && node --experimental-strip-types scripts/test-respaldos.ts"
+    "test:persist": "node --experimental-strip-types scripts/test-catalogos-persist.ts && node --experimental-strip-types scripts/test-asignaciones-persist.ts && node --experimental-strip-types scripts/test-respaldos.ts && npx tsx scripts/test-restaurar-respaldo.ts",
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

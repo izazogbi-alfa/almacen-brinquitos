@@ -13,6 +13,7 @@ import {
   type ColeccionRespaldos,
   type RespaldoCompleto,
 } from "@/lib/respaldos";
+import { catalogosVacios } from "@/lib/catalogos";
 
 const BLOB_PATH = "almacen-brinquitos/respaldos.json";
 const GITHUB_FILE = "data/respaldos.json";
@@ -33,14 +34,18 @@ function parseColeccion(raw: unknown): ColeccionRespaldos | null {
       typeof it.id === "string" && it.id.trim()
         ? it.id.trim()
         : `rb-${items.length + 1}`;
+    const catalogos = archivo.catalogos ?? catalogosVacios();
+    const asignaciones = archivo.asignaciones ?? {};
     items.push({
       id,
       createdAt: archivo.createdAt,
       origen: archivo.origen,
       dia: archivo.dia,
-      resumen: resumenDe(archivo.catalogos, archivo.asignaciones),
-      catalogos: archivo.catalogos,
-      asignaciones: archivo.asignaciones,
+      resumen: resumenDe(catalogos, asignaciones),
+      catalogos,
+      asignaciones,
+      existencias: archivo.existencias,
+      sesiones: archivo.sesiones,
     });
   }
   const savedAt =
