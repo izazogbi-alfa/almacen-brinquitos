@@ -4,7 +4,7 @@ export const SECCIONES_USUARIOS = [
     slug: "personas",
     href: "/admin/usuarios/personas",
     titulo: "Personas",
-    detalle: "Crea, da rol y módulos, cambia contraseñas o quita con tu clave.",
+    detalle: "Crea, da rol, permisos por usuario, cambia contraseñas o quita con tu clave.",
   },
 ] as const;
 

@@ -34,6 +34,11 @@ function CheckModulos({
 }) {
   return (
     <div className="space-y-2">
+      <p className="text-sm font-medium">Permisos por usuario</p>
+      <p className="text-xs text-muted-foreground">
+        Marca lo que puede usar. Si quitas Existencias, Recepción o Pedidos, no
+        sale en el menú de abajo, no entra a capturar y no ve ese pendiente.
+      </p>
       {OPCIONES_MODULO.map((op) => (
         <label
           key={op.clave}
@@ -242,7 +247,7 @@ function PersonasAdmin() {
     <div className="space-y-6">
       <CabeceraUsuarios
         titulo="Personas"
-        descripcion="Crea personas. Elige Administrador (todo, incluso Usuarios) o Usuario (solo los módulos marcados). Autorizar pedidos sigue siendo de administradora. En cada ficha: Cambiar contraseña."
+        descripcion="Crea personas. Elige Administrador (todo, incluso Usuarios) o Usuario. En cada persona: Permisos por usuario (Existencias, Recepción, Pedidos y el resto). Autorizar pedidos sigue siendo de administradora. Cambiar contraseña en cada ficha."
       />
 
       <form
@@ -302,7 +307,8 @@ function PersonasAdmin() {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Administrador ve todos los módulos, incluido Usuarios.
+            Administrador ve todos los módulos, incluido Usuarios. No se le
+            restringe Existencias, Recepción ni Pedidos.
           </p>
         )}
         <Button type="submit" className="h-11 w-full" disabled={creando}>
@@ -351,7 +357,8 @@ function PersonasAdmin() {
                 ) : null}
                 {u.rol === "admin" ? (
                   <p className="text-sm text-muted-foreground">
-                    Ve todo, incluido Usuarios. Autoriza pedidos.
+                    Ve todo, incluido Usuarios. Autoriza pedidos. No se le
+                    quitan Existencias, Recepción ni Pedidos.
                   </p>
                 ) : (
                   <>

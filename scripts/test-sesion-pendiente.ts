@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { puede } from "../src/lib/modulos.ts";
+import { SECCIONES_PENDIENTES } from "../src/lib/secciones-pendientes.ts";
 import {
   coincideBusquedaPendiente,
   etiquetaBotonPendiente,
@@ -150,7 +152,7 @@ assert.equal(coincideBusquedaPendiente(conSucursal, "gloria"), true);
 assert.equal(coincideBusquedaPendiente(conSucursal, "pedidos"), false);
 assert.equal(coincideBusquedaPendiente(conSucursal, "iza"), true);
 
-assert.equal(ORDEN_MODULOS_PENDIENTES.join(","), "existencias,pedidos,recepcion");
+assert.equal(ORDEN_MODULOS_PENDIENTES.join(","), "existencias,recepcion,pedidos");
 const pedidoPend: SesionCaptura = {
   ...conSucursal,
   id: "ss-pe",
@@ -176,5 +178,50 @@ assert.equal(borrarPendiente(mix, "ss-busca"), true);
 assert.equal(mix.length, 1);
 assert.equal(mix[0].id, "ss-pe");
 assert.equal(movimientos.length, 1);
+
+assert.deepEqual(
+  SECCIONES_PENDIENTES.map((s) => s.titulo),
+  [
+    "Existencias pendientes",
+    "Recepción pendientes",
+    "Pedidos pendientes",
+  ],
+);
+const iza = {
+  id: "u-iza",
+  username: "iza",
+  nombre: "Iza",
+  rol: "admin" as const,
+  modulos: {
+    existencias: true,
+    recepcion: true,
+    pedidos: true,
+    articulos: true,
+    configuracion: true,
+  },
+};
+const almacen2 = {
+  id: "u-a2",
+  username: "almacen2",
+  nombre: "Almacén 2",
+  rol: "operador" as const,
+  modulos: {
+    existencias: true,
+    recepcion: false,
+    pedidos: false,
+    articulos: false,
+    configuracion: false,
+  },
+};
+assert.equal(
+  SECCIONES_PENDIENTES.filter((s) => puede(iza, s.modulo)).length,
+  3,
+);
+assert.deepEqual(
+  SECCIONES_PENDIENTES.filter((s) => puede(almacen2, s.modulo)).map(
+    (s) => s.slug,
+  ),
+  ["existencias"],
+);
 
 console.log("ok sesion-pendiente");
