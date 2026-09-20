@@ -16,6 +16,7 @@ import {
   withStore,
 } from "@/server/store";
 import {
+  abandonarSesionesAbiertas,
   aplicarCierresPorInactividad,
   cerrarSesionModulo,
   reanudarSesionPendiente,
@@ -97,6 +98,9 @@ export async function POST(request: Request) {
     pedidoId?: string;
     modulo?: string;
     borrador?: unknown;
+    borradores?: Partial<
+      Record<"existencias" | "pedidos" | "recepcion", unknown>
+    >;
     crearSiFalta?: boolean;
   } | null;
 
@@ -177,6 +181,29 @@ export async function POST(request: Request) {
         }
         const sesion = cerrarSesionModulo(store, user, body.modulo);
         return { sesion, aviso: sesion ? "Sesión cerrada por inactividad" : null };
+      }
+
+      if (accion === "abandonar-pagina") {
+        const modulo = esModuloSesion(body?.modulo) ? body.modulo : undefined;
+        if (modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesiones = abandonarSesionesAbiertas(
+          store,
+          user,
+          new Date(),
+          modulo,
+          body.borrador,
+          body.borradores,
+        );
+        if (sesiones.some((s) => s.pendiente)) marcarGuardado(store, user);
+        return { sesiones };
       }
 
       if (accion === "contar") {

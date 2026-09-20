@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { cookieSesion, jsonUsuario } from "@/server/auth";
-import { login } from "@/server/store";
+import { login, withStore } from "@/server/store";
+import { abandonarSesionesAbiertas } from "@/lib/sesion-store";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -24,6 +25,9 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+    withStore((store) => {
+      abandonarSesionesAbiertas(store, result.user);
+    });
     const jar = await cookies();
     jar.set(cookieSesion(result.token));
     return NextResponse.json({ user: jsonUsuario(result.user) });

@@ -87,6 +87,10 @@ function ExistenciasContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-teal-900">
           Existencias
         </h2>
+        <BotonPendiente
+          modulo="existencias"
+          onReanudada={() => setVista("contar")}
+        />
         <EstadoSesion modulo="existencias" />
         <p className="mt-1 text-sm text-muted-foreground">
           Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
@@ -97,10 +101,6 @@ function ExistenciasContent() {
         </p>
       </div>
 
-      <BotonPendiente
-        modulo="existencias"
-        onReanudada={() => setVista("contar")}
-      />
       <Tabs value={vista} onValueChange={(v) => setVista(v as typeof vista)}>
         <TabsList className="w-full">
           <TabsTrigger value="contar">Contar</TabsTrigger>

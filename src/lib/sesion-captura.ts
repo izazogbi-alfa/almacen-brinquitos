@@ -31,8 +31,8 @@ export type SesionCaptura = {
   cerradaEn?: string;
   userId: string;
   userName: string;
-  motivoCierre?: "inactividad";
-  /** Cerrada por inactividad con trabajo; se retoma con el botón, no con una sesión nueva. */
+  motivoCierre?: "inactividad" | "pagina";
+  /** Cerrada con trabajo (inactividad o al salir); se retoma con el botón, no con una sesión nueva. */
   pendiente?: boolean;
   conteos: number;
   entradas: number;
