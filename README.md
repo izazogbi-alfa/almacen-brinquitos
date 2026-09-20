@@ -19,7 +19,7 @@ La barra sigue diciendo **Usuarios**. Esa pantalla es un hub con botones grandes
 1. Abre **Usuarios** en la barra.
 2. Pulsa **Personas**. **Volver** regresa al hub.
 3. **Persona nueva:** usuario, contraseña, nombre, rol Administrador o Usuario.
-4. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego casillas (Existencias, Recepción, Pedidos captura, Artículos, Configuración).
+4. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego **Permisos por usuario** (casillas Existencias, Recepción, Pedidos captura, Artículos, Configuración). Sin casilla: no sale en el menú, no entra a capturar y no ve ese pendiente. Administradora ve todo.
 5. **Cambiar contraseña** (en cada persona, incluida la administradora): clave nueva dos veces + **tu** contraseña de ahora. Clave mala: no cambia.
 6. **Quitar:** contraseña de quien está dentro + **Sí / No**. No se puede quitar a la última administradora (ni bajarse el rol si es la última).
 7. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
@@ -42,7 +42,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay d
 
 ## Pendientes
 
-En el menú de abajo, **Pendientes** está siempre (aunque la lista esté vacía). La lista va por tipo: **Existencias**, **Pedidos**, **Recepción**. Quién, cuándo y sucursal. Hay un buscador. Toca la fila: reabre **la misma** sesión. **Borrar** pide tu contraseña (Sí / No); quita solo esa captura a medias, no el catálogo ni lo ya guardado en piso. Si no hay ninguna: **No hay pendientes**.
+En el menú de abajo, **Pendientes** está siempre (aunque no haya capturas). Es un hub con botones grandes, igual que Configuración: **Existencias pendientes**, **Recepción pendientes**, **Pedidos pendientes**. Solo ves los módulos que Iza te marcó. Dentro hay buscador. Toca la fila: reabre **la misma** sesión. **Borrar** pide tu contraseña (Sí / No); quita solo esa captura a medias, no el catálogo ni lo ya guardado en piso. **Volver** regresa al hub. Si no hay ninguna: **No hay pendientes**.
 
 ## Existencias
 
