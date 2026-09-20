@@ -1,6 +1,13 @@
 /** Hub de Configuración. Agrega un ítem aquí y su página para un botón nuevo. */
 export const SECCIONES_CONFIGURACION = [
   {
+    slug: "actualizar-catalogo",
+    href: "/admin/configuracion/actualizar-catalogo",
+    titulo: "Actualizar catálogo",
+    detalle: "Excel o CSV: actualiza nombre y foto por Clave, sin borrar lo capturado.",
+    soloAdmin: true,
+  },
+  {
     slug: "listas-de-captura",
     href: "/admin/configuracion/listas-de-captura",
     titulo: "Listas de captura",
@@ -20,13 +27,6 @@ export const SECCIONES_CONFIGURACION = [
     titulo: "Informe PDF",
     detalle: "Subir logo y cambiar el nombre que sale en el encabezado.",
     soloAdmin: false,
-  },
-  {
-    slug: "actualizar-catalogo",
-    href: "/admin/configuracion/actualizar-catalogo",
-    titulo: "Actualizar catálogo",
-    detalle: "Excel o CSV: actualiza nombre y foto por Clave, sin borrar lo capturado.",
-    soloAdmin: true,
   },
 ] as const;
 

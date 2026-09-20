@@ -7,7 +7,15 @@ import {
   parseTablaCatalogo,
   tipoColumna,
 } from "../src/lib/actualizar-catalogo.ts";
+import { SECCIONES_CONFIGURACION } from "../src/lib/secciones-configuracion.ts";
 import type { Producto } from "../src/lib/types.ts";
+
+assert.equal(SECCIONES_CONFIGURACION[0].titulo, "Actualizar catálogo");
+assert.equal(SECCIONES_CONFIGURACION[0].soloAdmin, true);
+assert.equal(
+  SECCIONES_CONFIGURACION[0].href,
+  "/admin/configuracion/actualizar-catalogo",
+);
 
 assert.equal(tipoColumna("Clave"), "clave");
 assert.equal(tipoColumna("SKU"), "clave");
