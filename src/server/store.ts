@@ -267,32 +267,16 @@ function loadRaw(): AppStore {
     extra = true;
   } else if (catalogo.length) {
     const prevPorSku = new Map(
-      parsed.productos.map((p) => [p.sku.toUpperCase(), p] as const),
+      (parsed.productos ?? []).map((p) => [p.sku.toUpperCase(), p] as const),
     );
-    parsed.productos = catalogo.map((c) => {
-      const prev = prevPorSku.get(c.sku.toUpperCase());
-      if (!prev) {
-        extra = true;
-        return sanitizarArticuloSinFabrica(c, parsed.catalogos);
-      }
-      return sanitizarArticuloSinFabrica(
-        {
-          ...c,
-          id: prev.id,
-          esquemaConteo: prev.esquemaConteo,
-          tallas: prev.tallas?.length ? prev.tallas : undefined,
-          colores: prev.colores?.length ? prev.colores : c.colores,
-          especificaciones: prev.especificaciones?.length
-            ? prev.especificaciones
-            : c.especificaciones,
-          existenciasSucursal: prev.existenciasSucursal ?? [],
-          existencia: prev.existencia,
-          variantes: prev.variantes,
-          foto: prev.foto || c.foto,
-        },
-        parsed.catalogos,
-      );
-    });
+    for (const c of catalogo) {
+      const sku = c.sku.trim().toUpperCase();
+      if (!sku || prevPorSku.has(sku)) continue;
+      extra = true;
+      const nuevo = sanitizarArticuloSinFabrica(c, parsed.catalogos);
+      parsed.productos.push(nuevo);
+      prevPorSku.set(sku, nuevo);
+    }
   }
   let fotos: Record<string, string> = {};
   try {
