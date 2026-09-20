@@ -230,4 +230,17 @@ export function reanudarSesionPendiente(
   return pendiente;
 }
 
+/** Quita solo esa captura a medias. No toca catálogo ni movimientos ya guardados. */
+export function borrarSesionPendiente(
+  store: StoreConSesiones,
+  sesionId: string,
+): SesionCaptura | null {
+  const i = store.sesiones.findIndex(
+    (s) => s.id === sesionId && Boolean(s.cerradaEn) && s.pendiente,
+  );
+  if (i < 0) return null;
+  const [quitada] = store.sesiones.splice(i, 1);
+  return quitada ?? null;
+}
+
 export type { BorradorSesion };

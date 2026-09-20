@@ -118,6 +118,12 @@ export const NOMBRE_MODULO_SESION: Record<ModuloSesion, string> = {
   recepcion: "Recepción",
 };
 
+export const ORDEN_MODULOS_PENDIENTES: ModuloSesion[] = [
+  "existencias",
+  "pedidos",
+  "recepcion",
+];
+
 export function rutaDeModuloSesion(modulo: ModuloSesion) {
   if (modulo === "pedidos") return "/pedidos/nuevo";
   if (modulo === "recepcion") return "/recepcion";

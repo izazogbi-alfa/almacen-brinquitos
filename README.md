@@ -42,7 +42,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay d
 
 ## Pendientes
 
-En el menú de abajo, **Pendientes** está siempre (aunque la lista esté vacía). Ahí salen las capturas a medias de Existencias, Pedidos y Recepción: quién, cuándo y sucursal. Hay un buscador. Toca una fila: reabre **la misma** sesión en ese módulo. Si no hay ninguna: **No hay pendientes**.
+En el menú de abajo, **Pendientes** está siempre (aunque la lista esté vacía). La lista va por tipo: **Existencias**, **Pedidos**, **Recepción**. Quién, cuándo y sucursal. Hay un buscador. Toca la fila: reabre **la misma** sesión. **Borrar** pide tu contraseña (Sí / No); quita solo esa captura a medias, no el catálogo ni lo ya guardado en piso. Si no hay ninguna: **No hay pendientes**.
 
 ## Existencias
 
