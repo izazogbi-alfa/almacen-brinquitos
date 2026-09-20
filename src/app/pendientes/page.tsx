@@ -28,13 +28,14 @@ function HubPendientes() {
   const terminadas = SECCIONES_TERMINADAS.filter((s) => puede(user, s.modulo));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="font-heading text-2xl font-semibold tracking-tight text-amber-800">
+        <h2 className="font-heading text-2xl font-semibold tracking-tight">
           Registros
         </h2>
         <p className="text-sm text-muted-foreground">
-          Pulsa un botón. A medias o ya terminadas, cada tipo está aparte.
+          Pulsa un botón. Cada tipo está aparte. Luego puedes sumar más aquí
+          mismo.
         </p>
       </div>
       {pendientes.length === 0 ? (
@@ -43,32 +44,26 @@ function HubPendientes() {
           detalle="Iza no te asignó Existencias, Recepción ni Pedidos."
         />
       ) : (
-        <>
-          <div className="grid gap-3">
-            {pendientes.map((seccion) => (
-              <BotonHub
-                key={seccion.slug}
-                href={seccion.href}
-                titulo={seccion.titulo}
-                detalle={seccion.detalle}
-                icon={ICONOS_PENDIENTES[seccion.slug]}
-                tono="amber"
-              />
-            ))}
-          </div>
-          <div className="grid gap-3">
-            {terminadas.map((seccion) => (
-              <BotonHub
-                key={seccion.slug}
-                href={seccion.href}
-                titulo={seccion.titulo}
-                detalle={seccion.detalle}
-                icon={ICONOS_TERMINADAS[seccion.slug]}
-                tono="teal"
-              />
-            ))}
-          </div>
-        </>
+        <div className="grid gap-3">
+          {pendientes.map((seccion) => (
+            <BotonHub
+              key={seccion.slug}
+              href={seccion.href}
+              titulo={seccion.titulo}
+              detalle={seccion.detalle}
+              icon={ICONOS_PENDIENTES[seccion.slug]}
+            />
+          ))}
+          {terminadas.map((seccion) => (
+            <BotonHub
+              key={seccion.slug}
+              href={seccion.href}
+              titulo={seccion.titulo}
+              detalle={seccion.detalle}
+              icon={ICONOS_TERMINADAS[seccion.slug]}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

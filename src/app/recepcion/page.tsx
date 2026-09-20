@@ -13,9 +13,9 @@ import {
   useBorradorSesion,
   useCierrePorInactividad,
 } from "@/components/estado-sesion";
-import { formatoFechaHora } from "@/lib/format";
+import { formatoFecha } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdfBloques } from "@/lib/pdf";
+import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
 import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
 import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
@@ -47,31 +47,30 @@ function RecepcionContent() {
 
   function pdf() {
     const cuando = sesion?.cerradaEn || sesion?.ultimaActividad;
+    const filas = deSesion.map((m) => {
+      const prod = productos.find((p) => p.id === m.productoId);
+      return {
+        productoId: m.productoId ?? "",
+        sku: prod?.sku ?? "",
+        nombre: m.productoNombre ?? prod?.nombre ?? "",
+        color: m.color ?? "Único",
+        sucursalId: m.sucursalId,
+        sucursalNombre: m.sucursalNombre,
+        talla: m.talla ?? "",
+        cantidad: m.cantidad,
+      };
+    });
     descargarPdfBloques(
       `entrada-${sesion?.id ?? "sesion"}.pdf`,
-      "Brinquitos · Entrada",
-      [
-        `Quién recibe: ${user?.nombre ?? "—"}`,
-        sesion
-          ? `Sesión ${sesion.cerradaEn ? "cerrada" : "abierta"} · ${formatoFechaHora(cuando ?? sesion.abiertaEn)}`
-          : "Sin sesión todavía",
-      ],
-      bloquesDesdeCeldas(
-        deSesion.map((m) => {
-          const prod = productos.find((p) => p.id === m.productoId);
-          return {
-            productoId: m.productoId ?? "",
-            sku: prod?.sku ?? "",
-            nombre: m.productoNombre ?? prod?.nombre ?? "",
-            color: m.color ?? "Único",
-            sucursalId: m.sucursalId,
-            sucursalNombre: m.sucursalNombre,
-            talla: m.talla ?? "",
-            cantidad: m.cantidad,
-          };
-        }),
-        { productos, catalogos },
-      ),
+      "Entrada de mercancía",
+      [],
+      bloquesDesdeCeldas(filas, { productos, catalogos }),
+      encabezadoInforme(catalogos, {
+        tituloDoc: "Entrada de mercancía",
+        sucursal: filas.find((f) => f.sucursalNombre)?.sucursalNombre,
+        fecha: formatoFecha(cuando ?? new Date().toISOString()),
+        quien: user?.nombre,
+      }),
     );
   }
 
@@ -87,8 +86,8 @@ function RecepcionContent() {
         <p className="mt-1 text-sm text-emerald-800/80">
           Misma captura que existencias, en verde. Marca varias prendas del
           mismo esquema; el PDF junta esta sesión. A los 10 minutos sin
-          capturar, la lista se congela. Si quedó a medias, el botón ámbar
-          reabre esa misma entrada.
+          capturar, la lista se congela. Si quedó a medias, Continuar este
+          registro reabre esa misma entrada.
         </p>
       </div>
       <CapturaArticulo

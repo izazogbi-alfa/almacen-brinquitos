@@ -97,4 +97,16 @@ assert.equal(csv.length, 1);
 assert.equal(csv[0].esquemaConteo, undefined);
 assert.equal(csv[0].tallas, undefined);
 
+const conMarca = normalizarCatalogos({
+  esquemas: [custom],
+  colores: ["rosa"],
+  tallas: ["2"],
+  especificaciones: [],
+  empresaNombre: "  Tienda Iza  ",
+  logoDataUrl: "data:image/png;base64,aaa",
+});
+assert.equal(conMarca.empresaNombre, "Tienda Iza");
+assert.equal(conMarca.logoDataUrl?.startsWith("data:image/png"), true);
+assert.equal(normalizarCatalogos(null).empresaNombre, undefined);
+
 console.log("ok", cookies.filter((c) => c.value).length, "cookies");

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useInventory } from "@/lib/inventory-context";
-import { formatoFechaHora } from "@/lib/format";
+import { formatoFechaHora, GRUPOS_REGISTRO, grupoRegistro } from "@/lib/format";
 import { puede } from "@/lib/modulos";
 import {
   seccionPendienteDe,
@@ -98,8 +98,8 @@ function ListaPendientesModulo({
         titulo={seccion.titulo}
         descripcion={
           archivo
-            ? "Solo consulta. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso."
-            : "Toca la fila para seguir. Borrar pide tu contraseña y quita solo esa captura a medias."
+            ? "Consulta por día. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso."
+            : "Consulta por día. Toca la fila para continuar. Borrar pide tu contraseña."
         }
       />
 
@@ -119,82 +119,93 @@ function ListaPendientesModulo({
 
       {visibles.length === 0 ? (
         <EmptyView
-          titulo={archivo ? "No hay terminados" : "No hay pendientes"}
+          titulo={archivo ? "No hay terminados" : "No hay en curso"}
           detalle={
             q.trim()
               ? "Nada coincide con esa búsqueda. Borra el texto o prueba otra palabra."
               : archivo
-                ? "Cuando pulses Ya terminé (o guardes un pedido), aparece aquí."
+                ? "Cuando pulses Cerrar registro (o guardes un pedido), aparece aquí."
                 : "Cuando una captura se quede a medias (también si cierras la pestaña), aparece aquí."
           }
         />
       ) : (
-        <ul className="space-y-3">
-          {visibles.map((sesion) => {
-            const sucursal = nombreSucursal(sesion);
-            const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
-            const fila = (
-              <>
-                <span className="text-sm font-medium text-amber-950/80">
-                  {sesion.userName}
-                  {cuando ? ` · ${formatoFechaHora(cuando)}` : ""}
-                </span>
-                {sucursal ? (
-                  <span className="mt-0.5 text-sm text-muted-foreground">
-                    {sucursal}
-                  </span>
-                ) : null}
-              </>
-            );
+        <div className="space-y-8">
+          {GRUPOS_REGISTRO.map((grupo) => {
+            const filas = visibles.filter((sesion) => {
+              const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
+              return cuando ? grupoRegistro(cuando) === grupo : grupo === "Más antiguos";
+            });
+            if (filas.length === 0) return null;
             return (
-              <li
-                key={sesion.id}
-                className="flex flex-col gap-2 sm:flex-row sm:items-stretch"
-              >
-                {archivo ? (
-                  <div className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-left shadow-sm">
-                    {fila}
-                    <span className="mt-1 text-sm font-semibold text-teal-900">
-                      Terminada
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={abriendo !== null}
-                    onClick={() => void seguir(sesion)}
-                    className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left shadow-sm active:bg-amber-100 disabled:opacity-60"
-                  >
-                    {fila}
-                    {abriendo === sesion.id ? (
-                      <span className="mt-1 text-sm font-medium text-amber-800">
-                        Abriendo…
-                      </span>
-                    ) : (
-                      <span className="mt-1 text-sm font-semibold text-amber-900">
-                        Seguir esta captura
-                      </span>
-                    )}
-                  </button>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 shrink-0 sm:h-auto sm:w-28"
-                  disabled={abriendo !== null}
-                  onClick={() => setABorrar(sesion)}
-                >
-                  Borrar
-                </Button>
-              </li>
+              <section key={grupo} className="space-y-3">
+                <h3 className="font-heading text-base font-semibold tracking-tight">
+                  {grupo}
+                </h3>
+                <ul className="space-y-3">
+                  {filas.map((sesion) => {
+                    const sucursal = nombreSucursal(sesion);
+                    const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
+                    const estado = archivo ? "Terminado" : "En curso";
+                    const meta = (
+                      <>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-teal-800">
+                          {estado}
+                        </span>
+                        <span className="mt-1 text-sm font-medium">
+                          {cuando ? formatoFechaHora(cuando) : "Sin fecha"}
+                          {sucursal ? ` · ${sucursal}` : ""}
+                        </span>
+                        <span className="mt-0.5 text-sm text-muted-foreground">
+                          {sesion.userName}
+                        </span>
+                      </>
+                    );
+                    return (
+                      <li
+                        key={sesion.id}
+                        className="flex flex-col gap-2 sm:flex-row sm:items-stretch"
+                      >
+                        {archivo ? (
+                          <div className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border bg-card px-4 py-3 text-left shadow-sm">
+                            {meta}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={abriendo !== null}
+                            onClick={() => void seguir(sesion)}
+                            className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border bg-card px-4 py-3 text-left shadow-sm active:bg-muted disabled:opacity-60"
+                          >
+                            {meta}
+                            <span className="mt-1 text-sm font-semibold text-teal-800">
+                              {abriendo === sesion.id
+                                ? "Abriendo…"
+                                : "Continuar este registro"}
+                            </span>
+                          </button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-12 shrink-0 sm:h-auto sm:w-28"
+                          disabled={abriendo !== null}
+                          onClick={() => setABorrar(sesion)}
+                        >
+                          Borrar
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
 
       <DialogQuitarConClave
         abierto={aBorrar !== null}
-        titulo={archivo ? "¿Borrar este terminado?" : "¿Borrar este pendiente?"}
+        titulo={archivo ? "¿Borrar este terminado?" : "¿Borrar este registro en curso?"}
         descripcion={
           archivo
             ? "Se quita solo esta fila del archivo. El catálogo y lo que ya quedó en existencias no se borra. Escribe tu contraseña y pulsa Sí."

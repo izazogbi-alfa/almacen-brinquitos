@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { grupoRegistro } from "../src/lib/format.ts";
 import { puede } from "../src/lib/modulos.ts";
 import { SECCIONES_PENDIENTES, SECCIONES_TERMINADAS } from "../src/lib/secciones-pendientes.ts";
 import {
@@ -95,12 +96,12 @@ assert.equal(retomada?.pendiente, false);
 
 assert.equal(
   etiquetaBotonPendiente("existencias"),
-  "Seguir existencias pendientes",
+  "Continuar este registro",
 );
-assert.equal(etiquetaBotonPendiente("pedidos"), "Seguir pedidos pendientes");
+assert.equal(etiquetaBotonPendiente("pedidos"), "Continuar este registro");
 assert.equal(
   etiquetaBotonPendiente("recepcion"),
-  "Seguir recepción pendiente",
+  "Continuar este registro",
 );
 
 function abandonarAlSalir(sesion: SesionCaptura, ahora: Date) {
@@ -268,5 +269,10 @@ assert.deepEqual(
   ["ss-hecha"],
 );
 assert.equal(sesionesPendientes([aMedias, hecha]).map((s) => s.id).join(), "ss-medias");
+
+const ahoraGrupo = "2026-09-20T18:00:00.000Z";
+assert.equal(grupoRegistro("2026-09-20T12:00:00.000Z", ahoraGrupo), "Hoy");
+assert.equal(grupoRegistro("2026-09-19T18:00:00.000Z", ahoraGrupo), "Ayer");
+assert.equal(grupoRegistro("2026-09-01T18:00:00.000Z", ahoraGrupo), "Más antiguos");
 
 console.log("ok sesion-pendiente");

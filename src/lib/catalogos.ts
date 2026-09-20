@@ -45,6 +45,25 @@ export function esEsquemaDeFabrica(esquema: EsquemaCatalogo): boolean {
   return fab.nombre === esquema.nombre && tallasIguales(fab.tallas, esquema.tallas);
 }
 
+export const NOMBRE_EMPRESA_DEFAULT = "Brinquitos";
+const LOGO_MAX = 40_000;
+
+function sanitizarLogo(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim();
+  if (!t) return undefined;
+  if (!t.startsWith("data:image/")) return undefined;
+  if (t.length > LOGO_MAX) return undefined;
+  return t;
+}
+
+export function nombreEmpresa(
+  catalogos?: Pick<Catalogos, "empresaNombre"> | null,
+) {
+  const n = catalogos?.empresaNombre?.trim();
+  return n || NOMBRE_EMPRESA_DEFAULT;
+}
+
 export function catalogosVacios(): Catalogos {
   return {
     esquemas: [],
@@ -67,6 +86,8 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
         }))
         .filter((e) => !esEsquemaDeFabrica(e))
     : [];
+  const empresaNombre = raw.empresaNombre?.trim().slice(0, 80);
+  const logoDataUrl = sanitizarLogo(raw.logoDataUrl);
   return {
     esquemas,
     colores: Array.isArray(raw.colores)
@@ -78,6 +99,8 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
     especificaciones: Array.isArray(raw.especificaciones)
       ? raw.especificaciones.filter(Boolean)
       : [],
+    ...(empresaNombre ? { empresaNombre } : {}),
+    ...(logoDataUrl ? { logoDataUrl } : {}),
   };
 }
 

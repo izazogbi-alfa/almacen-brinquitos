@@ -29,6 +29,10 @@ export type Catalogos = {
   colores: string[];
   tallas: string[];
   especificaciones: string[];
+  /** Nombre en el PDF. Vacío = Brinquitos. */
+  empresaNombre?: string;
+  /** Logo del informe (`data:image/...`). */
+  logoDataUrl?: string;
 };
 
 export type Sucursal = {

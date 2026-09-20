@@ -7,21 +7,21 @@ export const SECCIONES_PENDIENTES = [
     modulo: "existencias" as ModuloSesion,
     href: "/pendientes/existencias",
     titulo: "Existencias pendientes",
-    detalle: "Capturas a medias de existencias. Busca, sigue o borra.",
+    detalle: "En curso. Fecha y sucursal. Continuar o borrar.",
   },
   {
     slug: "recepcion" as const,
     modulo: "recepcion" as ModuloSesion,
     href: "/pendientes/recepcion",
     titulo: "Recepción pendientes",
-    detalle: "Capturas a medias de entrada. Busca, sigue o borra.",
+    detalle: "En curso. Fecha y sucursal. Continuar o borrar.",
   },
   {
     slug: "pedidos" as const,
     modulo: "pedidos" as ModuloSesion,
     href: "/pendientes/pedidos",
     titulo: "Pedidos pendientes",
-    detalle: "Capturas a medias de pedidos. Busca, sigue o borra.",
+    detalle: "En curso. Fecha y sucursal. Continuar o borrar.",
   },
 ] as const;
 
@@ -32,21 +32,21 @@ export const SECCIONES_TERMINADAS = [
     modulo: "existencias" as ModuloSesion,
     href: "/pendientes/existencias/terminadas",
     titulo: "Existencias ya terminadas",
-    detalle: "Capturas de existencias que ya cerraste. Busca o borra.",
+    detalle: "Terminados. Fecha y sucursal. Consulta o borra.",
   },
   {
     slug: "recepcion-terminadas" as const,
     modulo: "recepcion" as ModuloSesion,
     href: "/pendientes/recepcion/terminadas",
     titulo: "Recepción ya terminada",
-    detalle: "Entradas que ya cerraste. Busca o borra.",
+    detalle: "Terminados. Fecha y sucursal. Consulta o borra.",
   },
   {
     slug: "pedidos-terminados" as const,
     modulo: "pedidos" as ModuloSesion,
     href: "/pendientes/pedidos/terminadas",
     titulo: "Pedidos ya terminados",
-    detalle: "Pedidos que ya cerraste. Busca o borra.",
+    detalle: "Terminados. Fecha y sucursal. Consulta o borra.",
   },
 ] as const;
 
