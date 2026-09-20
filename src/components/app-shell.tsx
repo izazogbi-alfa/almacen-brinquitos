@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ClipboardList,
+  Clock,
   Package,
   Settings,
   Shirt,
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const nav = [
+    { href: "/pendientes", label: "Pendientes", icon: Clock },
     puede(user, "existencias")
       ? { href: "/", label: "Existencias", icon: Package }
       : null,
@@ -57,9 +59,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ? "grid-cols-4"
             : nav.length === 5
               ? "grid-cols-5"
-              : nav.length >= 6
+              : nav.length === 6
                 ? "grid-cols-3 sm:grid-cols-6"
-                : "grid-cols-3";
+                : nav.length >= 7
+                  ? "grid-cols-4 sm:grid-cols-7"
+                  : "grid-cols-3";
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col bg-background md:max-w-5xl">
@@ -113,7 +117,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   active
                     ? item.href.startsWith("/recepcion")
                       ? "text-emerald-800"
-                      : "text-teal-800"
+                      : item.href.startsWith("/pendientes")
+                        ? "text-amber-700"
+                        : "text-teal-800"
                     : "text-muted-foreground",
                 )}
               >

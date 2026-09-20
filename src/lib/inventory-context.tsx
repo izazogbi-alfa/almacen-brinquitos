@@ -67,7 +67,10 @@ type InventoryValue = {
     modulo: ModuloSesion,
     borrador: BorradorSesion,
   ) => Promise<void>;
-  reanudarSesionPendiente: (modulo: ModuloSesion) => Promise<SesionCaptura>;
+  reanudarSesionPendiente: (
+    modulo: ModuloSesion,
+    sesionId?: string,
+  ) => Promise<SesionCaptura>;
   cerrarSesionInactividad: (modulo: ModuloSesion) => Promise<{
     aviso: string | null;
   }>;
@@ -407,10 +410,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const reanudarSesionPendiente = useCallback(
-    async (modulo: ModuloSesion) => {
+    async (modulo: ModuloSesion, sesionId?: string) => {
       const data = (await postAccion({
         accion: "reanudar-sesion",
         modulo,
+        sesionId,
       })) as { sesion: SesionCaptura };
       return data.sesion;
     },

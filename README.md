@@ -40,6 +40,10 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay d
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
+## Pendientes
+
+En el menú de abajo, **Pendientes** está siempre (aunque la lista esté vacía). Ahí salen las capturas a medias de Existencias, Pedidos y Recepción: quién, cuándo y sucursal. Hay un buscador. Toca una fila: reabre **la misma** sesión en ese módulo. Si no hay ninguna: **No hay pendientes**.
+
 ## Existencias
 
 1. Elige sucursal.

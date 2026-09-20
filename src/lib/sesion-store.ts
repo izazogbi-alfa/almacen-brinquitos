@@ -204,12 +204,23 @@ export function reanudarSesionPendiente(
   user: UsuarioMin,
   modulo: ModuloSesion,
   ahora = new Date(),
+  sesionId?: string,
 ): SesionCaptura | null {
   aplicarCierresPorInactividad(store, ahora);
-  const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
-  if (abierta) return null;
-  const pendiente = sesionPendienteDe(store.sesiones, modulo);
+  const pendiente = sesionId
+    ? store.sesiones.find(
+        (s) =>
+          s.id === sesionId &&
+          s.modulo === modulo &&
+          Boolean(s.cerradaEn) &&
+          s.pendiente,
+      )
+    : sesionPendienteDe(store.sesiones, modulo);
   if (!pendiente) return null;
+  const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  if (abierta && abierta.id !== pendiente.id) {
+    cerrarSesionModulo(store, user, modulo, ahora, { motivo: "pagina" });
+  }
   delete pendiente.cerradaEn;
   delete pendiente.motivoCierre;
   pendiente.pendiente = false;

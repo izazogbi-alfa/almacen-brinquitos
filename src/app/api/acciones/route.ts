@@ -102,6 +102,7 @@ export async function POST(request: Request) {
       Record<"existencias" | "pedidos" | "recepcion", unknown>
     >;
     crearSiFalta?: boolean;
+    sesionId?: string;
   } | null;
 
   const accion = body?.accion;
@@ -167,7 +168,13 @@ export async function POST(request: Request) {
         if (body.modulo === "pedidos" && !mods.pedidos) {
           throw new Error("No tienes módulo de pedidos.");
         }
-        const sesion = reanudarSesionPendiente(store, user, body.modulo);
+        const sesion = reanudarSesionPendiente(
+          store,
+          user,
+          body.modulo,
+          new Date(),
+          typeof body.sesionId === "string" ? body.sesionId : undefined,
+        );
         if (!sesion) {
           throw new Error("No hay una captura pendiente en este módulo.");
         }

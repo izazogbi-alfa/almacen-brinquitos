@@ -100,9 +100,60 @@ export function sesionPendienteDe(
   sesiones: SesionCaptura[],
   modulo: ModuloSesion,
 ) {
-  return sesiones.find(
-    (s) => s.modulo === modulo && Boolean(s.cerradaEn) && s.pendiente,
-  );
+  return sesionesPendientes(sesiones).find((s) => s.modulo === modulo);
+}
+
+export function sesionesPendientes(sesiones: SesionCaptura[]) {
+  return sesiones
+    .filter((s) => Boolean(s.cerradaEn) && s.pendiente)
+    .sort(
+      (a, b) =>
+        Date.parse(b.cerradaEn ?? "") - Date.parse(a.cerradaEn ?? ""),
+    );
+}
+
+export const NOMBRE_MODULO_SESION: Record<ModuloSesion, string> = {
+  existencias: "Existencias",
+  pedidos: "Pedidos",
+  recepcion: "Recepción",
+};
+
+export function rutaDeModuloSesion(modulo: ModuloSesion) {
+  if (modulo === "pedidos") return "/pedidos/nuevo";
+  if (modulo === "recepcion") return "/recepcion";
+  return "/";
+}
+
+export function sucursalDeSesion(sesion: SesionCaptura) {
+  const nombre =
+    sesion.borrador?.lineas.find((ln) => ln.sucursalNombre)?.sucursalNombre ||
+    undefined;
+  if (nombre) return nombre;
+  const id = sesion.borrador?.sucursalId;
+  if (!id) return undefined;
+  return id;
+}
+
+export function textoBusquedaPendiente(sesion: SesionCaptura) {
+  const articulos = (sesion.borrador?.lineas ?? [])
+    .map((ln) => `${ln.sku} ${ln.nombre} ${ln.color}`)
+    .join(" ");
+  return [
+    NOMBRE_MODULO_SESION[sesion.modulo],
+    sesion.userName,
+    sucursalDeSesion(sesion),
+    sesion.borrador?.proveedor,
+    articulos,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+export function coincideBusquedaPendiente(sesion: SesionCaptura, q: string) {
+  const t = q.trim().toLowerCase();
+  if (!t) return true;
+  return textoBusquedaPendiente(sesion).includes(t);
 }
 
 /** Texto fijo del botón de retomar. No cambia con la fecha. */
