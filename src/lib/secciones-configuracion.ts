@@ -21,6 +21,13 @@ export const SECCIONES_CONFIGURACION = [
     detalle: "Subir logo y cambiar el nombre que sale en el encabezado.",
     soloAdmin: false,
   },
+  {
+    slug: "actualizar-catalogo",
+    href: "/admin/configuracion/actualizar-catalogo",
+    titulo: "Actualizar catálogo",
+    detalle: "Excel o CSV: actualiza nombre y foto por Clave, sin borrar lo capturado.",
+    soloAdmin: true,
+  },
 ] as const;
 
 /** Dentro de Listas de captura. No mezclar módulos nuevos de Configuración aquí. */
