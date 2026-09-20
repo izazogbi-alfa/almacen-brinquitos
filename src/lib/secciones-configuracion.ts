@@ -14,6 +14,13 @@ export const SECCIONES_CONFIGURACION = [
     detalle: "Copia diaria, Guardar ahora y Restaurar respaldo.",
     soloAdmin: true,
   },
+  {
+    slug: "informe",
+    href: "/admin/configuracion/informe",
+    titulo: "Informe PDF",
+    detalle: "Subir logo y cambiar el nombre que sale en el encabezado.",
+    soloAdmin: false,
+  },
 ] as const;
 
 /** Dentro de Listas de captura. No mezclar módulos nuevos de Configuración aquí. */

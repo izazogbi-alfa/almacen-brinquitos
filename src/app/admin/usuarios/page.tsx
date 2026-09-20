@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Users } from "lucide-react";
+import { BotonHub } from "@/components/boton-hub";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { useInventory } from "@/lib/inventory-context";
 import { SECCIONES_USUARIOS } from "@/lib/secciones-usuarios";
@@ -34,28 +34,15 @@ function HubUsuarios() {
         </p>
       </div>
       <div className="grid gap-3">
-        {SECCIONES_USUARIOS.map((seccion) => {
-          const Icon = ICONOS[seccion.slug];
-          return (
-            <Link
-              key={seccion.slug}
-              href={seccion.href}
-              className="flex min-h-24 items-center gap-4 rounded-2xl border bg-card px-4 py-4 shadow-sm active:bg-muted"
-            >
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-800">
-                <Icon className="size-8" />
-              </span>
-              <span className="min-w-0 text-left">
-                <span className="font-heading block text-lg font-semibold leading-tight">
-                  {seccion.titulo}
-                </span>
-                <span className="mt-1 block text-sm text-muted-foreground">
-                  {seccion.detalle}
-                </span>
-              </span>
-            </Link>
-          );
-        })}
+        {SECCIONES_USUARIOS.map((seccion) => (
+          <BotonHub
+            key={seccion.slug}
+            href={seccion.href}
+            titulo={seccion.titulo}
+            detalle={seccion.detalle}
+            icon={ICONOS[seccion.slug]}
+          />
+        ))}
       </div>
     </div>
   );

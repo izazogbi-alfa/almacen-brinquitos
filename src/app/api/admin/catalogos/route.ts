@@ -48,7 +48,20 @@ export async function POST(request: Request) {
       especificaciones: Array.isArray(body.especificaciones)
         ? body.especificaciones
         : base.especificaciones,
+      empresaNombre:
+        typeof body.empresaNombre === "string"
+          ? body.empresaNombre
+          : base.empresaNombre,
+      logoDataUrl:
+        body.logoDataUrl === ""
+          ? undefined
+          : typeof body.logoDataUrl === "string"
+            ? body.logoDataUrl
+            : base.logoDataUrl,
     });
+    if (body.logoDataUrl === "") {
+      delete siguiente.logoDataUrl;
+    }
 
     const { data, remoto } = await guardarCatalogosEnStore(siguiente);
     let cookieOk = false;

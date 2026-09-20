@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ClipboardList } from "lucide-react";
+import { Archive, ClipboardList, FileText } from "lucide-react";
 import { BotonHub } from "@/components/boton-hub";
 import { AsyncGate } from "@/components/status-views";
 import { SinAccesoConfiguracion } from "@/components/use-editor-catalogos";
@@ -11,6 +11,7 @@ import { SECCIONES_CONFIGURACION } from "@/lib/secciones-configuracion";
 const ICONOS = {
   "listas-de-captura": ClipboardList,
   respaldos: Archive,
+  informe: FileText,
 } as const;
 
 function HubConfiguracion() {

@@ -118,14 +118,23 @@ function cookieBase(): Omit<CookieAttr, "name" | "value"> {
   };
 }
 
-export function cookiesCatalogos(data: CatalogosPersistidos): CookieAttr[] {
+function tokenCatalogos(data: CatalogosPersistidos) {
   const json = JSON.stringify({
     savedAt: data.savedAt,
     catalogos: data.catalogos,
   });
   const packed = gzipSync(Buffer.from(json, "utf8")).toString("base64url");
-  const sig = hmac(packed);
-  const token = `brq2.${packed}.${sig}`;
+  return `brq2.${packed}.${hmac(packed)}`;
+}
+
+export function cookiesCatalogos(data: CatalogosPersistidos): CookieAttr[] {
+  let token = tokenCatalogos(data);
+  const chunksNecesarios = Math.ceil(token.length / CHUNK_SIZE);
+  if (chunksNecesarios > MAX_CHUNKS && data.catalogos.logoDataUrl) {
+    const { logoDataUrl: _, ...sinLogo } = data.catalogos;
+    void _;
+    token = tokenCatalogos({ ...data, catalogos: sinLogo });
+  }
   const parts: string[] = [];
   for (let i = 0; i < token.length; i += CHUNK_SIZE) {
     parts.push(token.slice(i, i + CHUNK_SIZE));

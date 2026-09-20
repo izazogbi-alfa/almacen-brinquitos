@@ -118,7 +118,7 @@ export function BotonTerminarSesion({ modulo }: { modulo: ModuloSesion }) {
         })();
       }}
     >
-      {ocupado ? "Guardando…" : "Ya terminé"}
+      {ocupado ? "Guardando…" : "Cerrar registro"}
     </Button>
   );
 }

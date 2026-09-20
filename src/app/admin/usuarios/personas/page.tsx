@@ -17,7 +17,6 @@ import {
   PRESETS_USUARIO,
 } from "@/lib/modulos";
 import type { ModulosUsuario, RolUsuario, UsuarioPublico } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 function modsVacios(): ModulosUsuario {
   return { ...MODULOS_SOLO_ALMACEN };
@@ -36,34 +35,39 @@ function CheckModulos({
     <div className="space-y-2">
       <p className="text-sm font-medium">Permisos por usuario</p>
       <p className="text-xs text-muted-foreground">
-        Marca lo que puede usar. Si quitas Existencias, Recepción o Pedidos, no
-        sale en el menú de abajo, no entra a capturar y no ve esos botones en
-        Registros.
+        Marca lo que puede usar. En Existencias, Recepción y Pedidos pulsa
+        Permitir o No permitir. Si no permites, no sale en el menú, no entra a
+        capturar y no ve esos botones en Registros.
       </p>
       {OPCIONES_MODULO.map((op) => (
-        <label
-          key={op.clave}
-          className={cn(
-            "flex items-start gap-3 rounded-xl border p-3",
-            deshabilitado && "opacity-70",
-          )}
-        >
-          <input
-            type="checkbox"
-            className="mt-1 size-5 shrink-0"
-            checked={valor[op.clave]}
-            disabled={deshabilitado}
-            onChange={(e) =>
-              onChange({ ...valor, [op.clave]: e.target.checked })
-            }
-          />
+        <div key={op.clave} className="space-y-2 rounded-xl border p-3">
           <span>
             <span className="block text-sm font-medium">{op.etiqueta}</span>
             <span className="block text-xs text-muted-foreground">
               {op.detalle}
             </span>
           </span>
-        </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={valor[op.clave] ? "default" : "outline"}
+              className="h-11"
+              disabled={deshabilitado}
+              onClick={() => onChange({ ...valor, [op.clave]: true })}
+            >
+              Permitir
+            </Button>
+            <Button
+              type="button"
+              variant={!valor[op.clave] ? "default" : "outline"}
+              className="h-11"
+              disabled={deshabilitado}
+              onClick={() => onChange({ ...valor, [op.clave]: false })}
+            >
+              No permitir
+            </Button>
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -94,7 +98,7 @@ function Presets({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Luego puedes marcar o quitar casillas.
+        Luego puedes pulsar Permitir o No permitir.
       </p>
     </div>
   );

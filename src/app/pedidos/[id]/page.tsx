@@ -10,7 +10,7 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { TablaPrendas } from "@/components/tabla-prendas";
 import { etiquetaEstado, formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdfBloques } from "@/lib/pdf";
+import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
 import { puede, puedeAutorizarPedidos } from "@/lib/modulos";
 import {
   bloquesDesdeCeldas,
@@ -59,18 +59,25 @@ function DetallePedidoContent() {
   const notasPdf = [
     `Proveedor: ${actual.proveedor}`,
     `Estado: ${etiquetaEstado(actual.estado)}`,
-    `Armó: ${actual.userName} · ${formatoFecha(actual.fecha)}`,
     actual.autorizadoPorNombre
       ? `Autorizó: ${actual.autorizadoPorNombre} · ${formatoFechaHora(actual.autorizadoEn ?? actual.fecha)}`
       : "Aún sin autorizar",
   ];
+  const sucursalPedido = actual.lineas.find((l) => l.sucursalNombre)?.sucursalNombre;
+  const quienPedido = actual.userName?.trim() || user?.nombre;
 
   function pdf() {
     descargarPdfBloques(
       `${actual.folio}.pdf`,
-      `Brinquitos · ${actual.folio}`,
+      actual.folio,
       notasPdf,
       bloquesDesdeCeldas(celdas, { productos, catalogos }),
+      encabezadoInforme(catalogos, {
+        tituloDoc: `Pedido ${actual.folio}`,
+        sucursal: sucursalPedido,
+        fecha: formatoFecha(actual.fecha),
+        quien: quienPedido,
+      }),
     );
   }
 

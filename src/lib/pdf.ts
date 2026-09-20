@@ -11,6 +11,35 @@ import {
   PDF_MARGEN_MM,
 } from "@/lib/pdf-layout";
 
+export type EncabezadoInforme = {
+  tituloDoc: string;
+  empresa?: string;
+  logoDataUrl?: string;
+  sucursal?: string;
+  fecha?: string;
+  quien?: string;
+};
+
+export function encabezadoInforme(
+  ident: { empresaNombre?: string; logoDataUrl?: string } | null | undefined,
+  extra: {
+    tituloDoc: string;
+    sucursal?: string;
+    fecha?: string;
+    quien?: string;
+  },
+): EncabezadoInforme {
+  const empresa = ident?.empresaNombre?.trim();
+  return {
+    tituloDoc: extra.tituloDoc,
+    empresa: empresa || "Brinquitos",
+    logoDataUrl: ident?.logoDataUrl,
+    sucursal: extra.sucursal,
+    fecha: extra.fecha,
+    quien: extra.quien,
+  };
+}
+
 function plano(texto: string) {
   return texto.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
@@ -39,11 +68,23 @@ export function descargarPdf(
   construirPdfLineas(titulo, lineas).save(archivo);
 }
 
-export function construirPdfLineas(titulo: string, lineas: string[]) {
+export function construirPdfLineas(
+  titulo: string,
+  lineas: string[],
+  encabezado?: Partial<EncabezadoInforme>,
+) {
   const doc = nuevoDoc();
+  const cabe: EncabezadoInforme = {
+    tituloDoc: encabezado?.tituloDoc ?? titulo,
+    empresa: encabezado?.empresa,
+    logoDataUrl: encabezado?.logoDataUrl,
+    sucursal: encabezado?.sucursal,
+    fecha: encabezado?.fecha,
+    quien: encabezado?.quien,
+  };
   const anchoUtil = doc.internal.pageSize.getWidth() - PDF_MARGEN_MM * 2;
   const altoPagina = doc.internal.pageSize.getHeight();
-  const y0 = dibujarEncabezadoPagina(doc, titulo);
+  const y0 = dibujarEncabezadoPagina(doc, cabe);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   ink(doc, PDF_COLORES.nota);
@@ -53,7 +94,7 @@ export function construirPdfLineas(titulo: string, lineas: string[]) {
     for (const row of wrapped) {
       if (y > altoPagina - 12) {
         doc.addPage();
-        y = dibujarEncabezadoPagina(doc, titulo);
+        y = dibujarEncabezadoPagina(doc, cabe);
         ink(doc, PDF_COLORES.nota);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
@@ -72,32 +113,70 @@ function asegurarEspacio(
   doc: jsPDF,
   y: number,
   alto: number,
-  titulo: string,
+  encabezado: EncabezadoInforme,
 ): number {
   const limite = doc.internal.pageSize.getHeight() - 10;
   if (y + alto <= limite) return y;
   doc.addPage();
-  return dibujarEncabezadoPagina(doc, titulo);
+  return dibujarEncabezadoPagina(doc, encabezado);
 }
 
-function dibujarEncabezadoPagina(doc: jsPDF, titulo: string) {
+function dibujarEncabezadoPagina(doc: jsPDF, encabezado: EncabezadoInforme) {
   const w = doc.internal.pageSize.getWidth();
-  const h = PDF_COLORES.franjaTituloMm;
-  fill(doc, PDF_COLORES.tituloFondo);
-  doc.rect(0, 0, w, h, "F");
-  ink(doc, PDF_COLORES.tituloTexto);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text(plano(titulo), PDF_MARGEN_MM, 9);
+  const margen = PDF_MARGEN_MM;
+  const empresa = plano(encabezado.empresa?.trim() || "Brinquitos");
+  const titulo = plano(encabezado.tituloDoc);
+  let xTexto = margen;
+  const yLogo = 7;
+  const altoLogo = 14;
+  if (encabezado.logoDataUrl) {
+    try {
+      const fmt = encabezado.logoDataUrl.includes("image/jpeg")
+        ? "JPEG"
+        : "PNG";
+      doc.addImage(encabezado.logoDataUrl, fmt, margen, yLogo, 16, altoLogo);
+      xTexto = margen + 19;
+    } catch {
+      xTexto = margen;
+    }
+  }
   ink(doc, [15, 23, 42]);
-  return h + 6;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(empresa, xTexto, 12);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(titulo, w - margen, 12, { align: "right" });
+  const metaIzq = [encabezado.sucursal, encabezado.fecha]
+    .map((s) => s?.trim())
+    .filter(Boolean)
+    .join("  ·  ");
+  const quien = encabezado.quien?.trim();
+  doc.setFontSize(9);
+  ink(doc, [51, 65, 85]);
+  if (metaIzq) {
+    doc.text(plano(metaIzq), xTexto, 18);
+  }
+  if (quien) {
+    const esPedido = /pedido/i.test(encabezado.tituloDoc);
+    doc.setFont("helvetica", esPedido ? "bold" : "normal");
+    doc.setFontSize(esPedido ? 10 : 9);
+    doc.text(plano(`Hecho por: ${quien}`), w - margen, 18, {
+      align: "right",
+    });
+  }
+  stroke(doc, [203, 213, 225]);
+  doc.setLineWidth(0.35);
+  doc.line(margen, 22, w - margen, 22);
+  ink(doc, [15, 23, 42]);
+  return 28;
 }
 
 function dibujarBloque(
   doc: jsPDF,
   bloque: BloquePrenda,
   y0: number,
-  tituloPagina: string,
+  encabezado: EncabezadoInforme,
 ) {
   let y = y0;
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
@@ -106,7 +185,7 @@ function dibujarBloque(
   const { colColor, colTalla, anchoTabla } = layout;
   const totales = totalesDeBloque({ ...bloque, tallas });
 
-  y = asegurarEspacio(doc, y, ALTO_CLAVE + 8, tituloPagina);
+  y = asegurarEspacio(doc, y, ALTO_CLAVE + 8, encabezado);
   fill(doc, PDF_COLORES.claveFondo);
   stroke(doc, PDF_COLORES.borde);
   doc.rect(PDF_MARGEN_MM, y - 4, anchoTabla, ALTO_CLAVE + 2, "FD");
@@ -146,7 +225,7 @@ function dibujarBloque(
   ];
   const filas = [filaHeader, ...filasDatos, filaTotal];
   const altoTabla = ALTO_FILA * filas.length;
-  y = asegurarEspacio(doc, y, altoTabla + 6, tituloPagina);
+  y = asegurarEspacio(doc, y, altoTabla + 6, encabezado);
 
   const fuenteTalla = colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
   const fuenteColor = colColor < 22 ? 6 : 8;
@@ -203,17 +282,26 @@ export function construirPdfBloques(
   titulo: string,
   notas: string[],
   bloques: BloquePrenda[],
+  encabezado?: Partial<EncabezadoInforme>,
 ) {
   const doc = nuevoDoc();
+  const cabe: EncabezadoInforme = {
+    tituloDoc: encabezado?.tituloDoc ?? titulo,
+    empresa: encabezado?.empresa,
+    logoDataUrl: encabezado?.logoDataUrl,
+    sucursal: encabezado?.sucursal,
+    fecha: encabezado?.fecha,
+    quien: encabezado?.quien,
+  };
   const anchoUtil = doc.internal.pageSize.getWidth() - PDF_MARGEN_MM * 2;
-  let y = dibujarEncabezadoPagina(doc, titulo);
+  let y = dibujarEncabezadoPagina(doc, cabe);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   ink(doc, PDF_COLORES.nota);
   for (const nota of notas) {
     const wrapped = doc.splitTextToSize(plano(nota), anchoUtil);
     for (const row of wrapped) {
-      y = asegurarEspacio(doc, y, 5, titulo);
+      y = asegurarEspacio(doc, y, 5, cabe);
       ink(doc, PDF_COLORES.nota);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
@@ -230,7 +318,7 @@ export function construirPdfBloques(
     );
   } else {
     for (const bloque of bloques) {
-      y = dibujarBloque(doc, bloque, y, titulo);
+      y = dibujarBloque(doc, bloque, y, cabe);
     }
   }
   return doc;
@@ -241,6 +329,7 @@ export function descargarPdfBloques(
   titulo: string,
   notas: string[],
   bloques: BloquePrenda[],
+  encabezado?: Partial<EncabezadoInforme>,
 ) {
-  construirPdfBloques(titulo, notas, bloques).save(archivo);
+  construirPdfBloques(titulo, notas, bloques, encabezado).save(archivo);
 }

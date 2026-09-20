@@ -178,9 +178,9 @@ export function coincideBusquedaPendiente(sesion: SesionCaptura, q: string) {
 
 /** Texto fijo del botón de retomar. No cambia con la fecha. */
 export const ETIQUETAS_BOTON_PENDIENTE: Record<ModuloSesion, string> = {
-  existencias: "Seguir existencias pendientes",
-  pedidos: "Seguir pedidos pendientes",
-  recepcion: "Seguir recepción pendiente",
+  existencias: "Continuar este registro",
+  pedidos: "Continuar este registro",
+  recepcion: "Continuar este registro",
 };
 
 export function etiquetaBotonPendiente(modulo: ModuloSesion) {

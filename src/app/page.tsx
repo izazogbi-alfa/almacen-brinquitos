@@ -14,9 +14,9 @@ import {
   useBorradorSesion,
   useCierrePorInactividad,
 } from "@/components/estado-sesion";
-import { formatoFechaHora } from "@/lib/format";
+import { formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdfBloques } from "@/lib/pdf";
+import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
 import {
   bloquesDesdeCeldas,
@@ -69,16 +69,18 @@ function ExistenciasContent() {
 
   function pdfDeSesion() {
     const cuando = sesion?.cerradaEn || sesion?.ultimaActividad;
+    const sucursal = celdasDeSesion().find((c) => c.sucursalNombre)?.sucursalNombre;
     descargarPdfBloques(
       `existencias-${sesion?.id ?? "sesion"}.pdf`,
-      "Brinquitos · Existencias",
-      [
-        `Quién captura: ${user?.nombre ?? "—"}`,
-        sesion
-          ? `Sesión ${sesion.cerradaEn ? "cerrada" : "abierta"} · ${formatoFechaHora(cuando ?? sesion.abiertaEn)}`
-          : "Sin sesión todavía",
-      ],
+      "Existencias",
+      [],
       bloquesDesdeCeldas(celdasDeSesion(), { productos, catalogos }),
+      encabezadoInforme(catalogos, {
+        tituloDoc: "Existencias",
+        sucursal,
+        fecha: formatoFecha(cuando ?? new Date().toISOString()),
+        quien: user?.nombre,
+      }),
     );
   }
 
@@ -98,8 +100,8 @@ function ExistenciasContent() {
           Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
           Color, luego tallas. Contar deja la cantidad en piso. Al rato sin
           tocar, la lista de Hoy se congela; puedes volver a contar cuando
-          quieras. Si quedó a medias, usa el botón ámbar: es la misma lista,
-          no un día nuevo.
+          quieras. Si quedó a medias, Continuar este registro reabre la misma
+          lista, no un día nuevo.
         </p>
       </div>
 

@@ -28,11 +28,27 @@ export function formatoFechaHora(iso: string) {
   }).format(new Date(iso));
 }
 
-export function fechaClave(iso = new Date()) {
+export function fechaClave(valor: Date | string = new Date()) {
+  const d = typeof valor === "string" ? new Date(valor) : valor;
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Mexico_City",
-  }).format(iso);
+  }).format(d);
 }
+
+export function grupoRegistro(
+  iso: string,
+  ahora: Date | string = new Date(),
+): "Hoy" | "Ayer" | "Más antiguos" {
+  const dia = fechaClave(iso);
+  const hoy = fechaClave(ahora);
+  if (dia === hoy) return "Hoy";
+  const [y, m, d] = hoy.split("-").map(Number);
+  const ayer = new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+  if (dia === ayer) return "Ayer";
+  return "Más antiguos";
+}
+
+export const GRUPOS_REGISTRO = ["Hoy", "Ayer", "Más antiguos"] as const;
 
 export function etiquetaEstado(estado: EstadoPedido) {
   switch (estado) {

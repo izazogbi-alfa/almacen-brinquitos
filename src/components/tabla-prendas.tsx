@@ -3,8 +3,9 @@
 import { FileDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyView } from "@/components/status-views";
-import { descargarPdfBloques } from "@/lib/pdf";
+import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
 import { useInventory } from "@/lib/inventory-context";
+import { formatoFecha } from "@/lib/format";
 import {
   bloquesDesdeLineasColor,
   etiquetaColor,
@@ -32,17 +33,24 @@ export function TablaPrendas({
   acento?: "azul" | "verde";
   mostrarPdf?: boolean;
 }) {
-  const { productos, catalogos } = useInventory();
+  const { productos, catalogos, user } = useInventory();
   const bloques = bloquesDesdeLineasColor(lineas, { productos, catalogos });
   const verde = acento === "verde";
   const conPdf = mostrarPdf;
 
   function pdf() {
+    const sucursal = lineas.find((l) => l.sucursalNombre)?.sucursalNombre;
     descargarPdfBloques(
       pdfArchivo,
       pdfTitulo,
       pdfNotas ?? [],
       bloques,
+      encabezadoInforme(catalogos, {
+        tituloDoc: pdfTitulo.replace(/^Brinquitos\s*·\s*/i, "") || pdfTitulo,
+        sucursal,
+        fecha: formatoFecha(new Date().toISOString()),
+        quien: user?.nombre,
+      }),
     );
   }
 
