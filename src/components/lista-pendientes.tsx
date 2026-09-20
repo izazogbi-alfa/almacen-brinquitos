@@ -12,11 +12,15 @@ import { Label } from "@/components/ui/label";
 import { useInventory } from "@/lib/inventory-context";
 import { formatoFechaHora } from "@/lib/format";
 import { puede } from "@/lib/modulos";
-import { seccionPendienteDe } from "@/lib/secciones-pendientes";
+import {
+  seccionPendienteDe,
+  seccionTerminadaDe,
+} from "@/lib/secciones-pendientes";
 import {
   coincideBusquedaPendiente,
   rutaDeModuloSesion,
   sesionesPendientes,
+  sesionesTerminadas,
   sucursalDeSesion,
   type ModuloSesion,
   type SesionCaptura,
@@ -29,20 +33,36 @@ function nombreSucursal(sesion: SesionCaptura) {
   return sucursalPorId(raw)?.nombre ?? raw;
 }
 
-function ListaPendientesModulo({ modulo }: { modulo: ModuloSesion }) {
+function ListaPendientesModulo({
+  modulo,
+  archivo,
+}: {
+  modulo: ModuloSesion;
+  archivo?: boolean;
+}) {
   const router = useRouter();
-  const { sesiones, user, reanudarSesionPendiente, borrarSesionPendiente } =
-    useInventory();
+  const {
+    sesiones,
+    user,
+    reanudarSesionPendiente,
+    borrarSesionPendiente,
+    borrarSesionTerminada,
+  } = useInventory();
   const [q, setQ] = useState("");
   const [abriendo, setAbriendo] = useState<string | null>(null);
   const [aBorrar, setABorrar] = useState<SesionCaptura | null>(null);
-  const seccion = seccionPendienteDe(modulo);
+  const seccion = archivo
+    ? seccionTerminadaDe(modulo)
+    : seccionPendienteDe(modulo);
   const permitido = puede(user, modulo);
 
   const lista = useMemo(() => {
     if (!permitido) return [];
-    return sesionesPendientes(sesiones).filter((s) => s.modulo === modulo);
-  }, [sesiones, modulo, permitido]);
+    const todas = archivo
+      ? sesionesTerminadas(sesiones)
+      : sesionesPendientes(sesiones);
+    return todas.filter((s) => s.modulo === modulo);
+  }, [sesiones, modulo, permitido, archivo]);
 
   const visibles = useMemo(() => {
     return lista.filter((s) => coincideBusquedaPendiente(s, q));
@@ -76,13 +96,19 @@ function ListaPendientesModulo({ modulo }: { modulo: ModuloSesion }) {
     <div className="space-y-5">
       <CabeceraPendientes
         titulo={seccion.titulo}
-        descripcion="Toca la fila para seguir. Borrar pide tu contraseña y quita solo esa captura a medias."
+        descripcion={
+          archivo
+            ? "Solo consulta. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso."
+            : "Toca la fila para seguir. Borrar pide tu contraseña y quita solo esa captura a medias."
+        }
       />
 
       <div className="space-y-2">
-        <Label htmlFor={`busca-pendientes-${modulo}`}>Buscar</Label>
+        <Label htmlFor={`busca-pendientes-${modulo}-${archivo ? "t" : "p"}`}>
+          Buscar
+        </Label>
         <Input
-          id={`busca-pendientes-${modulo}`}
+          id={`busca-pendientes-${modulo}-${archivo ? "t" : "p"}`}
           className="h-12 text-base"
           placeholder="Sucursal o persona"
           value={q}
@@ -93,11 +119,13 @@ function ListaPendientesModulo({ modulo }: { modulo: ModuloSesion }) {
 
       {visibles.length === 0 ? (
         <EmptyView
-          titulo="No hay pendientes"
+          titulo={archivo ? "No hay terminados" : "No hay pendientes"}
           detalle={
             q.trim()
               ? "Nada coincide con esa búsqueda. Borra el texto o prueba otra palabra."
-              : "Cuando una captura se quede a medias (también si cierras la pestaña), aparece aquí."
+              : archivo
+                ? "Cuando pulses Ya terminé (o guardes un pedido), aparece aquí."
+                : "Cuando una captura se quede a medias (también si cierras la pestaña), aparece aquí."
           }
         />
       ) : (
@@ -105,36 +133,50 @@ function ListaPendientesModulo({ modulo }: { modulo: ModuloSesion }) {
           {visibles.map((sesion) => {
             const sucursal = nombreSucursal(sesion);
             const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
+            const fila = (
+              <>
+                <span className="text-sm font-medium text-amber-950/80">
+                  {sesion.userName}
+                  {cuando ? ` · ${formatoFechaHora(cuando)}` : ""}
+                </span>
+                {sucursal ? (
+                  <span className="mt-0.5 text-sm text-muted-foreground">
+                    {sucursal}
+                  </span>
+                ) : null}
+              </>
+            );
             return (
               <li
                 key={sesion.id}
                 className="flex flex-col gap-2 sm:flex-row sm:items-stretch"
               >
-                <button
-                  type="button"
-                  disabled={abriendo !== null}
-                  onClick={() => void seguir(sesion)}
-                  className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left shadow-sm active:bg-amber-100 disabled:opacity-60"
-                >
-                  <span className="text-sm font-medium text-amber-950/80">
-                    {sesion.userName}
-                    {cuando ? ` · ${formatoFechaHora(cuando)}` : ""}
-                  </span>
-                  {sucursal ? (
-                    <span className="mt-0.5 text-sm text-muted-foreground">
-                      {sucursal}
+                {archivo ? (
+                  <div className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-left shadow-sm">
+                    {fila}
+                    <span className="mt-1 text-sm font-semibold text-teal-900">
+                      Terminada
                     </span>
-                  ) : null}
-                  {abriendo === sesion.id ? (
-                    <span className="mt-1 text-sm font-medium text-amber-800">
-                      Abriendo…
-                    </span>
-                  ) : (
-                    <span className="mt-1 text-sm font-semibold text-amber-900">
-                      Seguir esta captura
-                    </span>
-                  )}
-                </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={abriendo !== null}
+                    onClick={() => void seguir(sesion)}
+                    className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left shadow-sm active:bg-amber-100 disabled:opacity-60"
+                  >
+                    {fila}
+                    {abriendo === sesion.id ? (
+                      <span className="mt-1 text-sm font-medium text-amber-800">
+                        Abriendo…
+                      </span>
+                    ) : (
+                      <span className="mt-1 text-sm font-semibold text-amber-900">
+                        Seguir esta captura
+                      </span>
+                    )}
+                  </button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
@@ -152,26 +194,41 @@ function ListaPendientesModulo({ modulo }: { modulo: ModuloSesion }) {
 
       <DialogQuitarConClave
         abierto={aBorrar !== null}
-        titulo="¿Borrar este pendiente?"
-        descripcion="Se quita solo esta captura a medias. El catálogo y lo que ya quedó en existencias no se borra. Escribe tu contraseña y pulsa Sí."
-        idCampo={`clave-borrar-pendiente-${modulo}`}
+        titulo={archivo ? "¿Borrar este terminado?" : "¿Borrar este pendiente?"}
+        descripcion={
+          archivo
+            ? "Se quita solo esta fila del archivo. El catálogo y lo que ya quedó en existencias no se borra. Escribe tu contraseña y pulsa Sí."
+            : "Se quita solo esta captura a medias. El catálogo y lo que ya quedó en existencias no se borra. Escribe tu contraseña y pulsa Sí."
+        }
+        idCampo={`clave-borrar-${archivo ? "terminada" : "pendiente"}-${modulo}`}
         etiquetaSi="Sí, borrar"
         onNo={() => setABorrar(null)}
         onConfirmarConClave={async (password) => {
           if (!aBorrar) return;
-          await borrarSesionPendiente(aBorrar.id, password);
+          if (archivo) {
+            await borrarSesionTerminada(aBorrar.id, password);
+            toast.success("Terminado borrado. Lo demás sigue igual.");
+          } else {
+            await borrarSesionPendiente(aBorrar.id, password);
+            toast.success("Pendiente borrado. Lo demás sigue igual.");
+          }
           setABorrar(null);
-          toast.success("Pendiente borrado. Lo demás sigue igual.");
         }}
       />
     </div>
   );
 }
 
-export function PaginaPendientesModulo({ modulo }: { modulo: ModuloSesion }) {
+export function PaginaPendientesModulo({
+  modulo,
+  archivo,
+}: {
+  modulo: ModuloSesion;
+  archivo?: boolean;
+}) {
   return (
     <AsyncGate>
-      <ListaPendientesModulo modulo={modulo} />
+      <ListaPendientesModulo modulo={modulo} archivo={archivo} />
     </AsyncGate>
   );
 }

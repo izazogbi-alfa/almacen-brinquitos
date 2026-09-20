@@ -31,7 +31,7 @@ export type SesionCaptura = {
   cerradaEn?: string;
   userId: string;
   userName: string;
-  motivoCierre?: "inactividad" | "pagina";
+  motivoCierre?: "inactividad" | "pagina" | "terminada";
   /** Cerrada con trabajo (inactividad o al salir); se retoma con el botón, no con una sesión nueva. */
   pendiente?: boolean;
   conteos: number;
@@ -106,6 +106,20 @@ export function sesionPendienteDe(
 export function sesionesPendientes(sesiones: SesionCaptura[]) {
   return sesiones
     .filter((s) => Boolean(s.cerradaEn) && s.pendiente)
+    .sort(
+      (a, b) =>
+        Date.parse(b.cerradaEn ?? "") - Date.parse(a.cerradaEn ?? ""),
+    );
+}
+
+/** Cerrada, con captura, y ya no se retoma: archivo de “ya terminadas”. */
+export function esSesionTerminada(sesion: SesionCaptura) {
+  return Boolean(sesion.cerradaEn) && !sesion.pendiente && sesionTieneTrabajo(sesion);
+}
+
+export function sesionesTerminadas(sesiones: SesionCaptura[]) {
+  return sesiones
+    .filter(esSesionTerminada)
     .sort(
       (a, b) =>
         Date.parse(b.cerradaEn ?? "") - Date.parse(a.cerradaEn ?? ""),
@@ -222,7 +236,7 @@ export function sanitizarBorrador(raw: unknown): BorradorSesion | undefined {
 
 export function sesionesParaCliente(
   sesiones: SesionCaptura[],
-  limite = 40,
+  limite = 80,
 ) {
   const seen = new Set<string>();
   const out: SesionCaptura[] = [];
@@ -235,6 +249,10 @@ export function sesionesParaCliente(
   for (const m of mods) {
     push(sesionAbiertaDe(sesiones, m));
     push(sesionPendienteDe(sesiones, m));
+  }
+  for (const s of sesionesTerminadas(sesiones)) {
+    if (out.length >= limite) break;
+    push(s);
   }
   for (const s of sesiones) {
     if (out.length >= limite) break;

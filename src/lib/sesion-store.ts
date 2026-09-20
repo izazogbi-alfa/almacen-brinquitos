@@ -54,7 +54,13 @@ function pushCierre(
           ? sesion.entradas
           : sesion.pedidos,
     sesionId: sesion.id,
-    nota: `Sesión cerrada ${sesion.motivoCierre === "pagina" ? "al salir" : "por inactividad"} · ${modulo}`,
+    nota: `Sesión cerrada ${
+      sesion.motivoCierre === "pagina"
+        ? "al salir"
+        : sesion.motivoCierre === "terminada"
+          ? "al terminar"
+          : "por inactividad"
+    } · ${modulo}`,
   });
 }
 
@@ -117,7 +123,7 @@ export function cerrarSesionModulo(
   user: UsuarioMin,
   modulo: ModuloSesion,
   ahora = new Date(),
-  opts?: { motivo?: "inactividad" | "pagina"; borrador?: unknown },
+  opts?: { motivo?: "inactividad" | "pagina" | "terminada"; borrador?: unknown },
 ): SesionCaptura | null {
   aplicarCierresPorInactividad(store, ahora);
   const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
@@ -230,6 +236,28 @@ export function reanudarSesionPendiente(
   return pendiente;
 }
 
+/** Cierra la captura abierta como archivo (ya terminada), no como pendiente. */
+export function terminarSesionModulo(
+  store: StoreConSesiones,
+  user: UsuarioMin,
+  modulo: ModuloSesion,
+  ahora = new Date(),
+): SesionCaptura | null {
+  aplicarCierresPorInactividad(store, ahora);
+  const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  if (!abierta) return null;
+  if (!sesionTieneTrabajo(abierta)) return null;
+  abierta.cerradaEn = ahora.toISOString();
+  abierta.motivoCierre = "terminada";
+  abierta.pendiente = false;
+  store.ultimoGuardado = {
+    timestamp: ahora.toISOString(),
+    userId: user.id,
+    userName: user.nombre,
+  };
+  return abierta;
+}
+
 /** Quita solo esa captura a medias. No toca catálogo ni movimientos ya guardados. */
 export function borrarSesionPendiente(
   store: StoreConSesiones,
@@ -237,6 +265,23 @@ export function borrarSesionPendiente(
 ): SesionCaptura | null {
   const i = store.sesiones.findIndex(
     (s) => s.id === sesionId && Boolean(s.cerradaEn) && s.pendiente,
+  );
+  if (i < 0) return null;
+  const [quitada] = store.sesiones.splice(i, 1);
+  return quitada ?? null;
+}
+
+/** Quita solo esa captura ya terminada del archivo. No toca catálogo ni piso. */
+export function borrarSesionTerminada(
+  store: StoreConSesiones,
+  sesionId: string,
+): SesionCaptura | null {
+  const i = store.sesiones.findIndex(
+    (s) =>
+      s.id === sesionId &&
+      Boolean(s.cerradaEn) &&
+      !s.pendiente &&
+      sesionTieneTrabajo(s),
   );
   if (i < 0) return null;
   const [quitada] = store.sesiones.splice(i, 1);

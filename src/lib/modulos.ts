@@ -52,19 +52,19 @@ export const OPCIONES_MODULO: {
     clave: "existencias",
     etiqueta: "Existencias",
     detalle:
-      "Menú, captura y Existencias pendientes. Sin marcar: no lo ve ni entra.",
+      "Menú, captura, Existencias pendientes y ya terminadas. Sin marcar: no lo ve ni entra.",
   },
   {
     clave: "recepcion",
     etiqueta: "Recepción",
     detalle:
-      "Menú, entrada de mercancía y Recepción pendientes. Sin marcar: no lo ve ni entra.",
+      "Menú, entrada de mercancía, Recepción pendientes y ya terminada. Sin marcar: no lo ve ni entra.",
   },
   {
     clave: "pedidos",
     etiqueta: "Pedidos",
     detalle:
-      "Menú, captura y Pedidos pendientes. Autorizar sigue siendo de administradora.",
+      "Menú, captura, Pedidos pendientes y ya terminados. Autorizar sigue siendo de administradora.",
   },
   {
     clave: "articulos",

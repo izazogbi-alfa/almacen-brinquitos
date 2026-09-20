@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { puede } from "../src/lib/modulos.ts";
-import { SECCIONES_PENDIENTES } from "../src/lib/secciones-pendientes.ts";
+import { SECCIONES_PENDIENTES, SECCIONES_TERMINADAS } from "../src/lib/secciones-pendientes.ts";
 import {
   coincideBusquedaPendiente,
   etiquetaBotonPendiente,
+  esSesionTerminada,
   ORDEN_MODULOS_PENDIENTES,
   sesionesPendientes,
+  sesionesTerminadas,
   sesionPendienteDe,
   sesionTieneTrabajo,
   type SesionCaptura,
@@ -223,5 +225,48 @@ assert.deepEqual(
   ),
   ["existencias"],
 );
+assert.deepEqual(
+  SECCIONES_TERMINADAS.map((s) => s.titulo),
+  [
+    "Existencias ya terminadas",
+    "Recepción ya terminada",
+    "Pedidos ya terminados",
+  ],
+);
+assert.deepEqual(
+  SECCIONES_TERMINADAS.filter((s) => puede(almacen2, s.modulo)).map(
+    (s) => s.slug,
+  ),
+  ["existencias-terminadas"],
+);
+
+const aMedias: SesionCaptura = {
+  ...base(),
+  id: "ss-medias",
+  cerradaEn: "2026-09-20T12:00:00.000Z",
+  pendiente: true,
+};
+const hecha: SesionCaptura = {
+  ...base(),
+  id: "ss-hecha",
+  cerradaEn: "2026-09-20T13:00:00.000Z",
+  pendiente: false,
+  motivoCierre: "terminada",
+};
+const vaciaCerrada: SesionCaptura = {
+  ...base(),
+  id: "ss-vacia-c",
+  conteos: 0,
+  cerradaEn: "2026-09-20T13:00:00.000Z",
+  pendiente: false,
+};
+assert.equal(esSesionTerminada(aMedias), false);
+assert.equal(esSesionTerminada(hecha), true);
+assert.equal(esSesionTerminada(vaciaCerrada), false);
+assert.deepEqual(
+  sesionesTerminadas([aMedias, hecha, vaciaCerrada]).map((s) => s.id),
+  ["ss-hecha"],
+);
+assert.equal(sesionesPendientes([aMedias, hecha]).map((s) => s.id).join(), "ss-medias");
 
 console.log("ok sesion-pendiente");

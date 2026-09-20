@@ -37,7 +37,8 @@ function CheckModulos({
       <p className="text-sm font-medium">Permisos por usuario</p>
       <p className="text-xs text-muted-foreground">
         Marca lo que puede usar. Si quitas Existencias, Recepción o Pedidos, no
-        sale en el menú de abajo, no entra a capturar y no ve ese pendiente.
+        sale en el menú de abajo, no entra a capturar y no ve ese pendiente ni
+        las ya terminadas.
       </p>
       {OPCIONES_MODULO.map((op) => (
         <label

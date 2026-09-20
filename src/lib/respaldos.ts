@@ -243,7 +243,9 @@ function parseSesionesCampo(raw: unknown): SesionCaptura[] | null {
       userId: typeof o.userId === "string" ? o.userId : "",
       userName: typeof o.userName === "string" ? o.userName : "",
       motivoCierre:
-        o.motivoCierre === "pagina" || o.motivoCierre === "inactividad"
+        o.motivoCierre === "pagina" ||
+        o.motivoCierre === "inactividad" ||
+        o.motivoCierre === "terminada"
           ? o.motivoCierre
           : undefined,
       pendiente: Boolean(o.pendiente),

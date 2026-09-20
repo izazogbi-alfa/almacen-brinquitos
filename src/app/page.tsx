@@ -8,6 +8,7 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import {
   BotonPendiente,
+  BotonTerminarSesion,
   EstadoSesion,
   movimientosDeSesionVisible,
   useBorradorSesion,
@@ -92,6 +93,7 @@ function ExistenciasContent() {
           onReanudada={() => setVista("contar")}
         />
         <EstadoSesion modulo="existencias" />
+        <BotonTerminarSesion modulo="existencias" />
         <p className="mt-1 text-sm text-muted-foreground">
           Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
           Color, luego tallas. Contar deja la cantidad en piso. Al rato sin
