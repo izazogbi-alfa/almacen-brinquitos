@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { formatoFechaHora } from "@/lib/format";
+import { formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
 import {
   etiquetaBotonPendiente,
@@ -50,32 +50,37 @@ export function BotonPendiente({
 
   if (abierta || !pendiente?.cerradaEn) return null;
 
-  const etiqueta = etiquetaBotonPendiente(pendiente.cerradaEn);
+  const etiqueta = etiquetaBotonPendiente(modulo);
 
   return (
-    <Button
-      type="button"
-      className="h-12 w-full bg-amber-500 text-base font-semibold text-white hover:bg-amber-600"
-      disabled={ocupado}
-      onClick={() => {
-        void (async () => {
-          setOcupado(true);
-          try {
-            await reanudarSesionPendiente(modulo);
-            toast.success("Sigue en la misma lista. No empieza un día nuevo.");
-            onReanudada?.();
-          } catch (err) {
-            toast.error(
-              err instanceof Error ? err.message : "No se pudo continuar.",
-            );
-          } finally {
-            setOcupado(false);
-          }
-        })();
-      }}
-    >
-      {ocupado ? "Abriendo…" : etiqueta}
-    </Button>
+    <div className="space-y-1.5">
+      <Button
+        type="button"
+        className="h-auto min-h-16 w-full rounded-xl bg-amber-500 px-4 py-4 text-lg leading-snug font-semibold whitespace-normal text-white shadow-md hover:bg-amber-600"
+        disabled={ocupado}
+        onClick={() => {
+          void (async () => {
+            setOcupado(true);
+            try {
+              await reanudarSesionPendiente(modulo);
+              toast.success("Sigue en la misma lista. No empieza un día nuevo.");
+              onReanudada?.();
+            } catch (err) {
+              toast.error(
+                err instanceof Error ? err.message : "No se pudo continuar.",
+              );
+            } finally {
+              setOcupado(false);
+            }
+          })();
+        }}
+      >
+        {ocupado ? "Abriendo…" : etiqueta}
+      </Button>
+      <p className="text-center text-xs text-muted-foreground">
+        Quedó el {formatoFecha(pendiente.cerradaEn)}
+      </p>
+    </div>
   );
 }
 
