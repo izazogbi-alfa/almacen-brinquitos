@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  coincideBusquedaPendiente,
   etiquetaBotonPendiente,
+  ORDEN_MODULOS_PENDIENTES,
+  sesionesPendientes,
   sesionPendienteDe,
   sesionTieneTrabajo,
   type SesionCaptura,
@@ -119,5 +122,59 @@ const vaciaAbierta = { ...base(), id: "ss-vacia-abierta", conteos: 0 };
 abandonarAlSalir(vaciaAbierta, new Date());
 assert.equal(vaciaAbierta.pendiente, false);
 assert.equal(sesionPendienteDe([vaciaAbierta], "existencias"), undefined);
+
+const conSucursal: SesionCaptura = {
+  ...alSalir,
+  id: "ss-busca",
+  pendiente: true,
+  cerradaEn: alSalir.cerradaEn,
+  userName: "Iza Zogbi",
+  borrador: {
+    sucursalId: "s-gloria",
+    lineas: [
+      {
+        key: "a",
+        productoId: "p1",
+        sku: "330",
+        nombre: "Camisa",
+        color: "Rojo",
+        sucursalId: "s-gloria",
+        sucursalNombre: "La Gloria",
+        pares: [{ talla: "8", cantidad: 7 }],
+      },
+    ],
+  },
+};
+assert.equal(sesionesPendientes([conSucursal, vaciaAbierta]).length, 1);
+assert.equal(coincideBusquedaPendiente(conSucursal, "gloria"), true);
+assert.equal(coincideBusquedaPendiente(conSucursal, "pedidos"), false);
+assert.equal(coincideBusquedaPendiente(conSucursal, "iza"), true);
+
+assert.equal(ORDEN_MODULOS_PENDIENTES.join(","), "existencias,pedidos,recepcion");
+const pedidoPend: SesionCaptura = {
+  ...conSucursal,
+  id: "ss-pe",
+  modulo: "pedidos",
+};
+const mix = [pedidoPend, conSucursal];
+const grupos = ORDEN_MODULOS_PENDIENTES.map((m) =>
+  mix.filter((s) => s.modulo === m),
+).filter((g) => g.length > 0);
+assert.equal(grupos[0][0].modulo, "existencias");
+assert.equal(grupos[1][0].modulo, "pedidos");
+
+function borrarPendiente(sesiones: SesionCaptura[], id: string) {
+  const i = sesiones.findIndex(
+    (s) => s.id === id && Boolean(s.cerradaEn) && s.pendiente,
+  );
+  if (i < 0) return false;
+  sesiones.splice(i, 1);
+  return true;
+}
+const movimientos = [{ id: "mv-1", tipo: "conteo", sesionId: "ss-busca" }];
+assert.equal(borrarPendiente(mix, "ss-busca"), true);
+assert.equal(mix.length, 1);
+assert.equal(mix[0].id, "ss-pe");
+assert.equal(movimientos.length, 1);
 
 console.log("ok sesion-pendiente");

@@ -11,6 +11,7 @@ import { exigirUsuario } from "@/server/auth";
 import { modulosDe } from "@/lib/modulos";
 import {
   agregarMovimiento,
+  contrasenaCoincide,
   marcarGuardado,
   siguienteFolio,
   withStore,
@@ -18,6 +19,7 @@ import {
 import {
   abandonarSesionesAbiertas,
   aplicarCierresPorInactividad,
+  borrarSesionPendiente,
   cerrarSesionModulo,
   reanudarSesionPendiente,
   tocarSesionCaptura,
@@ -102,6 +104,8 @@ export async function POST(request: Request) {
       Record<"existencias" | "pedidos" | "recepcion", unknown>
     >;
     crearSiFalta?: boolean;
+    sesionId?: string;
+    password?: string;
   } | null;
 
   const accion = body?.accion;
@@ -167,9 +171,54 @@ export async function POST(request: Request) {
         if (body.modulo === "pedidos" && !mods.pedidos) {
           throw new Error("No tienes módulo de pedidos.");
         }
-        const sesion = reanudarSesionPendiente(store, user, body.modulo);
+        const sesion = reanudarSesionPendiente(
+          store,
+          user,
+          body.modulo,
+          new Date(),
+          typeof body.sesionId === "string" ? body.sesionId : undefined,
+        );
         if (!sesion) {
           throw new Error("No hay una captura pendiente en este módulo.");
+        }
+        marcarGuardado(store, user);
+        return { sesion };
+      }
+
+      if (accion === "borrar-sesion-pendiente") {
+        const sesionId =
+          typeof body?.sesionId === "string" ? body.sesionId.trim() : "";
+        if (!sesionId) {
+          throw new Error("Falta la captura pendiente.");
+        }
+        const password = typeof body?.password === "string" ? body.password : "";
+        if (!password) {
+          throw new Error("Escribe tu contraseña.");
+        }
+        if (!contrasenaCoincide(user.id, password)) {
+          throw new Error("Contraseña incorrecta. No se quitó.");
+        }
+        const objetivo = store.sesiones.find((s) => s.id === sesionId);
+        if (
+          !objetivo ||
+          !objetivo.cerradaEn ||
+          !objetivo.pendiente ||
+          !esModuloSesion(objetivo.modulo)
+        ) {
+          throw new Error("Esa captura pendiente ya no está.");
+        }
+        if (objetivo.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (objetivo.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (objetivo.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = borrarSesionPendiente(store, sesionId);
+        if (!sesion) {
+          throw new Error("Esa captura pendiente ya no está.");
         }
         marcarGuardado(store, user);
         return { sesion };
