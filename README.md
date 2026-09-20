@@ -32,7 +32,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. Hoy hay d
 2. **Guardar ahora:** el navegador pide **dónde guardar el archivo en tu PC**. También se queda una copia en la app. No se pide Drive ni Dropbox.
 3. **Automático:** una copia por día (México). Vercel Cron a `/api/cron/respaldo-diario` y, si hace falta, al abrir la app como administradora.
 4. En la app hay **hasta 10** copias de **Guardar ahora** y **hasta 10** del día. La más vieja de cada lista se borra sola.
-5. **Restaurar:** elige una copia → contraseña → **Sí, restaurar**. Vuelven las listas y los esquemas de cada artículo.
+5. **Restaurar respaldo:** en la misma pantalla, bloque **Restaurar respaldo**. Elige una copia de la lista (o un archivo JSON) → **Restaurar** → contraseña → **Sí, restaurar**. Vuelve lo que esa copia trae (listas, esquemas por artículo y, si vienen, existencias y sesiones). No inventa datos. Lista vacía: **No hay respaldos**.
 
 ## Cómo probar
 
