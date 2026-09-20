@@ -92,13 +92,13 @@ function NuevoPedidoContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
           Nuevo pedido
         </h2>
+        <BotonPendiente modulo="pedidos" />
         <p className="text-sm text-muted-foreground">
           Marca varias prendas del mismo esquema. Color, luego tallas. Un
           pedido y un PDF con todas. Iza autoriza.
         </p>
         <EstadoSesion modulo="pedidos" />
       </div>
-      <BotonPendiente modulo="pedidos" />
       <div className="space-y-2">
         <Label htmlFor="proveedor">Proveedor</Label>
         <Input

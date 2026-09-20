@@ -80,6 +80,7 @@ function RecepcionContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-emerald-800">
           Entrada de mercancía
         </h2>
+        <BotonPendiente modulo="recepcion" />
         <EstadoSesion modulo="recepcion" />
         <p className="mt-1 text-sm text-emerald-800/80">
           Misma captura que existencias, en verde. Marca varias prendas del
@@ -88,7 +89,6 @@ function RecepcionContent() {
           reabre esa misma entrada.
         </p>
       </div>
-      <BotonPendiente modulo="recepcion" />
       <CapturaArticulo
         key={abierta?.id ?? "recepcion-nueva"}
         productos={productos}

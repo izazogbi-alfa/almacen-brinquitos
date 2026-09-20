@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -23,6 +24,7 @@ import type { ModuloSesion, SesionCaptura, BorradorSesion } from "@/lib/sesion-c
 import { catalogosVacios } from "@/lib/catalogos";
 import { puede } from "@/lib/modulos";
 import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
+import { enviarAbandonoPagina } from "@/lib/abandonar-pagina";
 
 type NuevaLinea = {
   productoId: string;
@@ -304,17 +306,43 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [pathname, router]);
 
+  const abandonoAlAbrir = useRef(false);
+
+  useEffect(() => {
+    const salir = () => enviarAbandonoPagina();
+    window.addEventListener("pagehide", salir);
+    window.addEventListener("beforeunload", salir);
+    return () => {
+      window.removeEventListener("pagehide", salir);
+      window.removeEventListener("beforeunload", salir);
+    };
+  }, []);
+
   useEffect(() => {
     if (pathname === "/login") return;
     let cancelado = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de sesión desde el API
-    void recargar()
-      .then(() => {
-        if (!cancelado) setStatus("ready");
-      })
-      .catch(() => {
-        if (!cancelado) setStatus("error");
-      });
+    void (async () => {
+      if (!abandonoAlAbrir.current) {
+        abandonoAlAbrir.current = true;
+        await fetch("/api/acciones", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accion: "abandonar-pagina" }),
+        }).catch(() => {
+          /* sin sesión o red */
+        });
+      }
+      if (cancelado) return;
+      await recargar()
+        .then(() => {
+          if (!cancelado) setStatus("ready");
+        })
+        .catch(() => {
+          if (!cancelado) setStatus("error");
+        });
+    })();
     return () => {
       cancelado = true;
     };

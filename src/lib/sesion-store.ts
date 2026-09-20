@@ -54,7 +54,7 @@ function pushCierre(
           ? sesion.entradas
           : sesion.pedidos,
     sesionId: sesion.id,
-    nota: `Sesión cerrada por inactividad · ${modulo}`,
+    nota: `Sesión cerrada ${sesion.motivoCierre === "pagina" ? "al salir" : "por inactividad"} · ${modulo}`,
   });
 }
 
@@ -117,12 +117,16 @@ export function cerrarSesionModulo(
   user: UsuarioMin,
   modulo: ModuloSesion,
   ahora = new Date(),
+  opts?: { motivo?: "inactividad" | "pagina"; borrador?: unknown },
 ): SesionCaptura | null {
   aplicarCierresPorInactividad(store, ahora);
   const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
   if (!abierta) return null;
+  if (opts?.borrador !== undefined) {
+    abierta.borrador = sanitizarBorrador(opts.borrador);
+  }
   abierta.cerradaEn = ahora.toISOString();
-  abierta.motivoCierre = "inactividad";
+  abierta.motivoCierre = opts?.motivo ?? "inactividad";
   abierta.pendiente = sesionTieneTrabajo(abierta);
   pushCierre(store, user, abierta, modulo);
   store.ultimoGuardado = {
@@ -131,6 +135,30 @@ export function cerrarSesionModulo(
     userName: user.nombre,
   };
   return abierta;
+}
+
+/** Cierra al salir de la página: queda pendiente si hay captura, sin esperar 10 minutos. */
+export function abandonarSesionesAbiertas(
+  store: StoreConSesiones,
+  user: UsuarioMin,
+  ahora = new Date(),
+  modulo?: ModuloSesion,
+  borrador?: unknown,
+  borradores?: Partial<Record<ModuloSesion, unknown>>,
+): SesionCaptura[] {
+  const cerradas: SesionCaptura[] = [];
+  const mods: ModuloSesion[] = modulo
+    ? [modulo]
+    : ["existencias", "pedidos", "recepcion"];
+  for (const m of mods) {
+    const draft = m === modulo ? borrador : borradores?.[m];
+    const sesion = cerrarSesionModulo(store, user, m, ahora, {
+      motivo: "pagina",
+      borrador: draft,
+    });
+    if (sesion) cerradas.push(sesion);
+  }
+  return cerradas;
 }
 
 export function tocarSesionCaptura(

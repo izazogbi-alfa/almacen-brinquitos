@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
+import { recordarBorradorAlSalir, enviarAbandonoPagina } from "@/lib/abandonar-pagina";
 import {
   etiquetaBotonPendiente,
   idleMsCliente,
@@ -96,16 +97,19 @@ export function useBorradorSesion(
   optsRef.current = opts;
   const tRef = useRef<number>(0);
 
+  usePreservarCaptura(modulo);
+
   return (lineas: BorradorSesion["lineas"]) => {
+    const e = extraRef.current;
+    const payload: BorradorSesion = {
+      sucursalId: e?.sucursalId ?? lineas[0]?.sucursalId,
+      proveedor: e?.proveedor,
+      notasPedido: e?.notasPedido,
+      lineas,
+    };
+    recordarBorradorAlSalir(modulo, payload);
     window.clearTimeout(tRef.current);
     tRef.current = window.setTimeout(() => {
-      const e = extraRef.current;
-      const payload = {
-        sucursalId: e?.sucursalId ?? lineas[0]?.sucursalId,
-        proveedor: e?.proveedor,
-        notasPedido: e?.notasPedido,
-        lineas,
-      };
       const run = optsRef.current?.crearSiFalta
         ? latidoSesion(modulo, payload)
         : guardarBorradorSesion(modulo, payload);
@@ -114,6 +118,21 @@ export function useBorradorSesion(
       });
     }, 450);
   };
+}
+
+/** Al cerrar pestaña o recargar: la captura queda pendiente al momento (no espera 10 min). */
+export function usePreservarCaptura(modulo: ModuloSesion) {
+  useEffect(() => {
+    const salir = () => {
+      enviarAbandonoPagina(modulo);
+    };
+    window.addEventListener("pagehide", salir);
+    window.addEventListener("beforeunload", salir);
+    return () => {
+      window.removeEventListener("pagehide", salir);
+      window.removeEventListener("beforeunload", salir);
+    };
+  }, [modulo]);
 }
 
 export function useCierrePorInactividad(

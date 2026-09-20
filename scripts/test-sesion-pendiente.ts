@@ -96,4 +96,28 @@ assert.equal(
   "Seguir recepción pendiente",
 );
 
+function abandonarAlSalir(sesion: SesionCaptura, ahora: Date) {
+  if (sesion.cerradaEn) return sesion;
+  sesion.cerradaEn = ahora.toISOString();
+  sesion.motivoCierre = "pagina";
+  sesion.pendiente = sesionTieneTrabajo(sesion);
+  return sesion;
+}
+
+const abiertaAhora = base();
+const alSalir = abandonarAlSalir(
+  abiertaAhora,
+  new Date("2026-09-19T12:00:05.000Z"),
+);
+assert.equal(alSalir.id, "ss-pend");
+assert.equal(alSalir.pendiente, true);
+assert.equal(alSalir.motivoCierre, "pagina");
+assert.ok(alSalir.cerradaEn);
+assert.equal(sesionPendienteDe([abiertaAhora], "existencias")?.id, "ss-pend");
+
+const vaciaAbierta = { ...base(), id: "ss-vacia-abierta", conteos: 0 };
+abandonarAlSalir(vaciaAbierta, new Date());
+assert.equal(vaciaAbierta.pendiente, false);
+assert.equal(sesionPendienteDe([vaciaAbierta], "existencias"), undefined);
+
 console.log("ok sesion-pendiente");
