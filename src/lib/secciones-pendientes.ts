@@ -1,6 +1,6 @@
 import type { ModuloSesion } from "@/lib/sesion-captura";
 
-/** Hub de Pendientes. Un botón por módulo de captura, no una sola lista. */
+/** Hub de Registros (`/pendientes`). Un botón por módulo de captura, no una sola lista. */
 export const SECCIONES_PENDIENTES = [
   {
     slug: "existencias" as const,
