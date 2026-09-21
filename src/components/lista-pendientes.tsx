@@ -9,6 +9,7 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AccionesPdfRegistro } from "@/components/visor-pdf-registro";
 import { useInventory } from "@/lib/inventory-context";
 import { formatoFechaHora, GRUPOS_REGISTRO, grupoRegistro } from "@/lib/format";
 import { puede } from "@/lib/modulos";
@@ -98,7 +99,7 @@ function ListaPendientesModulo({
         titulo={seccion.titulo}
         descripcion={
           archivo
-            ? "Consulta por día. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso."
+            ? "Consulta por día. Ver PDF abre el informe en la app. Descargar PDF guarda el archivo. Sin líneas: aviso, no se inventa nada. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso."
             : "Consulta por día. Toca la fila para continuar. Borrar pide tu contraseña."
         }
       />
@@ -168,6 +169,7 @@ function ListaPendientesModulo({
                         {archivo ? (
                           <div className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border bg-card px-4 py-3 text-left shadow-sm">
                             {meta}
+                            <AccionesPdfRegistro sesion={sesion} />
                           </div>
                         ) : (
                           <button
