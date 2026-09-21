@@ -7,6 +7,14 @@ import { DialogCambiarContrasena } from "@/components/dialog-cambiar-contrasena"
 import { DialogQuitarConClave } from "@/components/dialog-quitar-con-clave";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useInventory } from "@/lib/inventory-context";
@@ -17,7 +25,7 @@ import {
   PRESETS_USUARIO,
 } from "@/lib/modulos";
 import type { ModulosUsuario, RolUsuario, UsuarioPublico } from "@/lib/types";
-import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
+import { esIza, parseUsuariosPersistidos } from "@/lib/usuarios-persist";
 
 const LS_USUARIOS = "brq_usuarios";
 
@@ -150,6 +158,8 @@ function RolBotones({
   );
 }
 
+type PendienteClave = "crear" | "guardar" | "quitar" | null;
+
 function PersonasAdmin() {
   const { user, logout } = useInventory();
   const [usuarios, setUsuarios] = useState<UsuarioPublico[]>([]);
@@ -160,11 +170,12 @@ function PersonasAdmin() {
   const [nuevaClave, setNuevaClave] = useState("");
   const [nuevoRol, setNuevoRol] = useState<RolUsuario>("operador");
   const [nuevosModulos, setNuevosModulos] = useState<ModulosUsuario>(modsVacios);
-  const [creando, setCreando] = useState(false);
+  const [editar, setEditar] = useState<UsuarioPublico | null>(null);
+  const [editRol, setEditRol] = useState<RolUsuario>("operador");
+  const [editModulos, setEditModulos] = useState<ModulosUsuario>(modsVacios);
+  const [cambiarClave, setCambiarClave] = useState<UsuarioPublico | null>(null);
+  const [pendiente, setPendiente] = useState<PendienteClave>(null);
   const [quitar, setQuitar] = useState<UsuarioPublico | null>(null);
-  const [cambiarClave, setCambiarClave] = useState<UsuarioPublico | null>(
-    null,
-  );
 
   const admins = useMemo(
     () => usuarios.filter((u) => u.rol === "admin").length,
@@ -220,85 +231,62 @@ function PersonasAdmin() {
     return data;
   }
 
-  async function guardar(u: UsuarioPublico, parche: Partial<UsuarioPublico>) {
-    try {
-      await post({
-        accion: "actualizar",
-        userId: u.id,
-        rol: parche.rol ?? u.rol,
-        modulos: parche.modulos ?? u.modulos,
-      });
-      toast.success(`Listo: ${u.nombre}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
-    }
-  }
-
-  async function crear(e: React.FormEvent) {
-    e.preventDefault();
-    setCreando(true);
-    try {
-      await post({
-        accion: "crear",
-        username: nuevoUsuario,
-        password: nuevaClave,
-        nombre: nuevoNombre,
-        rol: nuevoRol,
-        modulos: nuevosModulos,
-      });
-      toast.success(`Creado: ${nuevoUsuario.trim().toLowerCase()}`);
-      setNuevoUsuario("");
-      setNuevoNombre("");
-      setNuevaClave("");
-      setNuevoRol("operador");
-      setNuevosModulos(modsVacios());
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo crear.");
-    } finally {
-      setCreando(false);
-    }
+  function abrirEditar(u: UsuarioPublico) {
+    setEditar(u);
+    setEditRol(u.rol);
+    setEditModulos({ ...u.modulos });
   }
 
   function puedeQuitar(u: UsuarioPublico) {
+    if (esIza(u.username)) return false;
     if (u.rol === "admin" && admins <= 1) return false;
     return true;
   }
+
+  function pedirCrear(e: React.FormEvent) {
+    e.preventDefault();
+    setPendiente("crear");
+  }
+
+  const dialogoClaveAbierto = pendiente !== null;
 
   return (
     <div className="space-y-6">
       <CabeceraUsuarios
         titulo="Personas"
-        descripcion="Crea personas. Elige Administrador (todo, incluso Usuarios) o Usuario. En cada persona: Permisos por usuario (Existencias, Recepción, Pedidos y el resto). Autorizar pedidos sigue siendo de administradora. Cambiar contraseña en cada ficha."
+        descripcion="Lista compacta: nombre, Editar y Eliminar. Crear o cambiar pide tu contraseña. No se puede quitar a Iza ni a la última administradora. Los cambios se quedan (archivo, cookies y respaldo en el teléfono)."
       />
 
       <form
-        onSubmit={(e) => void crear(e)}
-        className="space-y-4 rounded-xl border p-4"
+        onSubmit={pedirCrear}
+        className="space-y-3 rounded-xl border p-4"
       >
         <p className="font-medium">Persona nueva</p>
-        <div className="space-y-2">
-          <Label htmlFor="nuevo-usuario">Usuario</Label>
-          <Input
-            id="nuevo-usuario"
-            className="h-11"
-            autoComplete="off"
-            value={nuevoUsuario}
-            onChange={(e) => setNuevoUsuario(e.target.value)}
-            required
-          />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="nuevo-usuario">Usuario</Label>
+            <Input
+              id="nuevo-usuario"
+              className="h-11"
+              autoComplete="off"
+              value={nuevoUsuario}
+              onChange={(e) => setNuevoUsuario(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nuevo-nombre">Nombre</Label>
+            <Input
+              id="nuevo-nombre"
+              className="h-11"
+              value={nuevoNombre}
+              onChange={(e) => setNuevoNombre(e.target.value)}
+              required
+            />
+          </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="nuevo-nombre">Nombre</Label>
-          <Input
-            id="nuevo-nombre"
-            className="h-11"
-            value={nuevoNombre}
-            onChange={(e) => setNuevoNombre(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="nueva-clave">Contraseña</Label>
+          <Label htmlFor="nueva-clave">Contraseña de esa persona</Label>
           <Input
             id="nueva-clave"
             type="password"
@@ -328,12 +316,11 @@ function PersonasAdmin() {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Administrador ve todos los módulos, incluido Usuarios. No se le
-            restringe Existencias, Recepción ni Pedidos.
+            Administrador ve todos los módulos, incluido Usuarios.
           </p>
         )}
-        <Button type="submit" className="h-11 w-full" disabled={creando}>
-          {creando ? "Creando…" : "Crear usuario"}
+        <Button type="submit" className="h-11 w-full">
+          Crear usuario
         </Button>
       </form>
 
@@ -346,74 +333,123 @@ function PersonasAdmin() {
           detalle="Crea el primero con el formulario de arriba."
         />
       ) : (
-        <ul className="space-y-3">
-          {usuarios.map((u) => {
-            const ultimoAdmin = u.rol === "admin" && admins <= 1;
-            return (
-              <li key={u.id} className="space-y-3 rounded-xl border p-3">
-                <div>
-                  <p className="font-medium">{u.nombre}</p>
-                  <p className="text-xs text-muted-foreground">
-                    @{u.username} · {etiquetaRol(u.rol)}
-                    {u.id === user.id ? " · tú" : ""}
-                  </p>
-                </div>
+        <div className="overflow-hidden rounded-xl border">
+          <ul>
+            {usuarios.map((u) => {
+              const bloqueado = !puedeQuitar(u);
+              return (
+                <li
+                  key={u.id}
+                  className="flex items-center gap-2 border-b px-3 py-2 last:border-b-0"
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 rounded-lg py-1 text-left hover:bg-muted/60"
+                    onClick={() => abrirEditar(u)}
+                  >
+                    <p className="truncate font-medium">{u.nombre}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      @{u.username} · {etiquetaRol(u.rol)}
+                      {u.id === user.id ? " · tú" : ""}
+                      {esIza(u.username) ? " · no se elimina" : ""}
+                    </p>
+                  </button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 shrink-0 px-3"
+                    onClick={() => abrirEditar(u)}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="h-10 shrink-0 px-3"
+                    disabled={bloqueado}
+                    onClick={() => {
+                      setQuitar(u);
+                      setPendiente("quitar");
+                    }}
+                  >
+                    Eliminar
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      <Dialog
+        open={Boolean(editar) && pendiente !== "guardar"}
+        onOpenChange={(abierto) => {
+          if (!abierto) setEditar(null);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editar?.nombre ?? "Editar"}</DialogTitle>
+            <DialogDescription>
+              {editar
+                ? `@${editar.username}. Cambia rol o permisos y pulsa Guardar: pide tu contraseña.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {editar ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Rol</p>
                 <RolBotones
-                  valor={u.rol}
-                  deshabilitado={ultimoAdmin && u.rol === "admin"}
+                  valor={editRol}
+                  deshabilitado={
+                    editar.rol === "admin" && admins <= 1 && editRol === "admin"
+                  }
                   onChange={(rol) => {
-                    if (rol === u.rol) return;
-                    void guardar(u, {
-                      rol,
-                      modulos:
-                        rol === "operador" ? modsVacios() : u.modulos,
-                    });
+                    setEditRol(rol);
+                    if (rol === "operador") setEditModulos(modsVacios());
                   }}
                 />
-                {ultimoAdmin ? (
-                  <p className="text-xs text-muted-foreground">
-                    Eres la última administradora: no se puede bajar el rol ni
-                    quitar esta cuenta.
-                  </p>
-                ) : null}
-                {u.rol === "admin" ? (
-                  <p className="text-sm text-muted-foreground">
-                    Ve todo, incluido Usuarios. Autoriza pedidos. No se le
-                    quitan Existencias, Recepción ni Pedidos.
-                  </p>
-                ) : (
-                  <>
-                    <Presets
-                      onElegir={(modulos) => void guardar(u, { modulos })}
-                    />
-                    <CheckModulos
-                      valor={u.modulos}
-                      onChange={(modulos) => void guardar(u, { modulos })}
-                    />
-                  </>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 w-full"
-                  onClick={() => setCambiarClave(u)}
-                >
-                  Cambiar contraseña
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="h-11 w-full"
-                  disabled={!puedeQuitar(u)}
-                  onClick={() => setQuitar(u)}
-                >
-                  Quitar
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+              </div>
+              {editRol === "admin" ? (
+                <p className="text-sm text-muted-foreground">
+                  Ve todo, incluido Usuarios. Autoriza pedidos.
+                </p>
+              ) : (
+                <>
+                  <Presets onElegir={setEditModulos} />
+                  <CheckModulos valor={editModulos} onChange={setEditModulos} />
+                </>
+              )}
+            </div>
+          ) : null}
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              className="h-11 w-full"
+              onClick={() => setPendiente("guardar")}
+            >
+              Guardar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full"
+              onClick={() => editar && setCambiarClave(editar)}
+            >
+              Cambiar contraseña
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 w-full"
+              onClick={() => setEditar(null)}
+            >
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DialogCambiarContrasena
         abierto={Boolean(cambiarClave)}
@@ -440,29 +476,79 @@ function PersonasAdmin() {
       />
 
       <DialogQuitarConClave
-        abierto={Boolean(quitar)}
-        titulo="Quitar usuario"
-        descripcion={
-          quitar
-            ? `Para quitar a «${quitar.nombre}» (@${quitar.username}) escribe tu contraseña y pulsa Sí. Si pulsas No o la contraseña no es, se queda.`
-            : ""
+        abierto={dialogoClaveAbierto}
+        titulo={
+          pendiente === "crear"
+            ? "Crear persona"
+            : pendiente === "guardar"
+              ? "Guardar cambios"
+              : "Eliminar persona"
         }
-        idCampo="clave-quitar-usuario"
-        onNo={() => setQuitar(null)}
-        onSi={async () => {
-          if (!quitar) return;
-          const id = quitar.id;
-          const soyYo = id === user.id;
-          try {
-            await post({ accion: "quitar", userId: id });
-            toast.success("Usuario quitado");
+        descripcion={
+          pendiente === "crear"
+            ? `Para crear a «${nuevoNombre || nuevoUsuario}» escribe tu contraseña y pulsa Sí. Si pulsas No, no se crea.`
+            : pendiente === "guardar" && editar
+              ? `Para guardar a «${editar.nombre}» escribe tu contraseña y pulsa Sí. Si pulsas No, no se guarda.`
+              : quitar
+                ? `Para eliminar a «${quitar.nombre}» (@${quitar.username}) escribe tu contraseña y pulsa Sí. Si pulsas No o la contraseña no es, se queda.`
+                : ""
+        }
+        idCampo="clave-persona-admin"
+        etiquetaSi={
+          pendiente === "quitar" ? "Sí" : pendiente === "crear" ? "Sí, crear" : "Sí, guardar"
+        }
+        onNo={() => {
+          setPendiente(null);
+          if (pendiente === "quitar") setQuitar(null);
+        }}
+        onConfirmarConClave={async (claveAdmin) => {
+          if (pendiente === "crear") {
+            await post({
+              accion: "crear",
+              username: nuevoUsuario,
+              password: nuevaClave,
+              claveAdmin,
+              nombre: nuevoNombre,
+              rol: nuevoRol,
+              modulos: nuevosModulos,
+            });
+            toast.success(`Creado: ${nuevoUsuario.trim().toLowerCase()}`);
+            setNuevoUsuario("");
+            setNuevoNombre("");
+            setNuevaClave("");
+            setNuevoRol("operador");
+            setNuevosModulos(modsVacios());
+            setPendiente(null);
+            return;
+          }
+          if (pendiente === "guardar") {
+            if (!editar) return;
+            await post({
+              accion: "actualizar",
+              userId: editar.id,
+              rol: editRol,
+              modulos: editModulos,
+              claveAdmin,
+            });
+            toast.success(`Listo: ${editar.nombre}`);
+            setPendiente(null);
+            setEditar(null);
+            return;
+          }
+          if (pendiente === "quitar") {
+            if (!quitar) return;
+            const id = quitar.id;
+            const soyYo = id === user.id;
+            await post({
+              accion: "quitar",
+              userId: id,
+              claveAdmin,
+            });
+            toast.success("Persona eliminada");
+            setPendiente(null);
             setQuitar(null);
+            setEditar((actual) => (actual?.id === id ? null : actual));
             if (soyYo) await logout();
-          } catch (err) {
-            toast.error(
-              err instanceof Error ? err.message : "No se pudo quitar.",
-            );
-            throw err;
           }
         }}
       />

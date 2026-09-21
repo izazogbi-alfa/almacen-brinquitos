@@ -9,7 +9,7 @@ type UsuarioPersistido = {
   passwordHash: string;
 };
 
-const USERNAMES_SEMILLA = ["iza", "almacen1", "almacen2"] as const;
+const USERNAME_IZA = "iza";
 
 function parseUsuarioPersistido(raw: unknown): UsuarioPersistido | null {
   if (!raw || typeof raw !== "object") return null;
@@ -55,14 +55,10 @@ function mezclarUsuarios(
   semillas: UsuarioPersistido[],
 ) {
   const map = new Map<string, UsuarioPersistido>();
-  for (const s of semillas) map.set(s.username.toLowerCase(), s);
   for (const u of persistidos) map.set(u.username.toLowerCase(), u);
+  const izaSeed = semillas.find((s) => s.username.toLowerCase() === "iza");
+  if (izaSeed && !map.has("iza")) map.set("iza", izaSeed);
   return [...map.values()];
-}
-
-function tieneSemillas(users: UsuarioPersistido[]) {
-  const set = new Set(users.map((u) => u.username.toLowerCase()));
-  return USERNAMES_SEMILLA.every((n) => set.has(n));
 }
 
 const hash = "abcd".repeat(8) + ":" + "ef01".repeat(16);
@@ -102,9 +98,20 @@ assert.equal(parsed.users.length, 1);
 assert.equal(parsed.users[0].username, "lola");
 
 const mezclado = mezclarUsuarios([nueva], [iza, almacen1, almacen2]);
-assert.equal(mezclado.length, 4);
-assert.ok(tieneSemillas(mezclado));
+assert.equal(mezclado.length, 2);
+assert.ok(mezclado.some((u) => u.username === "iza"));
 assert.ok(mezclado.some((u) => u.username === "lola"));
+assert.equal(
+  mezclado.some((u) => u.username === "almacen1"),
+  false,
+);
+
+const sinLola = mezclarUsuarios([iza, almacen2], [iza, almacen1, almacen2]);
+assert.equal(
+  sinLola.some((u) => u.username === "almacen1"),
+  false,
+);
+assert.ok(sinLola.some((u) => u.username === "iza"));
 
 const izaNueva = { ...iza, passwordHash: "ffff".repeat(8) + ":" + "aa00".repeat(16) };
 assert.equal(
