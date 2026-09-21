@@ -16,6 +16,11 @@ export type UsuariosPersistidos = {
 };
 
 export const USERNAMES_SEMILLA = ["iza", "almacen1", "almacen2"] as const;
+export const USERNAME_IZA = "iza";
+
+export function esIza(username: string) {
+  return username.trim().toLowerCase() === USERNAME_IZA;
+}
 
 function rolDe(valor: unknown): RolUsuario | null {
   if (valor === "admin" || valor === "operador") return valor;
@@ -77,14 +82,19 @@ export function parseUsuariosPersistidos(
   return { savedAt, users };
 }
 
-/** Persistidos ganan. Semillas (iza/almacen1/almacen2) se agregan si faltan. */
+/**
+ * Lo persistido es la lista real (también los borrados).
+ * Solo se reponía `iza` si faltara: no se puede quedar sin esa cuenta.
+ * almacen1/almacen2 y el resto no vuelven si se eliminaron.
+ */
 export function mezclarUsuarios(
   persistidos: UsuarioPersistido[],
   semillas: UsuarioPersistido[],
 ): UsuarioPersistido[] {
   const map = new Map<string, UsuarioPersistido>();
-  for (const s of semillas) map.set(s.username.toLowerCase(), s);
   for (const u of persistidos) map.set(u.username.toLowerCase(), u);
+  const iza = semillas.find((s) => esIza(s.username));
+  if (iza && !map.has(USERNAME_IZA)) map.set(USERNAME_IZA, iza);
   return [...map.values()];
 }
 

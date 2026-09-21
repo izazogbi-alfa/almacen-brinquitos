@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { completarModulos } from "@/lib/modulos";
 import {
+  esIza,
   parseUsuariosPersistidos,
   type UsuariosPersistidos,
 } from "@/lib/usuarios-persist";
@@ -40,6 +41,37 @@ function ultimoAdmin(store: { users: { id: string; rol: RolUsuario }[] }, userId
   const dest = store.users.find((u) => u.id === userId);
   if (!dest || dest.rol !== "admin") return false;
   return store.users.filter((u) => u.rol === "admin").length <= 1;
+}
+
+function claveAdminDe(body: { claveAdmin?: unknown; password?: unknown } | null) {
+  if (typeof body?.claveAdmin === "string" && body.claveAdmin) return body.claveAdmin;
+  return "";
+}
+
+function exigirClaveAdmin(
+  userId: string,
+  clave: string,
+): NextResponse | null {
+  if (!clave) {
+    return NextResponse.json(
+      { error: "Escribe tu contraseña para guardar." },
+      { status: 400 },
+    );
+  }
+  try {
+    if (!contrasenaCoincide(userId, clave)) {
+      return NextResponse.json(
+        { error: "Contraseña incorrecta. No se guardó." },
+        { status: 401 },
+      );
+    }
+  } catch {
+    return NextResponse.json(
+      { error: "No se pudo comprobar la contraseña. No se guardó." },
+      { status: 500 },
+    );
+  }
+  return null;
 }
 
 function usuarioPublicoRespuesta() {
@@ -131,6 +163,7 @@ export async function POST(request: Request) {
     username?: string;
     password?: string;
     passwordNueva?: string;
+    claveAdmin?: string;
     nombre?: string;
     rol?: unknown;
     modulos?: Partial<ModulosUsuario>;
@@ -164,6 +197,8 @@ export async function POST(request: Request) {
       const nombre = (body?.nombre ?? "").trim();
       const password = typeof body?.password === "string" ? body.password : "";
       const rol = rolDe(body?.rol) ?? "operador";
+      const falloClave = exigirClaveAdmin(user.id, claveAdminDe(body));
+      if (falloClave) return falloClave;
       if (!username) {
         return NextResponse.json({ error: "Escribe un usuario." }, { status: 400 });
       }
@@ -202,6 +237,11 @@ export async function POST(request: Request) {
       if (!body?.userId) {
         return NextResponse.json({ error: "Falta el usuario." }, { status: 400 });
       }
+      const falloClave = exigirClaveAdmin(
+        user.id,
+        claveAdminDe(body) || (typeof body.password === "string" ? body.password : ""),
+      );
+      if (falloClave) return falloClave;
       const actualizado = withStore((store) => {
         const dest = store.users.find((u) => u.id === body.userId);
         if (!dest) throw new Error("Usuario no encontrado.");
@@ -268,9 +308,17 @@ export async function POST(request: Request) {
       if (!body?.userId) {
         return NextResponse.json({ error: "Falta el usuario." }, { status: 400 });
       }
+      const falloClave = exigirClaveAdmin(
+        user.id,
+        claveAdminDe(body) || (typeof body.password === "string" ? body.password : ""),
+      );
+      if (falloClave) return falloClave;
       withStore((store) => {
         const dest = store.users.find((u) => u.id === body.userId);
         if (!dest) throw new Error("Usuario no encontrado.");
+        if (esIza(dest.username)) {
+          throw new Error("No se puede quitar a Iza. Esa cuenta se queda.");
+        }
         if (ultimoAdmin(store, dest.id)) {
           throw new Error(
             "No se puede quitar a la última persona administradora. Quedarían sin quien entre a Usuarios.",
