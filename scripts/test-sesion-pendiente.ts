@@ -11,6 +11,7 @@ import {
   sesionesTerminadas,
   sesionPendienteDe,
   sesionTieneTrabajo,
+  asegurarTrabajoSesion,
   type SesionCaptura,
 } from "../src/lib/sesion-captura.ts";
 import { sesionVencidaPorInactividad } from "../src/lib/sesion-captura.ts";
@@ -344,5 +345,15 @@ assert.equal(terminadaBtn.motivoCierre, "terminada");
 assert.equal(esSesionTerminada(terminadaBtn), true);
 assert.equal(sesionesPendientes([terminadaBtn]).length, 0);
 assert.equal(sesionesTerminadas([terminadaBtn])[0]?.id, "ss-btn-term");
+
+const soloBorrador: SesionCaptura = {
+  ...base(),
+  id: "ss-solo-borrador",
+  conteos: 0,
+  borrador: borradorLineas,
+};
+asegurarTrabajoSesion(soloBorrador);
+assert.ok(soloBorrador.conteos >= 1);
+assert.equal(sesionTieneTrabajo(soloBorrador), true);
 
 console.log("ok sesion-pendiente");

@@ -85,6 +85,11 @@ type InventoryValue = {
     modulo: ModuloSesion,
     borrador?: BorradorSesion,
   ) => Promise<void>;
+  guardarRegistro: (
+    modulo: ModuloSesion,
+    cierre: "pendiente" | "terminada",
+    borrador?: BorradorSesion,
+  ) => Promise<SesionCaptura>;
   borrarSesionTerminada: (
     sesionId: string,
     password: string,
@@ -532,6 +537,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [postAccion],
   );
 
+  const guardarRegistro = useCallback(
+    async (
+      modulo: ModuloSesion,
+      cierre: "pendiente" | "terminada",
+      borrador?: BorradorSesion,
+    ) => {
+      const data = (await postAccion({
+        accion: "guardar-registro",
+        modulo,
+        cierre,
+        borrador,
+      })) as { sesion: SesionCaptura };
+      return data.sesion;
+    },
+    [postAccion],
+  );
+
   const borrarSesionTerminada = useCallback(
     async (sesionId: string, password: string) => {
       await postAccion({
@@ -685,6 +707,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       borrarSesionPendiente,
       terminarSesion,
       abandonarSesion,
+      guardarRegistro,
       borrarSesionTerminada,
       cerrarSesionInactividad,
       crearPedido,
@@ -712,6 +735,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       borrarSesionPendiente,
       terminarSesion,
       abandonarSesion,
+      guardarRegistro,
       borrarSesionTerminada,
       cerrarSesionInactividad,
       crearPedido,

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import {
-  BotonPendiente,
   BotonTerminarSesion,
   EstadoSesion,
   movimientosDeSesionVisible,
@@ -22,10 +21,9 @@ import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
 import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
 
 function RecepcionContent() {
-  const { productos, movimientos, sesiones, user, catalogos, entrada } =
+  const { productos, movimientos, sesiones, user, catalogos, entrada, latidoSesion } =
     useInventory();
   const [guardando, setGuardando] = useState(false);
-  const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion("recepcion");
   const { pendienteGuardar, terminarGuardar } = useRegistroCaptura("recepcion");
   useCierrePorInactividad("recepcion");
@@ -84,21 +82,16 @@ function RecepcionContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-emerald-800">
           Entrada de mercancía
         </h2>
-        <BotonPendiente
-          modulo="recepcion"
-          onReanudada={() => setCapturaNonce((n) => n + 1)}
-        />
         <EstadoSesion modulo="recepcion" />
         <BotonTerminarSesion modulo="recepcion" />
         <p className="mt-1 text-sm text-emerald-800/80">
-          Misma captura que existencias, en verde. Marca varias prendas del
-          mismo esquema; el PDF junta esta sesión. A los 10 minutos sin
-          capturar, la lista se congela. Si quedó a medias, Continuar este
-          registro reabre esa misma entrada.
+          Misma hoja de captura que existencias, en verde. Marca varias prendas
+          del mismo esquema. Si quedó a medias, retómalo en Registros →
+          Recepción pendientes.
         </p>
       </div>
       <CapturaArticulo
-        key={`recepcion-captura-${capturaNonce}`}
+        key="recepcion-captura"
         productos={productos}
         modo="entrada"
         acento="verde"
@@ -107,6 +100,9 @@ function RecepcionContent() {
         lineasIniciales={abierta?.borrador?.lineas}
         sucursalInicial={abierta?.borrador?.sucursalId}
         onTablaChange={guardarBorrador}
+        onInicioRegistro={() => {
+          void latidoSesion("recepcion");
+        }}
         onPendienteRegistro={async (lineas) => {
           setGuardando(true);
           try {

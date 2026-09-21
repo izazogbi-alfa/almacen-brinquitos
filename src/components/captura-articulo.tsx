@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { Check, Minus, Plus, Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyView } from "@/components/status-views";
@@ -18,7 +17,6 @@ import {
 } from "@/lib/sucursales";
 import {
   coloresDeCaptura,
-  especificacionesDeCaptura,
   tallasDeCaptura,
 } from "@/lib/asignacion-articulo";
 import { esquemaPorId } from "@/lib/catalogos";
@@ -31,9 +29,11 @@ import {
   notasPdfSeleccion,
 } from "@/lib/seleccion-mismo-esquema";
 import {
+  colorAnteriorEnLista,
   siguienteColorEnLista,
   siguienteTallaEnEsquema,
 } from "@/lib/captura-tallas";
+import { HojaCaptura } from "@/components/hoja-captura";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +74,7 @@ export function CapturaArticulo({
   sucursalInicial,
   onPendienteRegistro,
   onTerminarRegistro,
+  onInicioRegistro,
 }: {
   productos: Producto[];
   modo: ModoCaptura;
@@ -90,6 +91,7 @@ export function CapturaArticulo({
   sucursalInicial?: string;
   onPendienteRegistro?: (lineas: LineaTabla[]) => Promise<void> | void;
   onTerminarRegistro?: (lineas: LineaTabla[]) => Promise<void> | void;
+  onInicioRegistro?: () => void;
 }) {
   const { catalogos } = useInventory();
   const [sucursalId, setSucursalId] = useState(sucursalInicial ?? "");
@@ -151,7 +153,6 @@ export function CapturaArticulo({
   const esquemaActivo = mostrado
     ? esquemaDeArticulo(mostrado, catalogos)
     : undefined;
-  const sinEsquemaArticulo = Boolean(mostrado && !esquemaActivo);
   const colores = mostrado
     ? coloresDeCaptura(mostrado, catalogos)
     : catalogos.colores.length
@@ -161,12 +162,8 @@ export function CapturaArticulo({
     mostrado && esquemaActivo
       ? tallasDeCaptura(mostrado, catalogos, mostrado.esquemaConteo)
       : [];
-  const specsCaptura = mostrado
-    ? especificacionesDeCaptura(mostrado, catalogos)
-    : catalogos.especificaciones;
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
-  const listasListas = colores.length > 0;
 
   const coincidenciasDelEsquema = articulosDelMismoEsquema(
     coincidencias,
@@ -259,7 +256,7 @@ export function CapturaArticulo({
       );
     });
     if (hits.length === 1) {
-      const motivo = intentarMarcar(hits[0], { abrir: true });
+      const motivo = intentarMarcar(hits[0], { abrir: false });
       if (motivo) {
         setActivoId(null);
         setColor("");
@@ -316,8 +313,17 @@ export function CapturaArticulo({
     }
     setActivoId(p.id);
     preparar(p);
-    setMostrandoCaptura(true);
+    setMostrandoCaptura(false);
     setErrorEsquema("");
+  }
+
+  async function abrirHojaColor(c: string) {
+    if (mostrandoCaptura && c !== colorActivo) {
+      await guardarColorActual();
+    }
+    aplicarColor(c);
+    setMostrandoCaptura(true);
+    onInicioRegistro?.();
   }
 
   function enfocarCantidad() {
@@ -379,8 +385,6 @@ export function CapturaArticulo({
     return base;
   }
 
-  const paresConfirmables = paresListos();
-
   function publicarTabla(next: LineaTabla[]) {
     setLineas(next);
     onTablaChange?.(next);
@@ -427,16 +431,20 @@ export function CapturaArticulo({
     guardarCantidadDeTalla(tallaActiva, cantidad);
     const pares = paresListos();
     if (!mostrado || !sucursal || pares.length === 0) return lineas;
-    await onCommit({
-      producto: mostrado,
-      sucursalId: sucursal.id,
-      sucursalNombre: sucursal.nombre,
-      celdas: pares.map((p) => ({
-        talla: p.talla,
-        color: colorActivo,
-        cantidad: p.cantidad,
-      })),
-    });
+    try {
+      await onCommit({
+        producto: mostrado,
+        sucursalId: sucursal.id,
+        sucursalNombre: sucursal.nombre,
+        celdas: pares.map((p) => ({
+          talla: p.talla,
+          color: colorActivo,
+          cantidad: p.cantidad,
+        })),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar el conteo.");
+    }
     const next = fusionarLineasConPares(pares);
     publicarTabla(next);
     setBorrador([]);
@@ -466,15 +474,6 @@ export function CapturaArticulo({
     void irAlSiguienteColorTrasGuardar();
   }
 
-  async function tocarColor(c: string) {
-    if (c === colorActivo) {
-      enfocarCantidad();
-      return;
-    }
-    await guardarColorActual();
-    aplicarColor(c);
-  }
-
   function saltarEsteColor() {
     setBorrador([]);
     const next = siguienteColorEnLista(colores, colorActivo);
@@ -485,6 +484,16 @@ export function CapturaArticulo({
     const otro = colores.find((c) => c !== colorActivo);
     if (otro) aplicarColor(otro);
     else enfocarCantidad();
+  }
+
+  function regresarColor() {
+    const prev = colorAnteriorEnLista(colores, colorActivo);
+    if (!prev) {
+      toast.message("Ya es el primer color.");
+      return;
+    }
+    setBorrador([]);
+    aplicarColor(prev);
   }
 
   async function pendienteGuardar() {
@@ -620,6 +629,28 @@ export function CapturaArticulo({
                   Marcar más de la búsqueda
                 </Button>
               </div>
+              {colores.length > 0 && esquemaActivo ? (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {colores.map((c) => (
+                    <Button
+                      key={c}
+                      type="button"
+                      variant={
+                        mostrandoCaptura && c === colorActivo
+                          ? "default"
+                          : "outline"
+                      }
+                      className={cn(
+                        "h-12 w-full capitalize",
+                        mostrandoCaptura && c === colorActivo && btn,
+                      )}
+                      onClick={() => void abrirHojaColor(c)}
+                    >
+                      {c}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -639,284 +670,6 @@ export function CapturaArticulo({
               titulo="No hay coincidencias"
               detalle={`Nada con “${consulta}”.`}
             />
-          ) : mostrandoCaptura && mostrado && sinEsquemaArticulo ? (
-            <EmptyView
-              titulo="Este artículo no tiene esquema"
-              detalle={`${mostrado.sku} ${mostrado.nombre} todavía no tiene esquema de conteo. Iza debe ir a Artículos, abrir la ficha y pulsar Agregar esquemas (después de armar los esquemas en Configuración → Listas de captura). No se usa un esquema de fábrica.`}
-            />
-          ) : mostrandoCaptura && mostrado && !listasListas ? (
-            <EmptyView
-              titulo="Faltan listas"
-              detalle="Iza debe armar colores en Configuración. Aquí solo se elige, no se crean."
-            />
-          ) : mostrandoCaptura && mostrado && esquemaActivo ? (
-            <Card className={verde ? "border-emerald-700/40" : undefined}>
-              <CardContent className="space-y-3">
-                <FotoProducto src={mostrado.foto} alt={mostrado.nombre} />
-                <div>
-                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    Clave
-                  </p>
-                  <p className="font-heading text-lg font-semibold">
-                    {mostrado.sku}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{mostrado.nombre}</p>
-                  {usuarioNombre ? (
-                    <p className="text-xs text-muted-foreground">{usuarioNombre}</p>
-                  ) : null}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Esquema de conteo</Label>
-                  <p className="rounded-lg border bg-muted/40 p-3 text-sm">
-                    <span className="font-medium">
-                      {esquemaActivo.nombre}
-                    </span>
-                    <span className="mt-1 block text-muted-foreground">
-                      {esquemaActivo.tallas.length
-                        ? `Tallas: ${esquemaActivo.tallas.join(", ")}`
-                        : "Sin talla."}{" "}
-                      El PDF junta todas las prendas marcadas de este esquema.
-                    </span>
-                  </p>
-                </div>
-                {elegidos.length > 1 ? (
-                  <div className="space-y-1.5">
-                    <Label>Otra prenda de este PDF</Label>
-                    <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
-                      {elegidos.map((p) => (
-                        <Button
-                          key={p.id}
-                          type="button"
-                          variant={p.id === mostrado.id ? "default" : "outline"}
-                          className={cn(
-                            "h-10 text-xs",
-                            p.id === mostrado.id && btn,
-                          )}
-                          onClick={() => abrirCaptura(p)}
-                        >
-                          {p.sku}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <div className="space-y-1.5">
-                  <Label>Color</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Toca el color que estás contando. Otro color guarda lo
-                    capturado de este y te mueve. En el banner: Saltar color
-                    no guarda y pasa al siguiente; Pendiente guardar lo deja
-                    en Registros (en curso); Terminar guardar lo archiva.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {colores.map((c) => (
-                      <Button
-                        key={c}
-                        type="button"
-                        variant={c === colorActivo ? "default" : "outline"}
-                        className={cn(
-                          "h-14 min-h-14 w-full text-base capitalize",
-                          c === colorActivo && btn,
-                        )}
-                        onClick={() => void tocarColor(c)}
-                      >
-                        {c}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                {encabezados.some((t) => t !== "") ? (
-                  <div className="space-y-1.5">
-                    <Label>Talla (orden del esquema)</Label>
-                    <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
-                      {encabezados.map((t) => (
-                        <Button
-                          key={t}
-                          type="button"
-                          variant={t === tallaActiva ? "default" : "outline"}
-                          className={cn(
-                            "h-10 min-w-11 px-2.5 text-xs",
-                            t === tallaActiva && btn,
-                          )}
-                          onClick={() => cambiarTalla(t)}
-                        >
-                          {t}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Este esquema no usa talla: cantidad y Enter bastan.
-                  </p>
-                )}
-                {specsCaptura.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <Label>Especificación (opcional)</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {specsCaptura.map((s) => (
-                        <Button
-                          key={s}
-                          type="button"
-                          variant={s === especificacion ? "default" : "outline"}
-                          className={cn("h-10", s === especificacion && btn)}
-                          onClick={() =>
-                            setEspecificacion((prev) => (prev === s ? "" : s))
-                          }
-                        >
-                          {s}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <div
-                  className={cn(
-                    "sticky top-2 z-30 space-y-3 rounded-xl border-2 p-3 shadow-sm",
-                    verde
-                      ? "border-emerald-700 bg-emerald-50"
-                      : "border-amber-600 bg-amber-50",
-                  )}
-                >
-                  <p className="text-base font-semibold leading-tight">
-                    {colorActivo}
-                    {tallaActiva ? ` · talla ${tallaActiva}` : ""}
-                  </p>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full bg-background"
-                      onClick={saltarEsteColor}
-                    >
-                      Saltar color
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full bg-background"
-                      disabled={guardando}
-                      onClick={() => void pendienteGuardar()}
-                    >
-                      {guardando ? "Guardando…" : "Pendiente guardar"}
-                    </Button>
-                    <Button
-                      type="button"
-                      className={cn("h-11 w-full", btn)}
-                      disabled={guardando}
-                      onClick={() => void terminarGuardar()}
-                    >
-                      {guardando ? "Guardando…" : "Terminar guardar"}
-                    </Button>
-                  </div>
-                  <p className="text-sm">
-                    Escribe la cantidad y pulsa Enter. Pasa sola a la
-                    siguiente talla. Al terminar las tallas de este color se
-                    guarda y sigue el siguiente color.
-                  </p>
-                  <form
-                    className="space-y-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      avanzarTallaOGuardarColor();
-                    }}
-                  >
-                    <Label htmlFor="cantidad-captura">
-                      {modo === "contar"
-                        ? "Piezas contadas"
-                        : modo === "entrada"
-                          ? "Piezas de entrada"
-                          : "Cantidad"}
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="size-11 bg-background"
-                        onClick={() =>
-                          setCantidad(String(Math.max(0, Number(cantidad) - 1)))
-                        }
-                      >
-                        <Minus />
-                      </Button>
-                      <Input
-                        ref={cantidadRef}
-                        id="cantidad-captura"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        enterKeyHint="done"
-                        autoComplete="off"
-                        autoCorrect="off"
-                        className="h-14 bg-background text-center text-2xl"
-                        value={cantidad}
-                        onChange={(e) => setCantidad(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            avanzarTallaOGuardarColor();
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="size-11 bg-background"
-                        onClick={() =>
-                          setCantidad(String(Number(cantidad || 0) + 1))
-                        }
-                      >
-                        <Plus />
-                      </Button>
-                    </div>
-                  </form>
-                  <Button
-                    type="button"
-                    className={cn("h-11 w-full", btn)}
-                    disabled={guardando}
-                    onClick={avanzarTallaOGuardarColor}
-                  >
-                    {(() => {
-                      const next = siguienteTallaEnEsquema(
-                        encabezados,
-                        tallaActiva,
-                      );
-                      if (next) return `Enter · siguiente talla ${next}`;
-                      const nextColor = siguienteColorEnLista(
-                        colores,
-                        colorActivo,
-                      );
-                      if (nextColor) {
-                        return `Enter · guardar ${colorActivo} y pasar a ${nextColor}`;
-                      }
-                      return `Enter · guardar ${colorActivo} y terminar artículo`;
-                    })()}
-                  </Button>
-                  {paresConfirmables.length > 0 ? (
-                    <p className="text-sm">
-                      {colorActivo}:{" "}
-                      {paresConfirmables
-                        .map((p) =>
-                          p.talla
-                            ? `${p.talla} → ${p.cantidad}`
-                            : String(p.cantidad),
-                        )
-                        .join(" · ")}
-                    </p>
-                  ) : null}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setMostrandoCaptura(false)}
-                >
-                  Volver a la lista
-                </Button>
-              </CardContent>
-            </Card>
           ) : (
             <div className="space-y-3">
               {coincidencias.every((p) => !esquemaDeArticulo(p, catalogos)) ? (
@@ -1015,7 +768,25 @@ export function CapturaArticulo({
             </div>
           )}
 
-          <div>
+          {mostrandoCaptura && mostrado && esquemaActivo ? (
+            <HojaCaptura
+              color={colorActivo}
+              talla={tallaActiva}
+              cantidad={cantidad}
+              verde={verde}
+              guardando={guardando}
+              puedeRegresar={Boolean(colorAnteriorEnLista(colores, colorActivo))}
+              onCantidad={setCantidad}
+              onEnter={avanzarTallaOGuardarColor}
+              onSaltar={saltarEsteColor}
+              onRegresar={regresarColor}
+              onCerrar={() => setMostrandoCaptura(false)}
+              onPendiente={() => void pendienteGuardar()}
+              onTerminar={() => void terminarGuardar()}
+            />
+          ) : null}
+
+          <div className={mostrandoCaptura ? "pb-72" : undefined}>
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
             <p className="mb-2 text-xs text-muted-foreground">
               Cada prenda es un bloque (clave y nombre arriba). Colores de

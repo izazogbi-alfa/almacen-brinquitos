@@ -124,8 +124,8 @@ function ListaPendientesModulo({
             q.trim()
               ? "Nada coincide con esa búsqueda. Borra el texto o prueba otra palabra."
               : archivo
-                ? "Cuando pulses Cerrar registro (o guardes un pedido), aparece aquí."
-                : "Cuando una captura se quede a medias (también si cierras la pestaña), aparece aquí."
+                ? "Cuando pulses Terminar guardar (o Cerrar registro), aparece aquí."
+                : "Cuando pulses Pendiente guardar, aparece aquí. Toca la fila para continuar."
           }
         />
       ) : (

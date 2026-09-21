@@ -50,18 +50,18 @@ En el menú de abajo, **Registros** está siempre (aunque no haya capturas). Es 
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `Baccus`, `XC1092`).
 3. **Marca varias** que usen el **mismo esquema** (mismas tallas, ej. 1, 1X, 2–18, 34–42, 44–50). Si una se cuenta distinto, sale un aviso y no se suma. Las que no tienen esquema quedan apagadas: hay que asignarlo en Artículos (no se usa fábrica).
-4. **Capturar las elegidas**: toca un **color**. En el **banner** naranja (verde en Recepción) escribe la cantidad y pulsa **Enter**: guarda esa talla y salta a la **siguiente talla** del mismo color. Cuando se acaban las tallas de ese color, **se guarda solo** y pasa al **siguiente color** (mismo banner). En ese mismo banner hay tres acciones: **Saltar color** (no guarda ese color y te mueve), **Pendiente guardar** (cierra el registro en curso para retomar después en **Registros**) y **Terminar guardar** (lo archiva en ya terminadas). Tocar otro color también guarda el actual. El mismo componente sirve en Recepción y Pedidos. Ya no hay **Sacar**.
-5. **Contar** deja la cantidad en piso. Tras cada cantidad + **Enter**, la captura **pasa sola a la siguiente talla** del mismo color.
-6. Mientras capturas, sale **Sesión abierta**. Si **cierras la pestaña o el navegador**, la captura **no se pierde**: queda **en curso** en el momento. Al volver, **Continuar este registro** está bajo el título. A los **10 minutos sin capturar** con la pantalla abierta se cierra igual. **Cerrar registro** la mueve a **Existencias ya terminadas**.
+4. Toca un **color**: abre una **hoja inferior** de captura (no una ficha larga). Arriba: color · talla y acciones delgadas (**Regresar color**, **Saltar color**, **Pendiente guardar**, **Terminar guardar**). En el centro la cantidad. Abajo el **teclado** 0–9, borrar y **Enter** (siguiente talla). La hoja se queda abierta al pasar de talla; al siguiente color solo cambia el título. Eso **abre el registro**. **Pendiente guardar** deja **EN CURSO** en **Registros → Existencias pendientes**. **Terminar guardar** archiva en ya terminadas. Ya no hay **Sacar**.
+5. **Contar** deja la cantidad en piso. Tras cada cantidad + **Enter**, pasa sola a la siguiente talla del mismo color.
+6. Si **cierras la pestaña**, la captura queda **en curso**. **No hay** botón naranja Continuar en Existencias: retómalo en **Registros**. A los **10 minutos sin capturar** se cierra igual. **Cerrar registro** (si hay sesión abierta) también archiva.
 7. **Descargar PDF de esta tabla** junta las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF de esta sesión**. El PDF es **carta US horizontal**. Encabezado de informe: logo + nombre (**Configuración → Informe PDF**), sucursal y fecha. Las cajas de talla van en **una sola fila**. Franja verde de **Clave** (solo el código, para saber de qué existencia es; **no** se imprime el nombre del esquema ni el tipo). Pedidos y Recepción sí pueden mostrar esquema en su PDF.
 
 ## Recepción
 
-Misma captura y misma tabla (varias prendas del mismo esquema, un PDF), título **Entrada de mercancía**, color verde. El PDF es de **esta sesión**. Si cierras la pestaña, **Continuar este registro** queda bajo el título. A los 10 minutos sin capturar también se congela. Carta horizontal, tallas en una fila, encabezado de informe.
+Misma hoja de captura (teclado y Enter), título **Entrada de mercancía**, color verde. **Pendiente guardar** y **Terminar guardar** salen en **Registros**. Carta horizontal, tallas en una fila, encabezado de informe.
 
 ## Pedidos
 
-Misma captura y misma tabla si el módulo está marcado: varias prendas del mismo esquema en **un** pedido y **un** PDF. Al guardar, el detalle y el PDF del folio agrupan por prenda (colores en filas, tallas en una fila, carta horizontal). El PDF muestra **Hecho por** (quién lo hace: el nombre de quien capturó, `userName` del pedido). Estado *Por autorizar* hasta que una administradora autoriza. La captura de pedido también usa sesión de 10 minutos; si cierras el navegador, **Continuar este registro** sale bajo el título en la lista de Pedidos (y en Nuevo pedido).
+Misma captura y misma tabla si el módulo está marcado. Al guardar, el detalle y el PDF del folio agrupan por prenda. El PDF muestra **Hecho por**. Estado *Por autorizar* hasta que una administradora autoriza. Si quedó a medias, retómalo en **Registros → Pedidos pendientes**.
 
 ## Cómo correrlo
 

@@ -22,3 +22,14 @@ export function siguienteColorEnLista(
   if (i + 1 >= colores.length) return null;
   return colores[i + 1];
 }
+
+/** Color anterior, o null si ya es el primero. */
+export function colorAnteriorEnLista(
+  colores: string[],
+  actual: string,
+): string | null {
+  if (colores.length === 0) return null;
+  const i = colores.indexOf(actual);
+  if (i <= 0) return null;
+  return colores[i - 1];
+}

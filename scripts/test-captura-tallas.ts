@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   siguienteColorEnLista,
   siguienteTallaEnEsquema,
+  colorAnteriorEnLista,
 } from "../src/lib/captura-tallas.ts";
 
 assert.equal(siguienteTallaEnEsquema(["8", "10", "12"], "8"), "10");
@@ -15,5 +16,9 @@ assert.equal(siguienteColorEnLista(["rojo", "azul", "verde"], "rojo"), "azul");
 assert.equal(siguienteColorEnLista(["rojo", "azul", "verde"], "verde"), null);
 assert.equal(siguienteColorEnLista([], "rojo"), null);
 assert.equal(siguienteColorEnLista(["rojo"], "rojo"), null);
+
+assert.equal(colorAnteriorEnLista(["rojo", "azul", "verde"], "azul"), "rojo");
+assert.equal(colorAnteriorEnLista(["rojo", "azul", "verde"], "rojo"), null);
+assert.equal(colorAnteriorEnLista(["rojo"], "rojo"), null);
 
 console.log("ok captura-tallas");

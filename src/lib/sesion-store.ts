@@ -1,5 +1,6 @@
 import {
   SESION_INACTIVIDAD_MS,
+  asegurarTrabajoSesion,
   sanitizarBorrador,
   sesionPendienteDe,
   sesionTieneTrabajo,
@@ -158,10 +159,6 @@ export function abandonarSesionesAbiertas(
     : ["existencias", "pedidos", "recepcion"];
   for (const m of mods) {
     const draft = m === modulo ? borrador : borradores?.[m];
-    const abierta = store.sesiones.find((s) => s.modulo === m && !s.cerradaEn);
-    if (!abierta && draft != null) {
-      tocarSesionCaptura(store, user, m, ahora, { borrador: draft });
-    }
     const sesion = cerrarSesionModulo(store, user, m, ahora, {
       motivo: "pagina",
       borrador: draft,
@@ -258,10 +255,47 @@ export function terminarSesionModulo(
   if (opts?.borrador !== undefined) {
     abierta.borrador = sanitizarBorrador(opts.borrador);
   }
+  asegurarTrabajoSesion(abierta);
   if (!sesionTieneTrabajo(abierta)) return null;
   abierta.cerradaEn = ahora.toISOString();
   abierta.motivoCierre = "terminada";
   abierta.pendiente = false;
+  store.ultimoGuardado = {
+    timestamp: ahora.toISOString(),
+    userId: user.id,
+    userName: user.nombre,
+  };
+  return abierta;
+}
+
+/** Pendiente guardar / Terminar guardar: crea o cierra el registro para que salga en Registros. */
+export function guardarRegistroCaptura(
+  store: StoreConSesiones,
+  user: UsuarioMin,
+  modulo: ModuloSesion,
+  cierre: "pendiente" | "terminada",
+  ahora = new Date(),
+  borrador?: unknown,
+): SesionCaptura | null {
+  aplicarCierresPorInactividad(store, ahora);
+  let abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  if (!abierta) {
+    tocarSesionCaptura(store, user, modulo, ahora, { borrador });
+    abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  } else if (borrador !== undefined) {
+    abierta.borrador = sanitizarBorrador(borrador);
+  }
+  if (!abierta) return null;
+  asegurarTrabajoSesion(abierta);
+  if (!sesionTieneTrabajo(abierta)) return null;
+  abierta.cerradaEn = ahora.toISOString();
+  if (cierre === "terminada") {
+    abierta.motivoCierre = "terminada";
+    abierta.pendiente = false;
+  } else {
+    abierta.motivoCierre = "pagina";
+    abierta.pendiente = true;
+  }
   store.ultimoGuardado = {
     timestamp: ahora.toISOString(),
     userId: user.id,
