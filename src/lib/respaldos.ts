@@ -8,6 +8,9 @@ import {
 import type { Catalogos, ExistenciaSucursal, Producto, Variante } from "./types";
 import {
   LIMITE_RESPALDOS,
+  idRespaldoAutomatico,
+  incorporarRespaldo,
+  mezclarItemsTope,
   recortarColeccion,
   recortarPorOrigen,
   yaHayAutomaticoDelDia,
@@ -16,6 +19,9 @@ import {
 
 export {
   LIMITE_RESPALDOS,
+  idRespaldoAutomatico,
+  incorporarRespaldo,
+  mezclarItemsTope,
   recortarColeccion,
   recortarPorOrigen,
   yaHayAutomaticoDelDia,
@@ -71,6 +77,11 @@ export type RespaldoCompleto = RespaldoMeta & ContenidoRespaldo;
 export type ColeccionRespaldos = {
   savedAt: string;
   items: RespaldoCompleto[];
+};
+
+export type IndiceRespaldos = {
+  savedAt: string;
+  items: RespaldoMeta[];
 };
 
 export type ArchivoRespaldo = {
@@ -360,6 +371,7 @@ export function snapshotDesdeStore(input: {
   sesiones?: SesionCaptura[];
   origen: OrigenRespaldo;
   ahora?: Date;
+  id?: string;
 }): RespaldoCompleto {
   const ahora = input.ahora ?? new Date();
   const catalogos = normalizarCatalogos(input.catalogos);
@@ -368,7 +380,11 @@ export function snapshotDesdeStore(input: {
   const sesiones = input.sesiones ? [...input.sesiones] : [];
   const createdAt = ahora.toISOString();
   const dia = diaCalendario(ahora);
-  const id = `rb-${ahora.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id =
+    input.id ??
+    (input.origen === "automatico"
+      ? idRespaldoAutomatico(dia)
+      : `rb-${ahora.getTime()}-${Math.random().toString(36).slice(2, 8)}`);
   return {
     id,
     createdAt,
@@ -411,4 +427,147 @@ export function metaPublica(item: RespaldoCompleto): RespaldoMeta {
 
 export function coleccionVacia(): ColeccionRespaldos {
   return { savedAt: new Date(0).toISOString(), items: [] };
+}
+
+export function indiceVacio(): IndiceRespaldos {
+  return { savedAt: new Date(0).toISOString(), items: [] };
+}
+
+function resumenCero(): ResumenRespaldo {
+  return {
+    esquemas: 0,
+    colores: 0,
+    tallas: 0,
+    especificaciones: 0,
+    articulos: 0,
+  };
+}
+
+export function parseMetaRespaldo(raw: unknown): RespaldoMeta | null {
+  if (!raw || typeof raw !== "object") return null;
+  const it = raw as Record<string, unknown>;
+  const createdAt =
+    typeof it.createdAt === "string" && it.createdAt ? it.createdAt : "";
+  const origen: OrigenRespaldo =
+    it.origen === "automatico" ? "automatico" : "manual";
+  const dia =
+    typeof it.dia === "string" && it.dia
+      ? it.dia
+      : createdAt
+        ? diaCalendario(new Date(createdAt))
+        : "";
+  const id =
+    typeof it.id === "string" && it.id.trim()
+      ? it.id.trim()
+      : origen === "automatico" && dia
+        ? idRespaldoAutomatico(dia)
+        : "";
+  if (!id || !createdAt || !dia) return null;
+  let resumen = resumenCero();
+  if (it.resumen && typeof it.resumen === "object") {
+    const r = it.resumen as Record<string, unknown>;
+    resumen = {
+      esquemas: Number(r.esquemas) || 0,
+      colores: Number(r.colores) || 0,
+      tallas: Number(r.tallas) || 0,
+      especificaciones: Number(r.especificaciones) || 0,
+      articulos: Number(r.articulos) || 0,
+    };
+  } else {
+    const archivo = parseArchivoRespaldo(it);
+    if (archivo) resumen = resumenDe(archivo.catalogos, archivo.asignaciones);
+  }
+  return { id, createdAt, origen, dia, resumen };
+}
+
+export function parseIndiceRespaldos(raw: unknown): IndiceRespaldos | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  if (Array.isArray(obj.items)) {
+    const items: RespaldoMeta[] = [];
+    for (const rawItem of obj.items) {
+      const meta = parseMetaRespaldo(rawItem);
+      if (meta) items.push(meta);
+    }
+    const savedAt =
+      typeof obj.savedAt === "string" && obj.savedAt
+        ? obj.savedAt
+        : items[0]?.createdAt ?? new Date(0).toISOString();
+    return { savedAt, items: recortarColeccion(items) };
+  }
+  const uno = parseMetaRespaldo(obj);
+  if (!uno) return null;
+  const savedAt =
+    typeof obj.savedAt === "string" && obj.savedAt ? obj.savedAt : uno.createdAt;
+  return { savedAt, items: [uno] };
+}
+
+export function parseColeccionRespaldos(raw: unknown): ColeccionRespaldos | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const items: RespaldoCompleto[] = [];
+  const guardar = (rawItem: unknown) => {
+    if (!rawItem || typeof rawItem !== "object") return;
+    const it = rawItem as Record<string, unknown>;
+    const archivo = parseArchivoRespaldo(it);
+    if (!archivo) return;
+    const meta = parseMetaRespaldo(it);
+    const id =
+      meta?.id ??
+      (typeof it.id === "string" && it.id.trim()
+        ? it.id.trim()
+        : `rb-${items.length + 1}`);
+    items.push(completoDesdeArchivo(archivo, id));
+  };
+  if (Array.isArray(obj.items)) {
+    for (const rawItem of obj.items) guardar(rawItem);
+  } else {
+    guardar(obj);
+  }
+  if (!items.length) return null;
+  const savedAt =
+    typeof obj.savedAt === "string" && obj.savedAt
+      ? obj.savedAt
+      : items
+          .slice()
+          .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0]
+          .createdAt;
+  return { savedAt, items: recortarColeccion(items) };
+}
+
+export function mezclarColecciones(
+  ...cols: Array<ColeccionRespaldos | null | undefined>
+): ColeccionRespaldos {
+  const vivos = cols.filter((c): c is ColeccionRespaldos => Boolean(c));
+  if (!vivos.length) return coleccionVacia();
+  let savedAt = vivos[0].savedAt;
+  for (const c of vivos) {
+    if (Date.parse(c.savedAt) > Date.parse(savedAt)) savedAt = c.savedAt;
+  }
+  return {
+    savedAt,
+    items: mezclarItemsTope(vivos.map((c) => c.items)),
+  };
+}
+
+export function mezclarIndices(
+  ...idxs: Array<IndiceRespaldos | null | undefined>
+): IndiceRespaldos {
+  const vivos = idxs.filter((i): i is IndiceRespaldos => Boolean(i));
+  if (!vivos.length) return indiceVacio();
+  let savedAt = vivos[0].savedAt;
+  for (const i of vivos) {
+    if (Date.parse(i.savedAt) > Date.parse(savedAt)) savedAt = i.savedAt;
+  }
+  return {
+    savedAt,
+    items: mezclarItemsTope(vivos.map((i) => i.items)),
+  };
+}
+
+export function indiceDesdeColeccion(col: ColeccionRespaldos): IndiceRespaldos {
+  return {
+    savedAt: col.savedAt,
+    items: recortarColeccion(col.items.map(metaPublica)),
+  };
 }

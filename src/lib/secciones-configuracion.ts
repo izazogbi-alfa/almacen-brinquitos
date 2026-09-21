@@ -18,7 +18,7 @@ export const SECCIONES_CONFIGURACION = [
     slug: "respaldos",
     href: "/admin/configuracion/respaldos",
     titulo: "Respaldos",
-    detalle: "Copia diaria, Guardar ahora y Restaurar respaldo.",
+    detalle: "Copia de cada día, Guardar ahora y Restaurar.",
     soloAdmin: true,
   },
   {

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {
   LIMITE_RESPALDOS,
+  idRespaldoAutomatico,
+  incorporarRespaldo,
+  mezclarItemsTope,
   recortarColeccion,
   yaHayAutomaticoDelDia,
 } from "../src/lib/respaldos-tope.ts";
@@ -9,6 +12,8 @@ import {
   aplicarExistenciasRespaldo,
   extraerExistencias,
   parseArchivoRespaldo,
+  parseColeccionRespaldos,
+  parseIndiceRespaldos,
 } from "../src/lib/respaldos.ts";
 import type { Producto } from "../src/lib/types.ts";
 
@@ -49,6 +54,64 @@ assert.equal(yaHayAutomaticoDelDia(mixto, "2026-01-12"), true);
 assert.equal(yaHayAutomaticoDelDia(mixto, "2026-09-19"), false);
 
 console.log("ok respaldos cap 10");
+
+const d1 = fake("automatico", 1);
+const d2 = fake("automatico", 2);
+const d3 = fake("automatico", 3);
+const soloHoy = mezclarItemsTope([[d3], [d1, d2]]);
+assert.equal(soloHoy.length, 3);
+assert.ok(soloHoy.some((x) => x.dia === "2026-01-01"));
+assert.ok(soloHoy.some((x) => x.dia === "2026-01-02"));
+assert.ok(soloHoy.some((x) => x.dia === "2026-01-03"));
+
+const pisaHoy = incorporarRespaldo(
+  [d1, d2, { ...d3, id: "automatico-viejo" }],
+  { ...d3, id: idRespaldoAutomatico("2026-01-03"), createdAt: "2026-01-03T20:00:00.000Z" },
+);
+assert.equal(pisaHoy.filter((x) => x.origen === "automatico" && x.dia === "2026-01-03").length, 1);
+assert.ok(pisaHoy.some((x) => x.dia === "2026-01-01"));
+assert.equal(idRespaldoAutomatico("2026-09-21"), "rb-auto-2026-09-21");
+
+const onceDias = incorporarRespaldo(
+  Array.from({ length: 10 }, (_, i) => fake("automatico", i + 1)),
+  fake("automatico", 11),
+);
+assert.equal(onceDias.length, LIMITE_RESPALDOS);
+assert.ok(onceDias.some((x) => x.dia === "2026-01-11"));
+assert.ok(!onceDias.some((x) => x.dia === "2026-01-01"));
+
+console.log("ok respaldos historia de dias");
+
+const legadoUno = parseColeccionRespaldos({
+  kind: KIND_RESPALDO,
+  version: 2,
+  id: "rb-auto-2026-01-01",
+  createdAt: "2026-01-01T13:00:00.000Z",
+  origen: "automatico",
+  dia: "2026-01-01",
+  catalogos: {
+    esquemas: [{ id: "esq-iza", nombre: "Niña", tallas: ["2"] }],
+    colores: ["rosa"],
+    tallas: ["2"],
+    especificaciones: [],
+  },
+  asignaciones: {},
+});
+assert.ok(legadoUno);
+assert.equal(legadoUno.items.length, 1);
+assert.equal(legadoUno.items[0].dia, "2026-01-01");
+
+const indiceDos = parseIndiceRespaldos({
+  savedAt: "2026-01-02T13:00:00.000Z",
+  items: [
+    { id: "rb-auto-2026-01-01", createdAt: "2026-01-01T13:00:00.000Z", origen: "automatico", dia: "2026-01-01", resumen: { esquemas: 1, colores: 1, tallas: 1, especificaciones: 0, articulos: 0 } },
+    { id: "rb-auto-2026-01-02", createdAt: "2026-01-02T13:00:00.000Z", origen: "automatico", dia: "2026-01-02", resumen: { esquemas: 1, colores: 1, tallas: 1, especificaciones: 0, articulos: 0 } },
+  ],
+});
+assert.ok(indiceDos);
+assert.equal(indiceDos.items.length, 2);
+
+console.log("ok parse coleccion e indice");
 
 assert.equal(parseArchivoRespaldo({ hola: 1 }), null);
 assert.equal(parseArchivoRespaldo(null), null);

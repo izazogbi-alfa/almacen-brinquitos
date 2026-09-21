@@ -44,6 +44,8 @@ next-env.d.ts
 /data/store.json
 /data/asignaciones-articulos.json
 /data/respaldos.json
+/data/respaldos-indice.json
+/data/respaldos/
 /data/usuarios.json
 
 *.xlsx
