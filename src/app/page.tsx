@@ -25,7 +25,7 @@ import {
 import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
 
 function ExistenciasContent() {
-  const { productos, movimientos, sesiones, user, catalogos, contar } =
+  const { productos, movimientos, sesiones, user, catalogos, contar, latidoSesion } =
     useInventory();
   const [vista, setVista] = useState<"contar" | "hoy">("contar");
   const [guardando, setGuardando] = useState(false);
@@ -148,6 +148,9 @@ function ExistenciasContent() {
           lineasIniciales={abierta?.borrador?.lineas}
           sucursalInicial={abierta?.borrador?.sucursalId}
           onTablaChange={guardarBorrador}
+          onInicioRegistro={() => {
+            void latidoSesion("existencias");
+          }}
           onPendienteRegistro={async (lineas) => {
             setGuardando(true);
             try {

@@ -74,6 +74,7 @@ export function CapturaArticulo({
   sucursalInicial,
   onPendienteRegistro,
   onTerminarRegistro,
+  onInicioRegistro,
 }: {
   productos: Producto[];
   modo: ModoCaptura;
@@ -90,6 +91,7 @@ export function CapturaArticulo({
   sucursalInicial?: string;
   onPendienteRegistro?: (lineas: LineaTabla[]) => Promise<void> | void;
   onTerminarRegistro?: (lineas: LineaTabla[]) => Promise<void> | void;
+  onInicioRegistro?: () => void;
 }) {
   const { catalogos } = useInventory();
   const [sucursalId, setSucursalId] = useState(sucursalInicial ?? "");
@@ -151,7 +153,6 @@ export function CapturaArticulo({
   const esquemaActivo = mostrado
     ? esquemaDeArticulo(mostrado, catalogos)
     : undefined;
-  const sinEsquemaArticulo = Boolean(mostrado && !esquemaActivo);
   const colores = mostrado
     ? coloresDeCaptura(mostrado, catalogos)
     : catalogos.colores.length
@@ -163,7 +164,6 @@ export function CapturaArticulo({
       : [];
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
-  const listasListas = colores.length > 0;
 
   const coincidenciasDelEsquema = articulosDelMismoEsquema(
     coincidencias,
@@ -256,7 +256,7 @@ export function CapturaArticulo({
       );
     });
     if (hits.length === 1) {
-      const motivo = intentarMarcar(hits[0], { abrir: true });
+      const motivo = intentarMarcar(hits[0], { abrir: false });
       if (motivo) {
         setActivoId(null);
         setColor("");
@@ -313,8 +313,17 @@ export function CapturaArticulo({
     }
     setActivoId(p.id);
     preparar(p);
-    setMostrandoCaptura(true);
+    setMostrandoCaptura(false);
     setErrorEsquema("");
+  }
+
+  async function abrirHojaColor(c: string) {
+    if (mostrandoCaptura && c !== colorActivo) {
+      await guardarColorActual();
+    }
+    aplicarColor(c);
+    setMostrandoCaptura(true);
+    onInicioRegistro?.();
   }
 
   function enfocarCantidad() {
@@ -463,15 +472,6 @@ export function CapturaArticulo({
       return;
     }
     void irAlSiguienteColorTrasGuardar();
-  }
-
-  async function tocarColor(c: string) {
-    if (c === colorActivo) {
-      enfocarCantidad();
-      return;
-    }
-    await guardarColorActual();
-    aplicarColor(c);
   }
 
   function saltarEsteColor() {
@@ -629,6 +629,28 @@ export function CapturaArticulo({
                   Marcar más de la búsqueda
                 </Button>
               </div>
+              {colores.length > 0 && esquemaActivo ? (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {colores.map((c) => (
+                    <Button
+                      key={c}
+                      type="button"
+                      variant={
+                        mostrandoCaptura && c === colorActivo
+                          ? "default"
+                          : "outline"
+                      }
+                      className={cn(
+                        "h-12 w-full capitalize",
+                        mostrandoCaptura && c === colorActivo && btn,
+                      )}
+                      onClick={() => void abrirHojaColor(c)}
+                    >
+                      {c}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -647,37 +669,6 @@ export function CapturaArticulo({
             <EmptyView
               titulo="No hay coincidencias"
               detalle={`Nada con “${consulta}”.`}
-            />
-          ) : mostrandoCaptura && mostrado && sinEsquemaArticulo ? (
-            <EmptyView
-              titulo="Este artículo no tiene esquema"
-              detalle={`${mostrado.sku} ${mostrado.nombre} todavía no tiene esquema de conteo. Iza debe ir a Artículos, abrir la ficha y pulsar Agregar esquemas (después de armar los esquemas en Configuración → Listas de captura). No se usa un esquema de fábrica.`}
-            />
-          ) : mostrandoCaptura && mostrado && !listasListas ? (
-            <EmptyView
-              titulo="Faltan listas"
-              detalle="Iza debe armar colores en Configuración. Aquí solo se elige, no se crean."
-            />
-          ) : mostrandoCaptura && mostrado && esquemaActivo ? (
-            <HojaCaptura
-              sku={mostrado.sku}
-              color={colorActivo}
-              talla={tallaActiva}
-              cantidad={cantidad}
-              colores={colores}
-              tallas={encabezados}
-              verde={verde}
-              guardando={guardando}
-              puedeRegresar={Boolean(colorAnteriorEnLista(colores, colorActivo))}
-              onCantidad={setCantidad}
-              onColor={(c) => void tocarColor(c)}
-              onTalla={cambiarTalla}
-              onEnter={avanzarTallaOGuardarColor}
-              onSaltar={saltarEsteColor}
-              onRegresar={regresarColor}
-              onCerrar={() => setMostrandoCaptura(false)}
-              onPendiente={() => void pendienteGuardar()}
-              onTerminar={() => void terminarGuardar()}
             />
           ) : (
             <div className="space-y-3">
@@ -777,7 +768,25 @@ export function CapturaArticulo({
             </div>
           )}
 
-          <div>
+          {mostrandoCaptura && mostrado && esquemaActivo ? (
+            <HojaCaptura
+              color={colorActivo}
+              talla={tallaActiva}
+              cantidad={cantidad}
+              verde={verde}
+              guardando={guardando}
+              puedeRegresar={Boolean(colorAnteriorEnLista(colores, colorActivo))}
+              onCantidad={setCantidad}
+              onEnter={avanzarTallaOGuardarColor}
+              onSaltar={saltarEsteColor}
+              onRegresar={regresarColor}
+              onCerrar={() => setMostrandoCaptura(false)}
+              onPendiente={() => void pendienteGuardar()}
+              onTerminar={() => void terminarGuardar()}
+            />
+          ) : null}
+
+          <div className={mostrandoCaptura ? "pb-72" : undefined}>
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
             <p className="mb-2 text-xs text-muted-foreground">
               Cada prenda es un bloque (clave y nombre arriba). Colores de

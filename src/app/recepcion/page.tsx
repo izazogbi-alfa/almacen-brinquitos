@@ -21,7 +21,7 @@ import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
 import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
 
 function RecepcionContent() {
-  const { productos, movimientos, sesiones, user, catalogos, entrada } =
+  const { productos, movimientos, sesiones, user, catalogos, entrada, latidoSesion } =
     useInventory();
   const [guardando, setGuardando] = useState(false);
   const guardarBorrador = useBorradorSesion("recepcion");
@@ -100,6 +100,9 @@ function RecepcionContent() {
         lineasIniciales={abierta?.borrador?.lineas}
         sucursalInicial={abierta?.borrador?.sucursalId}
         onTablaChange={guardarBorrador}
+        onInicioRegistro={() => {
+          void latidoSesion("recepcion");
+        }}
         onPendienteRegistro={async (lineas) => {
           setGuardando(true);
           try {

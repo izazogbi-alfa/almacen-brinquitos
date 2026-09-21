@@ -136,6 +136,9 @@ function NuevoPedidoContent() {
           setTabla(next);
           guardarBorrador(next);
         }}
+        onInicioRegistro={() => {
+          void latidoSesion("pedidos");
+        }}
         onPendienteRegistro={async (lineas) => {
           setTabla(lineas);
           try {
