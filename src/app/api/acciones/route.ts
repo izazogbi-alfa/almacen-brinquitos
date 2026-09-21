@@ -109,6 +109,7 @@ export async function POST(request: Request) {
     crearSiFalta?: boolean;
     sesionId?: string;
     password?: string;
+    cierre?: "pendiente" | "terminada" | string;
   } | null;
 
   const accion = body?.accion;
