@@ -35,6 +35,7 @@ function NuevoPedidoContent() {
     abierta?.borrador?.lineas ?? [],
   );
   const [enviando, setEnviando] = useState(false);
+  const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion(
     "pedidos",
     {
@@ -93,7 +94,10 @@ function NuevoPedidoContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
           Nuevo pedido
         </h2>
-        <BotonPendiente modulo="pedidos" />
+        <BotonPendiente
+          modulo="pedidos"
+          onReanudada={() => setCapturaNonce((n) => n + 1)}
+        />
         <p className="text-sm text-muted-foreground">
           Marca varias prendas del mismo esquema. Color, luego tallas. Un
           pedido y un PDF con todas. Iza autoriza.
@@ -120,7 +124,7 @@ function NuevoPedidoContent() {
         />
       </div>
       <CapturaArticulo
-        key={abierta?.id ?? "pedido-nuevo"}
+        key={`pedido-captura-${capturaNonce}`}
         productos={productos}
         modo="pedido"
         acento="azul"

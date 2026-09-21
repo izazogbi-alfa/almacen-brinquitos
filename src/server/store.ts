@@ -47,6 +47,19 @@ import {
   mejorCatalogos,
   type CatalogosPersistidos,
 } from "@/server/catalogos-persist";
+import {
+  mezclarUsuarios,
+  type UsuariosPersistidos,
+} from "@/lib/usuarios-persist";
+import {
+  archivoUsuariosEmpaquetado,
+  archivoUsuariosLocal,
+  guardarUsuariosDuraderos,
+  leerUsuariosArchivo,
+  leerUsuariosDuraderos,
+  mejorUsuarios,
+  usuariosDesdeCookies,
+} from "@/server/usuarios-persist";
 
 export type UsuarioInterno = {
   id: string;
@@ -72,6 +85,7 @@ export type AppStore = {
   catalogos: Catalogos;
   catalogosGuardadosEn?: string | null;
   asignacionesGuardadosEn?: string | null;
+  usuariosGuardadosEn?: string | null;
 };
 
 const CATALOG_ORIGEN = "iza-csv-v1";
@@ -156,10 +170,34 @@ function seedStore(): AppStore {
     catalogos,
     catalogosGuardadosEn: archivos?.savedAt ?? null,
     asignacionesGuardadosEn: null,
+    usuariosGuardadosEn: archivosUsuarios()?.savedAt ?? null,
   };
   const asignadas = asignacionesDeArchivos();
   if (asignadas) aplicarAsignacionesAlStore(seeded, asignadas);
+  const usuariosArchivo = archivosUsuarios();
+  if (usuariosArchivo) aplicarUsuariosAlStore(seeded, usuariosArchivo);
   return seeded;
+}
+
+function archivosUsuarios(): UsuariosPersistidos | null {
+  return mejorUsuarios(
+    leerUsuariosArchivo(archivoUsuariosLocal()),
+    leerUsuariosArchivo(archivoUsuariosEmpaquetado()),
+  );
+}
+
+function aplicarUsuariosAlStore(store: AppStore, data: UsuariosPersistidos) {
+  store.users = mezclarUsuarios(data.users, seedUsers());
+  store.usuariosGuardadosEn = data.savedAt;
+}
+
+function overlayUsuariosDeArchivo(parsed: AppStore) {
+  const archivos = archivosUsuarios();
+  if (!archivos) return;
+  const actual = parsed.usuariosGuardadosEn;
+  if (!actual || Date.parse(archivos.savedAt) > Date.parse(actual)) {
+    aplicarUsuariosAlStore(parsed, archivos);
+  }
 }
 
 function catalogosDeArchivos(): CatalogosPersistidos | null {
@@ -248,6 +286,7 @@ function loadRaw(): AppStore {
     parsed.users = seedUsers();
     extra = true;
   }
+  overlayUsuariosDeArchivo(parsed);
   let catalogo: Producto[] = [];
   try {
     catalogo = leerCatalogoIza();
@@ -363,6 +402,16 @@ export async function hidratarCatalogos(
       sanitizarArticuloSinFabrica(p, store.catalogos),
     );
   }
+
+  const mejorUsuariosData = mejorUsuarios(
+    store.usuariosGuardadosEn
+      ? { savedAt: store.usuariosGuardadosEn, users: store.users }
+      : null,
+    usuariosDesdeCookies(leerCookie),
+    await leerUsuariosDuraderos(),
+  );
+  if (mejorUsuariosData) aplicarUsuariosAlStore(store, mejorUsuariosData);
+
   memoryStore = store;
   return store;
 }
@@ -394,11 +443,43 @@ export async function guardarAsignacionesEnStore(
   return { store, data, remoto };
 }
 
+export async function guardarUsuariosEnStore(users?: UsuarioInterno[]) {
+  const store = loadRaw();
+  const data: UsuariosPersistidos = {
+    savedAt: new Date().toISOString(),
+    users: users ?? store.users,
+  };
+  const remoto = await guardarUsuariosDuraderos(data);
+  aplicarUsuariosAlStore(store, data);
+  saveRaw(store);
+  return { store, data, remoto };
+}
+
 export const ERROR_ESQUEMA_NO_PERSISTIO =
   "No se pudo guardar el esquema. El artículo no quedó persistido. Intenta de nuevo.";
 
 export const ERROR_CLON_NO_PERSISTIO =
   "No se pudo copiar el esquema. Los cambios no quedaron persistidos. Intenta de nuevo.";
+
+export async function hidratarUsuarios(
+  leerCookie: (name: string) => string | undefined,
+) {
+  const store = loadRaw();
+  const mejor = mejorUsuarios(
+    store.usuariosGuardadosEn
+      ? { savedAt: store.usuariosGuardadosEn, users: store.users }
+      : null,
+    usuariosDesdeCookies(leerCookie),
+    await leerUsuariosDuraderos(),
+  );
+  if (mejor) {
+    aplicarUsuariosAlStore(store, mejor);
+    saveRaw(store);
+  } else {
+    memoryStore = store;
+  }
+  return store;
+}
 
 export function withStore<T>(fn: (store: AppStore) => T): T {
   const store = loadRaw();

@@ -25,6 +25,8 @@ import { catalogosVacios } from "@/lib/catalogos";
 import { puede } from "@/lib/modulos";
 import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
 import { enviarAbandonoPagina } from "@/lib/abandonar-pagina";
+import type { UsuariosPersistidos } from "@/lib/usuarios-persist";
+import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
 
 type NuevaLinea = {
   productoId: string;
@@ -113,6 +115,7 @@ type InventoryValue = {
 
 const LS_CATALOGOS = "brq_catalogos";
 const LS_ASIGNACIONES = "brq_asignaciones";
+const LS_USUARIOS = "brq_usuarios";
 
 function leerCatalogosLocal(): {
   savedAt: string;
@@ -162,6 +165,26 @@ function escribirAsignacionesLocal(data: AsignacionesPersistidas) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LS_ASIGNACIONES, JSON.stringify(data));
+  } catch {
+    /* quota */
+  }
+}
+
+function leerUsuariosLocal(): UsuariosPersistidos | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LS_USUARIOS);
+    if (!raw) return null;
+    return parseUsuariosPersistidos(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function escribirUsuariosLocal(data: UsuariosPersistidos) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_USUARIOS, JSON.stringify(data));
   } catch {
     /* quota */
   }
@@ -315,6 +338,44 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         savedAt: serverAsigAt,
         asignaciones,
       });
+    }
+
+    if (data.user?.rol === "admin") {
+      const localU = leerUsuariosLocal();
+      const serverUAt =
+        typeof data.usuariosGuardadosEn === "string"
+          ? data.usuariosGuardadosEn
+          : "";
+      if (
+        localU &&
+        (!serverUAt || Date.parse(localU.savedAt) > Date.parse(serverUAt))
+      ) {
+        const push = await fetch("/api/admin/usuarios", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "restaurar",
+            respaldoUsuarios: localU,
+          }),
+        });
+        if (push.ok) {
+          const saved = (await push.json()) as {
+            respaldoUsuarios?: unknown;
+          };
+          const parsed = parseUsuariosPersistidos(saved.respaldoUsuarios);
+          if (parsed) escribirUsuariosLocal(parsed);
+        }
+      } else {
+        const resU = await fetch("/api/admin/usuarios", {
+          credentials: "include",
+        });
+        if (resU.ok) {
+          const body = (await resU.json()) as { respaldoUsuarios?: unknown };
+          const parsed = parseUsuariosPersistidos(body.respaldoUsuarios);
+          if (parsed) escribirUsuariosLocal(parsed);
+        }
+      }
     }
   }, [pathname, router]);
 
