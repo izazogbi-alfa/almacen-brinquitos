@@ -352,3 +352,12 @@ export function descargarPdfBloques(
 ) {
   construirPdfBloques(titulo, notas, bloques, encabezado).save(archivo);
 }
+
+export function blobPdfBloques(
+  titulo: string,
+  notas: string[],
+  bloques: BloquePrenda[],
+  encabezado?: Partial<EncabezadoInforme>,
+) {
+  return construirPdfBloques(titulo, notas, bloques, encabezado).output("blob");
+}
