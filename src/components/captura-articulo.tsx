@@ -772,7 +772,7 @@ export function CapturaArticulo({
                 ) : null}
                 <div
                   className={cn(
-                    "sticky top-2 z-10 space-y-3 rounded-xl border-2 p-3 shadow-sm",
+                    "sticky top-2 z-30 space-y-3 rounded-xl border-2 p-3 shadow-sm",
                     verde
                       ? "border-emerald-700 bg-emerald-50"
                       : "border-amber-600 bg-amber-50",
@@ -782,6 +782,33 @@ export function CapturaArticulo({
                     {colorActivo}
                     {tallaActiva ? ` · talla ${tallaActiva}` : ""}
                   </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full bg-background"
+                      onClick={saltarEsteColor}
+                    >
+                      Saltar color
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full bg-background"
+                      disabled={guardando}
+                      onClick={() => void pendienteGuardar()}
+                    >
+                      {guardando ? "Guardando…" : "Pendiente guardar"}
+                    </Button>
+                    <Button
+                      type="button"
+                      className={cn("h-11 w-full", btn)}
+                      disabled={guardando}
+                      onClick={() => void terminarGuardar()}
+                    >
+                      {guardando ? "Guardando…" : "Terminar guardar"}
+                    </Button>
+                  </div>
                   <p className="text-sm">
                     Escribe la cantidad y pulsa Enter. Pasa sola a la
                     siguiente talla. Al terminar las tallas de este color se
@@ -879,37 +906,6 @@ export function CapturaArticulo({
                         .join(" · ")}
                     </p>
                   ) : null}
-                  <p className="text-xs">
-                    Pendiente guardar: lo retomas en Registros (en curso).
-                    Terminar guardar: queda en ya terminadas.
-                  </p>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full bg-background"
-                      onClick={saltarEsteColor}
-                    >
-                      Saltar color
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 w-full bg-background"
-                      disabled={guardando}
-                      onClick={() => void pendienteGuardar()}
-                    >
-                      {guardando ? "Guardando…" : "Pendiente guardar"}
-                    </Button>
-                    <Button
-                      type="button"
-                      className={cn("h-11 w-full", btn)}
-                      disabled={guardando}
-                      onClick={() => void terminarGuardar()}
-                    >
-                      {guardando ? "Guardando…" : "Terminar guardar"}
-                    </Button>
-                  </div>
                 </div>
                 <Button
                   type="button"
