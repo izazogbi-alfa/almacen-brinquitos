@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { cookieSesion, jsonUsuario } from "@/server/auth";
-import { login, withStore } from "@/server/store";
+import { hidratarUsuarios, login, withStore } from "@/server/store";
 import { abandonarSesionesAbiertas } from "@/lib/sesion-store";
 
 export async function POST(request: Request) {
@@ -18,6 +18,8 @@ export async function POST(request: Request) {
     );
   }
   try {
+    const jar = await cookies();
+    await hidratarUsuarios((name) => jar.get(name)?.value);
     const result = login(username, password);
     if (!result) {
       return NextResponse.json(
@@ -28,7 +30,6 @@ export async function POST(request: Request) {
     withStore((store) => {
       abandonarSesionesAbiertas(store, result.user);
     });
-    const jar = await cookies();
     jar.set(cookieSesion(result.token));
     return NextResponse.json({ user: jsonUsuario(result.user) });
   } catch (error) {

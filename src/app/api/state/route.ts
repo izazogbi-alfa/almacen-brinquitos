@@ -32,5 +32,6 @@ export async function GET() {
     catalogos: store.catalogos,
     catalogosGuardadosEn: store.catalogosGuardadosEn ?? null,
     asignacionesGuardadosEn: store.asignacionesGuardadosEn ?? null,
+    usuariosGuardadosEn: store.usuariosGuardadosEn ?? null,
   });
 }

@@ -1,11 +1,19 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { completarModulos } from "@/lib/modulos";
+import {
+  parseUsuariosPersistidos,
+  type UsuariosPersistidos,
+} from "@/lib/usuarios-persist";
 import type { ModulosUsuario, RolUsuario } from "@/lib/types";
 import { exigirAdmin } from "@/server/auth";
 import { hashPassword } from "@/server/passwords";
+import { cookiesUsuarios } from "@/server/usuarios-persist";
 import {
   cambiarContrasenaUsuario,
   contrasenaCoincide,
+  guardarUsuariosEnStore,
+  hidratarUsuarios,
   publicoDe,
   readStore,
   withStore,
@@ -39,6 +47,45 @@ function usuarioPublicoRespuesta() {
   return store.users.map((u) => publicoDe(u));
 }
 
+async function persistirPersonas(
+  jar: Awaited<ReturnType<typeof cookies>>,
+) {
+  const { data, remoto } = await guardarUsuariosEnStore();
+  let cookieOk = false;
+  try {
+    for (const c of cookiesUsuarios(data)) {
+      jar.set(c);
+    }
+    cookieOk = true;
+  } catch (cookieError) {
+    console.error("usuarios cookie failed", cookieError);
+    if (!remoto.persistio) {
+      const msg =
+        cookieError instanceof Error
+          ? cookieError.message
+          : "No se pudieron guardar las personas.";
+      return { error: msg, data: null as UsuariosPersistidos | null };
+    }
+  }
+  if (!remoto.persistio && !cookieOk) {
+    return {
+      error:
+        "No se pudieron guardar las personas. El servidor no pudo persistir los cambios.",
+      data: null as UsuariosPersistidos | null,
+    };
+  }
+  return { error: null as string | null, data };
+}
+
+function jsonPersonas(data: UsuariosPersistidos | null, extra?: object) {
+  return NextResponse.json({
+    usuarios: usuarioPublicoRespuesta(),
+    usuariosGuardadosEn: data?.savedAt ?? readStore().usuariosGuardadosEn ?? null,
+    respaldoUsuarios: data,
+    ...extra,
+  });
+}
+
 export async function GET() {
   const { user, error } = await exigirAdmin();
   if (!user) {
@@ -47,7 +94,23 @@ export async function GET() {
       NextResponse.json({ error: "Solo quien administra." }, { status: 403 })
     );
   }
-  return NextResponse.json({ usuarios: usuarioPublicoRespuesta() });
+  const jar = await cookies();
+  await hidratarUsuarios((name) => jar.get(name)?.value);
+  const store = readStore();
+  const data = store.usuariosGuardadosEn
+    ? {
+        savedAt: store.usuariosGuardadosEn,
+        users: store.users,
+      }
+    : null;
+  if (data) {
+    try {
+      for (const c of cookiesUsuarios(data)) jar.set(c);
+    } catch (cookieError) {
+      console.error("usuarios cookie sync failed", cookieError);
+    }
+  }
+  return jsonPersonas(data);
 }
 
 export async function POST(request: Request) {
@@ -59,6 +122,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const jar = await cookies();
+  await hidratarUsuarios((name) => jar.get(name)?.value);
+
   const body = (await request.json().catch(() => null)) as {
     accion?: string;
     userId?: string;
@@ -68,11 +134,31 @@ export async function POST(request: Request) {
     nombre?: string;
     rol?: unknown;
     modulos?: Partial<ModulosUsuario>;
+    respaldoUsuarios?: unknown;
   } | null;
 
   const accion = body?.accion ?? (body?.userId ? "actualizar" : "crear");
 
   try {
+    if (accion === "restaurar") {
+      const parsed = parseUsuariosPersistidos(body?.respaldoUsuarios);
+      if (!parsed) {
+        return NextResponse.json(
+          { error: "No hay personas para restaurar." },
+          { status: 400 },
+        );
+      }
+      withStore((store) => {
+        store.users = parsed.users;
+        store.usuariosGuardadosEn = parsed.savedAt;
+      });
+      const persistido = await persistirPersonas(jar);
+      if (persistido.error) {
+        return NextResponse.json({ error: persistido.error }, { status: 500 });
+      }
+      return jsonPersonas(persistido.data, { ok: true });
+    }
+
     if (accion === "crear") {
       const username = (body?.username ?? "").trim().toLowerCase();
       const nombre = (body?.nombre ?? "").trim();
@@ -91,9 +177,7 @@ export async function POST(request: Request) {
         );
       }
       const creado = withStore((store) => {
-        if (
-          store.users.some((u) => u.username.toLowerCase() === username)
-        ) {
+        if (store.users.some((u) => u.username.toLowerCase() === username)) {
           throw new Error("Ese usuario ya existe.");
         }
         const nuevo = {
@@ -107,7 +191,11 @@ export async function POST(request: Request) {
         store.users.push(nuevo);
         return publicoDe(nuevo);
       });
-      return NextResponse.json({ usuario: creado, usuarios: usuarioPublicoRespuesta() });
+      const persistido = await persistirPersonas(jar);
+      if (persistido.error) {
+        return NextResponse.json({ error: persistido.error }, { status: 500 });
+      }
+      return jsonPersonas(persistido.data, { usuario: creado });
     }
 
     if (accion === "actualizar") {
@@ -127,10 +215,11 @@ export async function POST(request: Request) {
         dest.modulos = modsDe(rol, body.modulos, dest.username);
         return publicoDe(dest);
       });
-      return NextResponse.json({
-        usuario: actualizado,
-        usuarios: usuarioPublicoRespuesta(),
-      });
+      const persistido = await persistirPersonas(jar);
+      if (persistido.error) {
+        return NextResponse.json({ error: persistido.error }, { status: 500 });
+      }
+      return jsonPersonas(persistido.data, { usuario: actualizado });
     }
 
     if (accion === "cambiar-contrasena") {
@@ -168,10 +257,11 @@ export async function POST(request: Request) {
         );
       }
       cambiarContrasenaUsuario(body.userId, nueva);
-      return NextResponse.json({
-        ok: true,
-        usuarios: usuarioPublicoRespuesta(),
-      });
+      const persistido = await persistirPersonas(jar);
+      if (persistido.error) {
+        return NextResponse.json({ error: persistido.error }, { status: 500 });
+      }
+      return jsonPersonas(persistido.data, { ok: true });
     }
 
     if (accion === "quitar") {
@@ -189,7 +279,11 @@ export async function POST(request: Request) {
         store.users = store.users.filter((u) => u.id !== dest.id);
         store.sessions = store.sessions.filter((s) => s.userId !== dest.id);
       });
-      return NextResponse.json({ ok: true, usuarios: usuarioPublicoRespuesta() });
+      const persistido = await persistirPersonas(jar);
+      if (persistido.error) {
+        return NextResponse.json({ error: persistido.error }, { status: 500 });
+      }
+      return jsonPersonas(persistido.data, { ok: true });
     }
 
     return NextResponse.json({ error: "Acción no válida." }, { status: 400 });

@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 import { COOKIE_SESION } from "@/lib/session-cookie";
 import { puede } from "@/lib/modulos";
 import type { ClaveModulo } from "@/lib/types";
-import { publicoDe, usuarioPorSesion, type UsuarioInterno } from "@/server/store";
+import {
+  hidratarUsuarios,
+  publicoDe,
+  usuarioPorSesion,
+  type UsuarioInterno,
+} from "@/server/store";
 
 export const COOKIE = COOKIE_SESION;
 
@@ -13,6 +18,8 @@ export async function tokenActual() {
 }
 
 export async function usuarioActual() {
+  const jar = await cookies();
+  await hidratarUsuarios((name) => jar.get(name)?.value);
   return usuarioPorSesion(await tokenActual());
 }
 

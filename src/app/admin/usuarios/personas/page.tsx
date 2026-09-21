@@ -17,6 +17,19 @@ import {
   PRESETS_USUARIO,
 } from "@/lib/modulos";
 import type { ModulosUsuario, RolUsuario, UsuarioPublico } from "@/lib/types";
+import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
+
+const LS_USUARIOS = "brq_usuarios";
+
+function guardarRespaldoLocal(raw: unknown) {
+  const parsed = parseUsuariosPersistidos(raw);
+  if (!parsed || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_USUARIOS, JSON.stringify(parsed));
+  } catch {
+    /* quota */
+  }
+}
 
 function modsVacios(): ModulosUsuario {
   return { ...MODULOS_SOLO_ALMACEN };
@@ -166,6 +179,7 @@ function PersonasAdmin() {
       return;
     }
     const data = await res.json();
+    guardarRespaldoLocal(data.respaldoUsuarios);
     setUsuarios(data.usuarios);
     setError(null);
     setCargando(false);
@@ -196,10 +210,12 @@ function PersonasAdmin() {
     const data = (await res.json().catch(() => ({}))) as {
       error?: string;
       usuarios?: UsuarioPublico[];
+      respaldoUsuarios?: unknown;
     };
     if (!res.ok) {
       throw new Error(data.error ?? "No se pudo guardar.");
     }
+    guardarRespaldoLocal(data.respaldoUsuarios);
     if (data.usuarios) setUsuarios(data.usuarios);
     return data;
   }
