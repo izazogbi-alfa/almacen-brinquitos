@@ -239,7 +239,9 @@ export async function POST(request: Request) {
         if (body.modulo === "pedidos" && !mods.pedidos) {
           throw new Error("No tienes módulo de pedidos.");
         }
-        const sesion = terminarSesionModulo(store, user, body.modulo);
+        const sesion = terminarSesionModulo(store, user, body.modulo, new Date(), {
+          borrador: body.borrador,
+        });
         if (!sesion) {
           throw new Error(
             "No hay una captura abierta con trabajo para marcar como terminada.",

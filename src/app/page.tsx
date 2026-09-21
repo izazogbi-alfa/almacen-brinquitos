@@ -13,6 +13,7 @@ import {
   movimientosDeSesionVisible,
   useBorradorSesion,
   useCierrePorInactividad,
+  useRegistroCaptura,
 } from "@/components/estado-sesion";
 import { formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
@@ -31,6 +32,8 @@ function ExistenciasContent() {
   const [guardando, setGuardando] = useState(false);
   const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion("existencias");
+  const { pendienteGuardar, terminarGuardar } =
+    useRegistroCaptura("existencias");
 
   useCierrePorInactividad("existencias", () => setVista("hoy"));
 
@@ -81,6 +84,7 @@ function ExistenciasContent() {
         sucursal,
         fecha: formatoFecha(cuando ?? new Date().toISOString()),
         quien: user?.nombre,
+        claveSolo: true,
       }),
     );
   }
@@ -154,6 +158,30 @@ function ExistenciasContent() {
           lineasIniciales={abierta?.borrador?.lineas}
           sucursalInicial={abierta?.borrador?.sucursalId}
           onTablaChange={guardarBorrador}
+          onPendienteRegistro={async (lineas) => {
+            setGuardando(true);
+            try {
+              await pendienteGuardar(lineas);
+            } catch (err) {
+              toast.error(
+                err instanceof Error ? err.message : "No se pudo dejar pendiente.",
+              );
+            } finally {
+              setGuardando(false);
+            }
+          }}
+          onTerminarRegistro={async (lineas) => {
+            setGuardando(true);
+            try {
+              await terminarGuardar(lineas);
+            } catch (err) {
+              toast.error(
+                err instanceof Error ? err.message : "No se pudo terminar.",
+              );
+            } finally {
+              setGuardando(false);
+            }
+          }}
           onCommit={async (p) => {
             setGuardando(true);
             try {

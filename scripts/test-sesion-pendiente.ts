@@ -275,4 +275,74 @@ assert.equal(grupoRegistro("2026-09-20T12:00:00.000Z", ahoraGrupo), "Hoy");
 assert.equal(grupoRegistro("2026-09-19T18:00:00.000Z", ahoraGrupo), "Ayer");
 assert.equal(grupoRegistro("2026-09-01T18:00:00.000Z", ahoraGrupo), "Más antiguos");
 
+const user = { id: "u-iza", nombre: "Iza" };
+const borradorLineas = {
+  sucursalId: "s1",
+  lineas: [
+    {
+      key: "a",
+      productoId: "p1",
+      sku: "XC1092",
+      nombre: "Camisa",
+      color: "Rosa",
+      sucursalId: "s1",
+      sucursalNombre: "Centro",
+      pares: [{ talla: "8", cantidad: 2 }],
+    },
+  ],
+};
+
+function abrirYCerrarPendiente(): SesionCaptura {
+  const ahora = "2026-09-21T12:00:00.000Z";
+  const sesion: SesionCaptura = {
+    id: "ss-btn-pend",
+    modulo: "existencias",
+    abiertaEn: ahora,
+    ultimaActividad: ahora,
+    userId: user.id,
+    userName: user.nombre,
+    conteos: 0,
+    entradas: 0,
+    pedidos: 0,
+    borrador: borradorLineas,
+  };
+  sesion.cerradaEn = ahora;
+  sesion.motivoCierre = "pagina";
+  sesion.pendiente = sesionTieneTrabajo(sesion);
+  return sesion;
+}
+
+function abrirYCerrarTerminada(): SesionCaptura {
+  const ahora = "2026-09-21T13:00:00.000Z";
+  const sesion: SesionCaptura = {
+    id: "ss-btn-term",
+    modulo: "existencias",
+    abiertaEn: ahora,
+    ultimaActividad: ahora,
+    userId: user.id,
+    userName: user.nombre,
+    conteos: 0,
+    entradas: 0,
+    pedidos: 0,
+    borrador: borradorLineas,
+  };
+  sesion.cerradaEn = ahora;
+  sesion.motivoCierre = "terminada";
+  sesion.pendiente = false;
+  return sesion;
+}
+
+const pendienteBtn = abrirYCerrarPendiente();
+assert.equal(pendienteBtn.pendiente, true);
+assert.equal(pendienteBtn.motivoCierre, "pagina");
+assert.equal(sesionesPendientes([pendienteBtn])[0]?.id, "ss-btn-pend");
+assert.equal(sesionesTerminadas([pendienteBtn]).length, 0);
+
+const terminadaBtn = abrirYCerrarTerminada();
+assert.equal(terminadaBtn.pendiente, false);
+assert.equal(terminadaBtn.motivoCierre, "terminada");
+assert.equal(esSesionTerminada(terminadaBtn), true);
+assert.equal(sesionesPendientes([terminadaBtn]).length, 0);
+assert.equal(sesionesTerminadas([terminadaBtn])[0]?.id, "ss-btn-term");
+
 console.log("ok sesion-pendiente");

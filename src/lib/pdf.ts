@@ -10,6 +10,9 @@ import {
   PDF_JSPDF,
   PDF_MARGEN_MM,
 } from "@/lib/pdf-layout";
+import { esPdfExistencias, notasPdfInforme } from "@/lib/pdf-clave";
+
+export { esPdfExistencias } from "@/lib/pdf-clave";
 
 export type EncabezadoInforme = {
   tituloDoc: string;
@@ -18,6 +21,8 @@ export type EncabezadoInforme = {
   sucursal?: string;
   fecha?: string;
   quien?: string;
+  /** Existencias: franja verde solo con la Clave, sin nombre ni esquema. */
+  claveSolo?: boolean;
 };
 
 export function encabezadoInforme(
@@ -27,6 +32,7 @@ export function encabezadoInforme(
     sucursal?: string;
     fecha?: string;
     quien?: string;
+    claveSolo?: boolean;
   },
 ): EncabezadoInforme {
   const empresa = ident?.empresaNombre?.trim();
@@ -37,6 +43,7 @@ export function encabezadoInforme(
     sucursal: extra.sucursal,
     fecha: extra.fecha,
     quien: extra.quien,
+    claveSolo: extra.claveSolo ?? esPdfExistencias(extra.tituloDoc),
   };
 }
 
@@ -188,26 +195,30 @@ function dibujarBloque(
   y = asegurarEspacio(doc, y, ALTO_CLAVE + 8, encabezado);
   fill(doc, PDF_COLORES.claveFondo);
   stroke(doc, PDF_COLORES.borde);
-  doc.rect(PDF_MARGEN_MM, y - 4, anchoTabla, ALTO_CLAVE + 2, "FD");
+  const soloClave = Boolean(encabezado.claveSolo);
+  const altoBanda = soloClave ? 10 : ALTO_CLAVE + 2;
+  doc.rect(PDF_MARGEN_MM, y - 4, anchoTabla, altoBanda, "FD");
   ink(doc, PDF_COLORES.claveTexto);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(soloClave ? 13 : 11);
   doc.text(plano(bloque.sku), PDF_MARGEN_MM + 2, y + 2, {
     maxWidth: Math.max(8, anchoTabla - 4),
   });
   y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  ink(doc, PDF_COLORES.subClave);
-  const sub = [bloque.nombre, bloque.sucursalNombre]
-    .filter(Boolean)
-    .join(" · ");
-  if (sub) {
-    const wrapped = doc.splitTextToSize(plano(sub), Math.max(8, anchoTabla - 4));
-    doc.text(wrapped[0] ?? "", PDF_MARGEN_MM + 2, y + 1, {
-      maxWidth: Math.max(8, anchoTabla - 4),
-    });
-    y += 5;
+  if (!soloClave) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    ink(doc, PDF_COLORES.subClave);
+    const sub = [bloque.nombre, bloque.sucursalNombre]
+      .filter(Boolean)
+      .join(" · ");
+    if (sub) {
+      const wrapped = doc.splitTextToSize(plano(sub), Math.max(8, anchoTabla - 4));
+      doc.text(wrapped[0] ?? "", PDF_MARGEN_MM + 2, y + 1, {
+        maxWidth: Math.max(8, anchoTabla - 4),
+      });
+      y += 5;
+    }
   }
   y += 4;
 
@@ -292,13 +303,17 @@ export function construirPdfBloques(
     sucursal: encabezado?.sucursal,
     fecha: encabezado?.fecha,
     quien: encabezado?.quien,
+    claveSolo:
+      encabezado?.claveSolo ??
+      esPdfExistencias(encabezado?.tituloDoc ?? titulo),
   };
   const anchoUtil = doc.internal.pageSize.getWidth() - PDF_MARGEN_MM * 2;
   let y = dibujarEncabezadoPagina(doc, cabe);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   ink(doc, PDF_COLORES.nota);
-  for (const nota of notas) {
+  const notasVisibles = notasPdfInforme(notas, Boolean(cabe.claveSolo));
+  for (const nota of notasVisibles) {
     const wrapped = doc.splitTextToSize(plano(nota), anchoUtil);
     for (const row of wrapped) {
       y = asegurarEspacio(doc, y, 5, cabe);
@@ -312,7 +327,11 @@ export function construirPdfBloques(
   y += 3;
   if (bloques.length === 0) {
     doc.text(
-      plano("Sin lineas en la tabla. Un articulo sin esquema no usa tallas de fabrica."),
+      plano(
+        cabe.claveSolo
+          ? "Sin lineas en la tabla."
+          : "Sin lineas en la tabla. Un articulo sin esquema no usa tallas de fabrica.",
+      ),
       PDF_MARGEN_MM,
       y,
     );
