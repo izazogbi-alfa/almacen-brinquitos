@@ -134,7 +134,7 @@ export function useRegistroCaptura(
   extra?: { sucursalId?: string; proveedor?: string; notasPedido?: string },
 ) {
   const router = useRouter();
-  const { abandonarSesion, terminarSesion } = useInventory();
+  const { guardarRegistro } = useInventory();
   const extraRef = useRef(extra);
   extraRef.current = extra;
 
@@ -152,7 +152,7 @@ export function useRegistroCaptura(
     async pendienteGuardar(lineas: LineaBorrador[]) {
       const borrador = payloadDe(lineas);
       recordarBorradorAlSalir(modulo, borrador);
-      await abandonarSesion(modulo, borrador);
+      await guardarRegistro(modulo, "pendiente", borrador);
       const archivo = seccionPendienteDe(modulo);
       toast.success(`Quedó en curso. Lo retomas en ${archivo.titulo}.`);
       router.push(archivo.href);
@@ -160,7 +160,7 @@ export function useRegistroCaptura(
     async terminarGuardar(lineas: LineaBorrador[]) {
       const borrador = payloadDe(lineas);
       recordarBorradorAlSalir(modulo, borrador);
-      await terminarSesion(modulo, borrador);
+      await guardarRegistro(modulo, "terminada", borrador);
       const archivo = seccionTerminadaDe(modulo);
       toast.success(`Listo. Quedó en ${archivo.titulo}.`);
       router.push(archivo.href);

@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsyncGate, EmptyView } from "@/components/status-views";
-import { EstadoSesion, BotonPendiente, useCierrePorInactividad, usePreservarCaptura } from "@/components/estado-sesion";
+import { EstadoSesion, useCierrePorInactividad, usePreservarCaptura } from "@/components/estado-sesion";
 import { etiquetaEstado, formatoFecha, formatoMoneda } from "@/lib/format";
 import { progresoRecepcion, totalPedido } from "@/lib/mock-data";
 import { useInventory } from "@/lib/inventory-context";
@@ -58,10 +58,6 @@ function PedidosContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
           Pedidos
         </h2>
-        <BotonPendiente
-          modulo="pedidos"
-          onReanudada={() => router.push("/pedidos/nuevo")}
-        />
         <div className="mt-2 flex items-start justify-between gap-3">
           <div>
             <p className="text-sm text-muted-foreground">

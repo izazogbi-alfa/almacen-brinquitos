@@ -14,7 +14,6 @@ import {
 import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
 import {
-  BotonPendiente,
   BotonTerminarSesion,
   EstadoSesion,
   useBorradorSesion,
@@ -36,7 +35,6 @@ function NuevoPedidoContent() {
     abierta?.borrador?.lineas ?? [],
   );
   const [enviando, setEnviando] = useState(false);
-  const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion(
     "pedidos",
     {
@@ -100,13 +98,10 @@ function NuevoPedidoContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
           Nuevo pedido
         </h2>
-        <BotonPendiente
-          modulo="pedidos"
-          onReanudada={() => setCapturaNonce((n) => n + 1)}
-        />
         <p className="text-sm text-muted-foreground">
           Marca varias prendas del mismo esquema. Color, luego tallas. Un
-          pedido y un PDF con todas. Iza autoriza.
+          pedido y un PDF con todas. Iza autoriza. Si quedó a medias, retómalo
+          en Registros → Pedidos pendientes.
         </p>
         <EstadoSesion modulo="pedidos" />
         <BotonTerminarSesion modulo="pedidos" />
@@ -130,7 +125,7 @@ function NuevoPedidoContent() {
         />
       </div>
       <CapturaArticulo
-        key={`pedido-captura-${capturaNonce}`}
+        key="pedido-captura"
         productos={productos}
         modo="pedido"
         acento="azul"

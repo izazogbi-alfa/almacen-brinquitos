@@ -25,6 +25,7 @@ import {
   terminarSesionModulo,
   borrarSesionTerminada,
   tocarSesionCaptura,
+  guardarRegistroCaptura,
 } from "@/lib/sesion-store";
 import { esModuloSesion } from "@/lib/sesion-captura";
 
@@ -280,6 +281,40 @@ export async function POST(request: Request) {
         const sesion = borrarSesionTerminada(store, sesionId);
         if (!sesion) {
           throw new Error("Esa captura terminada ya no está.");
+        }
+        marcarGuardado(store, user);
+        return { sesion };
+      }
+
+      if (accion === "guardar-registro") {
+        if (!esModuloSesion(body?.modulo)) {
+          throw new Error("Falta el módulo de la sesión.");
+        }
+        if (body.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (body.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (body.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const cierre =
+          body?.cierre === "terminada" ? "terminada" : "pendiente";
+        const sesion = guardarRegistroCaptura(
+          store,
+          user,
+          body.modulo,
+          cierre,
+          new Date(),
+          body.borrador,
+        );
+        if (!sesion) {
+          throw new Error(
+            cierre === "terminada"
+              ? "No se pudo terminar. Cuenta al menos una talla."
+              : "No se pudo dejar pendiente. Cuenta al menos una talla.",
+          );
         }
         marcarGuardado(store, user);
         return { sesion };

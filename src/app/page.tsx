@@ -7,7 +7,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { CapturaArticulo } from "@/components/captura-articulo";
 import {
-  BotonPendiente,
   BotonTerminarSesion,
   EstadoSesion,
   movimientosDeSesionVisible,
@@ -30,7 +29,6 @@ function ExistenciasContent() {
     useInventory();
   const [vista, setVista] = useState<"contar" | "hoy">("contar");
   const [guardando, setGuardando] = useState(false);
-  const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion("existencias");
   const { pendienteGuardar, terminarGuardar } =
     useRegistroCaptura("existencias");
@@ -95,21 +93,13 @@ function ExistenciasContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-teal-900">
           Existencias
         </h2>
-        <BotonPendiente
-          modulo="existencias"
-          onReanudada={() => {
-            setVista("contar");
-            setCapturaNonce((n) => n + 1);
-          }}
-        />
         <EstadoSesion modulo="existencias" />
         <BotonTerminarSesion modulo="existencias" />
         <p className="mt-1 text-sm text-muted-foreground">
           Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
-          Color, luego tallas. Contar deja la cantidad en piso. Al rato sin
-          tocar, la lista de Hoy se congela; puedes volver a contar cuando
-          quieras. Si quedó a medias, Continuar este registro reabre la misma
-          lista, no un día nuevo.
+          Color, luego tallas en la hoja de captura (teclado y Enter). Contar
+          deja la cantidad en piso. Si quedó a medias, retómalo en
+          Registros → Existencias pendientes.
         </p>
       </div>
 
@@ -149,7 +139,7 @@ function ExistenciasContent() {
         </div>
       ) : (
         <CapturaArticulo
-          key={`existencias-captura-${capturaNonce}`}
+          key="existencias-captura"
           productos={productos}
           modo="contar"
           acento="azul"

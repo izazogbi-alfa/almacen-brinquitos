@@ -90,6 +90,34 @@ export function piezasDeSesion(sesion: SesionCaptura) {
   return sesion.pedidos;
 }
 
+export function piezasDeBorrador(borrador?: BorradorSesion) {
+  return (borrador?.lineas ?? []).reduce((n, ln) => {
+    return (
+      n +
+      ln.pares.reduce(
+        (s, p) => s + (Number.isFinite(p.cantidad) ? p.cantidad : 0),
+        0,
+      )
+    );
+  }, 0);
+}
+
+/** Marca que hay trabajo (fila en Registros) a partir del borrador. */
+export function asegurarTrabajoSesion(sesion: SesionCaptura) {
+  const piezas = piezasDeBorrador(sesion.borrador);
+  const n = Math.max(
+    piezasDeSesion(sesion),
+    piezas,
+    (sesion.borrador?.lineas.length ?? 0) > 0 ? 1 : 0,
+  );
+  if (sesion.modulo === "existencias") sesion.conteos = Math.max(sesion.conteos, n);
+  else if (sesion.modulo === "recepcion") {
+    sesion.entradas = Math.max(sesion.entradas, n);
+  } else {
+    sesion.pedidos = Math.max(sesion.pedidos, n);
+  }
+}
+
 export function sesionTieneTrabajo(sesion: SesionCaptura) {
   if (piezasDeSesion(sesion) > 0) return true;
   return (sesion.borrador?.lineas.length ?? 0) > 0;
@@ -248,8 +276,8 @@ export function sesionesParaCliente(
   const mods: ModuloSesion[] = ["existencias", "pedidos", "recepcion"];
   for (const m of mods) {
     push(sesionAbiertaDe(sesiones, m));
-    push(sesionPendienteDe(sesiones, m));
   }
+  for (const s of sesionesPendientes(sesiones)) push(s);
   for (const s of sesionesTerminadas(sesiones)) {
     if (out.length >= limite) break;
     push(s);
