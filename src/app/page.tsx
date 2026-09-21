@@ -29,6 +29,7 @@ function ExistenciasContent() {
     useInventory();
   const [vista, setVista] = useState<"contar" | "hoy">("contar");
   const [guardando, setGuardando] = useState(false);
+  const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion("existencias");
 
   useCierrePorInactividad("existencias", () => setVista("hoy"));
@@ -92,7 +93,10 @@ function ExistenciasContent() {
         </h2>
         <BotonPendiente
           modulo="existencias"
-          onReanudada={() => setVista("contar")}
+          onReanudada={() => {
+            setVista("contar");
+            setCapturaNonce((n) => n + 1);
+          }}
         />
         <EstadoSesion modulo="existencias" />
         <BotonTerminarSesion modulo="existencias" />
@@ -141,7 +145,7 @@ function ExistenciasContent() {
         </div>
       ) : (
         <CapturaArticulo
-          key={abierta?.id ?? "existencias-nueva"}
+          key={`existencias-captura-${capturaNonce}`}
           productos={productos}
           modo="contar"
           acento="azul"

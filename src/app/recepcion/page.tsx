@@ -24,6 +24,7 @@ function RecepcionContent() {
   const { productos, movimientos, sesiones, user, catalogos, entrada } =
     useInventory();
   const [guardando, setGuardando] = useState(false);
+  const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion("recepcion");
   useCierrePorInactividad("recepcion");
 
@@ -80,7 +81,10 @@ function RecepcionContent() {
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-emerald-800">
           Entrada de mercancía
         </h2>
-        <BotonPendiente modulo="recepcion" />
+        <BotonPendiente
+          modulo="recepcion"
+          onReanudada={() => setCapturaNonce((n) => n + 1)}
+        />
         <EstadoSesion modulo="recepcion" />
         <BotonTerminarSesion modulo="recepcion" />
         <p className="mt-1 text-sm text-emerald-800/80">
@@ -91,7 +95,7 @@ function RecepcionContent() {
         </p>
       </div>
       <CapturaArticulo
-        key={abierta?.id ?? "recepcion-nueva"}
+        key={`recepcion-captura-${capturaNonce}`}
         productos={productos}
         modo="entrada"
         acento="verde"
