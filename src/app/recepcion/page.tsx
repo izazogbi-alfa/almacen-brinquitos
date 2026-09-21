@@ -12,6 +12,7 @@ import {
   movimientosDeSesionVisible,
   useBorradorSesion,
   useCierrePorInactividad,
+  useRegistroCaptura,
 } from "@/components/estado-sesion";
 import { formatoFecha } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
@@ -26,6 +27,7 @@ function RecepcionContent() {
   const [guardando, setGuardando] = useState(false);
   const [capturaNonce, setCapturaNonce] = useState(0);
   const guardarBorrador = useBorradorSesion("recepcion");
+  const { pendienteGuardar, terminarGuardar } = useRegistroCaptura("recepcion");
   useCierrePorInactividad("recepcion");
 
   const abierta = sesionAbiertaDe(sesiones, "recepcion");
@@ -71,6 +73,7 @@ function RecepcionContent() {
         sucursal: filas.find((f) => f.sucursalNombre)?.sucursalNombre,
         fecha: formatoFecha(cuando ?? new Date().toISOString()),
         quien: user?.nombre,
+        claveSolo: false,
       }),
     );
   }
@@ -104,6 +107,30 @@ function RecepcionContent() {
         lineasIniciales={abierta?.borrador?.lineas}
         sucursalInicial={abierta?.borrador?.sucursalId}
         onTablaChange={guardarBorrador}
+        onPendienteRegistro={async (lineas) => {
+          setGuardando(true);
+          try {
+            await pendienteGuardar(lineas);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "No se pudo dejar pendiente.",
+            );
+          } finally {
+            setGuardando(false);
+          }
+        }}
+        onTerminarRegistro={async (lineas) => {
+          setGuardando(true);
+          try {
+            await terminarGuardar(lineas);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "No se pudo terminar.",
+            );
+          } finally {
+            setGuardando(false);
+          }
+        }}
         extraAfter={
           deSesion.length > 0 ? (
             <Button

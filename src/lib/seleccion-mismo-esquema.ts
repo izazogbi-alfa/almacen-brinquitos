@@ -46,8 +46,13 @@ export function articulosDelMismoEsquema(
 export function notasPdfSeleccion(
   elegidos: Producto[],
   catalogos: Catalogos,
+  opts?: { sinEsquema?: boolean },
 ): string[] {
   if (elegidos.length === 0) return [];
+  if (opts?.sinEsquema) {
+    const claves = [...new Set(elegidos.map((p) => p.sku).filter(Boolean))];
+    return claves.length ? [`Claves: ${claves.join(" · ")}`] : [];
+  }
   const esq = esquemaDeArticulo(elegidos[0], catalogos);
   const lista = elegidos.map((p) => `${p.sku} ${p.nombre}`).join(" · ");
   const tallas = esq?.tallas?.length

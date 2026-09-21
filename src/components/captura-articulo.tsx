@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Minus, Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -71,6 +72,8 @@ export function CapturaArticulo({
   pdfNotas,
   lineasIniciales,
   sucursalInicial,
+  onPendienteRegistro,
+  onTerminarRegistro,
 }: {
   productos: Producto[];
   modo: ModoCaptura;
@@ -85,6 +88,8 @@ export function CapturaArticulo({
   pdfNotas?: string[];
   lineasIniciales?: LineaTabla[];
   sucursalInicial?: string;
+  onPendienteRegistro?: (lineas: LineaTabla[]) => Promise<void> | void;
+  onTerminarRegistro?: (lineas: LineaTabla[]) => Promise<void> | void;
 }) {
   const { catalogos } = useInventory();
   const [sucursalId, setSucursalId] = useState(sucursalInicial ?? "");
@@ -381,51 +386,47 @@ export function CapturaArticulo({
     onTablaChange?.(next);
   }
 
-  function publicarLineasConPares(pares: ParTalla[]) {
-    if (!mostrado || !sucursal) return;
-    publicarTabla(
-      (() => {
-        const idx = lineas.findIndex(
-          (x) =>
-            x.productoId === mostrado.id &&
-            x.color === colorActivo &&
-            x.especificacion === especificacion &&
-            x.sucursalId === sucursal.id,
-        );
-        if (idx >= 0) {
-          const next = [...lineas];
-          const prevPares = next[idx].pares;
-          const merged = [...prevPares];
-          for (const p of pares) {
-            const i = merged.findIndex((m) => m.talla === p.talla);
-            if (i >= 0) merged[i] = p;
-            else merged.push(p);
-          }
-          next[idx] = { ...next[idx], pares: merged };
-          return next;
-        }
-        return [
-          ...lineas,
-          {
-            key: `ln-${Date.now()}`,
-            productoId: mostrado.id,
-            sku: mostrado.sku,
-            nombre: mostrado.nombre,
-            color: colorActivo,
-            especificacion: especificacion || undefined,
-            sucursalId: sucursal.id,
-            sucursalNombre: sucursal.nombre,
-            pares,
-          },
-        ];
-      })(),
+  function fusionarLineasConPares(pares: ParTalla[]): LineaTabla[] {
+    if (!mostrado || !sucursal) return lineas;
+    const idx = lineas.findIndex(
+      (x) =>
+        x.productoId === mostrado.id &&
+        x.color === colorActivo &&
+        x.especificacion === especificacion &&
+        x.sucursalId === sucursal.id,
     );
+    if (idx >= 0) {
+      const next = [...lineas];
+      const prevPares = next[idx].pares;
+      const merged = [...prevPares];
+      for (const p of pares) {
+        const i = merged.findIndex((m) => m.talla === p.talla);
+        if (i >= 0) merged[i] = p;
+        else merged.push(p);
+      }
+      next[idx] = { ...next[idx], pares: merged };
+      return next;
+    }
+    return [
+      ...lineas,
+      {
+        key: `ln-${Date.now()}`,
+        productoId: mostrado.id,
+        sku: mostrado.sku,
+        nombre: mostrado.nombre,
+        color: colorActivo,
+        especificacion: especificacion || undefined,
+        sucursalId: sucursal.id,
+        sucursalNombre: sucursal.nombre,
+        pares,
+      },
+    ];
   }
 
-  async function guardarColorActual(): Promise<boolean> {
+  async function guardarColorActual(): Promise<LineaTabla[]> {
     guardarCantidadDeTalla(tallaActiva, cantidad);
     const pares = paresListos();
-    if (!mostrado || !sucursal || pares.length === 0) return false;
+    if (!mostrado || !sucursal || pares.length === 0) return lineas;
     await onCommit({
       producto: mostrado,
       sucursalId: sucursal.id,
@@ -436,9 +437,10 @@ export function CapturaArticulo({
         cantidad: p.cantidad,
       })),
     });
-    publicarLineasConPares(pares);
+    const next = fusionarLineasConPares(pares);
+    publicarTabla(next);
     setBorrador([]);
-    return true;
+    return next;
   }
 
   async function irAlSiguienteColorTrasGuardar() {
@@ -485,14 +487,39 @@ export function CapturaArticulo({
     else enfocarCantidad();
   }
 
-  async function terminarYGuardar() {
-    await guardarColorActual();
+  async function pendienteGuardar() {
+    const next = await guardarColorActual();
+    if (next.length === 0) {
+      toast.error("Cuenta al menos una talla antes de dejarlo pendiente.");
+      return;
+    }
+    if (!onPendienteRegistro) {
+      toast.error("No se pudo dejar pendiente.");
+      return;
+    }
+    await onPendienteRegistro(next);
+    setMostrandoCaptura(false);
+  }
+
+  async function terminarGuardar() {
+    const next = await guardarColorActual();
+    if (next.length === 0) {
+      toast.error("Cuenta al menos una talla antes de terminar.");
+      return;
+    }
+    if (!onTerminarRegistro) {
+      toast.error("No se pudo terminar.");
+      return;
+    }
+    await onTerminarRegistro(next);
     setMostrandoCaptura(false);
   }
 
   const notasPdfTabla = [
     ...(pdfNotas ?? []),
-    ...notasPdfSeleccion(elegidos, catalogos),
+    ...notasPdfSeleccion(elegidos, catalogos, {
+      sinEsquema: modo === "contar",
+    }),
   ];
 
   return (
@@ -677,8 +704,9 @@ export function CapturaArticulo({
                   <Label>Color</Label>
                   <p className="text-xs text-muted-foreground">
                     Toca el color que estás contando. Otro color guarda lo
-                    capturado de este y te mueve. Saltar este color no guarda
-                    y te lleva al siguiente.
+                    capturado de este y te mueve. En el banner: Saltar color
+                    no guarda y pasa al siguiente; Pendiente guardar lo deja
+                    en Registros (en curso); Terminar guardar lo archiva.
                   </p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {colores.map((c) => (
@@ -851,23 +879,35 @@ export function CapturaArticulo({
                         .join(" · ")}
                     </p>
                   ) : null}
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <p className="text-xs">
+                    Pendiente guardar: lo retomas en Registros (en curso).
+                    Terminar guardar: queda en ya terminadas.
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <Button
                       type="button"
                       variant="outline"
                       className="h-11 w-full bg-background"
                       onClick={saltarEsteColor}
                     >
-                      Saltar este color
+                      Saltar color
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       className="h-11 w-full bg-background"
                       disabled={guardando}
-                      onClick={() => void terminarYGuardar()}
+                      onClick={() => void pendienteGuardar()}
                     >
-                      {guardando ? "Guardando…" : "Terminar / guardar"}
+                      {guardando ? "Guardando…" : "Pendiente guardar"}
+                    </Button>
+                    <Button
+                      type="button"
+                      className={cn("h-11 w-full", btn)}
+                      disabled={guardando}
+                      onClick={() => void terminarGuardar()}
+                    >
+                      {guardando ? "Guardando…" : "Terminar guardar"}
                     </Button>
                   </div>
                 </div>
@@ -989,7 +1029,7 @@ export function CapturaArticulo({
             <TablaPrendas
               lineas={lineas}
               acento={acento}
-              vacioDetalle="Guarda un color (Enter en la última talla, o Terminar / guardar) para que aparezca aquí, debajo de la clave."
+              vacioDetalle="Guarda un color (Enter en la última talla, o Terminar guardar) para que aparezca aquí, debajo de la clave."
               pdfArchivo={
                 pdfArchivo ??
                 (modo === "entrada"
@@ -1010,6 +1050,7 @@ export function CapturaArticulo({
               onQuitarFila={(keys) =>
                 publicarTabla(lineas.filter((x) => !keys.includes(x.key)))
               }
+              pdfClaveSolo={modo === "contar"}
             />
           </div>
           {extraAfter}

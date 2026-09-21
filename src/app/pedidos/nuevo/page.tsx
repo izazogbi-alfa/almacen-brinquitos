@@ -19,6 +19,7 @@ import {
   EstadoSesion,
   useBorradorSesion,
   useCierrePorInactividad,
+  useRegistroCaptura,
 } from "@/components/estado-sesion";
 import { sesionAbiertaDe } from "@/lib/sesion-captura";
 
@@ -46,6 +47,11 @@ function NuevoPedidoContent() {
     { crearSiFalta: true },
   );
   useCierrePorInactividad("pedidos");
+  const { pendienteGuardar, terminarGuardar } = useRegistroCaptura("pedidos", {
+    proveedor,
+    notasPedido: notas,
+    sucursalId: abierta?.borrador?.sucursalId,
+  });
 
   if (!puede(user, "pedidos")) {
     return (
@@ -134,6 +140,26 @@ function NuevoPedidoContent() {
         onTablaChange={(next) => {
           setTabla(next);
           guardarBorrador(next);
+        }}
+        onPendienteRegistro={async (lineas) => {
+          setTabla(lineas);
+          try {
+            await pendienteGuardar(lineas);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "No se pudo dejar pendiente.",
+            );
+          }
+        }}
+        onTerminarRegistro={async (lineas) => {
+          setTabla(lineas);
+          try {
+            await terminarGuardar(lineas);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "No se pudo terminar.",
+            );
+          }
         }}
         extraAfter={
           <Button

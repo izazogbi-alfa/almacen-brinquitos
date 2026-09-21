@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatoFecha, formatoFechaHora } from "@/lib/format";
@@ -15,9 +16,13 @@ import {
   sesionTieneTrabajo,
   sesionVisibleHoy,
   type BorradorSesion,
+  type LineaBorrador,
   type ModuloSesion,
 } from "@/lib/sesion-captura";
-import { seccionTerminadaDe } from "@/lib/secciones-pendientes";
+import {
+  seccionPendienteDe,
+  seccionTerminadaDe,
+} from "@/lib/secciones-pendientes";
 
 export function EstadoSesion({ modulo }: { modulo: ModuloSesion }) {
   const { sesiones } = useInventory();
@@ -121,6 +126,46 @@ export function BotonTerminarSesion({ modulo }: { modulo: ModuloSesion }) {
       {ocupado ? "Guardando…" : "Cerrar registro"}
     </Button>
   );
+}
+
+/** Pendiente guardar / Terminar guardar: escribe el registro y te lleva a Registros. */
+export function useRegistroCaptura(
+  modulo: ModuloSesion,
+  extra?: { sucursalId?: string; proveedor?: string; notasPedido?: string },
+) {
+  const router = useRouter();
+  const { abandonarSesion, terminarSesion } = useInventory();
+  const extraRef = useRef(extra);
+  extraRef.current = extra;
+
+  function payloadDe(lineas: LineaBorrador[]): BorradorSesion {
+    const e = extraRef.current;
+    return {
+      sucursalId: e?.sucursalId ?? lineas[0]?.sucursalId,
+      proveedor: e?.proveedor,
+      notasPedido: e?.notasPedido,
+      lineas,
+    };
+  }
+
+  return {
+    async pendienteGuardar(lineas: LineaBorrador[]) {
+      const borrador = payloadDe(lineas);
+      recordarBorradorAlSalir(modulo, borrador);
+      await abandonarSesion(modulo, borrador);
+      const archivo = seccionPendienteDe(modulo);
+      toast.success(`Quedó en curso. Lo retomas en ${archivo.titulo}.`);
+      router.push(archivo.href);
+    },
+    async terminarGuardar(lineas: LineaBorrador[]) {
+      const borrador = payloadDe(lineas);
+      recordarBorradorAlSalir(modulo, borrador);
+      await terminarSesion(modulo, borrador);
+      const archivo = seccionTerminadaDe(modulo);
+      toast.success(`Listo. Quedó en ${archivo.titulo}.`);
+      router.push(archivo.href);
+    },
+  };
 }
 
 export function useBorradorSesion(

@@ -20,6 +20,7 @@ export function TablaPrendas({
   pdfArchivo,
   pdfTitulo,
   pdfNotas,
+  pdfClaveSolo,
   vacioDetalle,
   acento,
   mostrarPdf = true,
@@ -29,6 +30,8 @@ export function TablaPrendas({
   pdfArchivo: string;
   pdfTitulo: string;
   pdfNotas?: string[];
+  /** Solo existencias: franja verde con la Clave, sin esquema. */
+  pdfClaveSolo?: boolean;
   vacioDetalle: string;
   acento?: "azul" | "verde";
   mostrarPdf?: boolean;
@@ -50,6 +53,7 @@ export function TablaPrendas({
         sucursal,
         fecha: formatoFecha(new Date().toISOString()),
         quien: user?.nombre,
+        claveSolo: pdfClaveSolo,
       }),
     );
   }

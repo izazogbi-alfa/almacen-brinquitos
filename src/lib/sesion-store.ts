@@ -158,6 +158,10 @@ export function abandonarSesionesAbiertas(
     : ["existencias", "pedidos", "recepcion"];
   for (const m of mods) {
     const draft = m === modulo ? borrador : borradores?.[m];
+    const abierta = store.sesiones.find((s) => s.modulo === m && !s.cerradaEn);
+    if (!abierta && draft != null) {
+      tocarSesionCaptura(store, user, m, ahora, { borrador: draft });
+    }
     const sesion = cerrarSesionModulo(store, user, m, ahora, {
       motivo: "pagina",
       borrador: draft,
@@ -242,10 +246,18 @@ export function terminarSesionModulo(
   user: UsuarioMin,
   modulo: ModuloSesion,
   ahora = new Date(),
+  opts?: { borrador?: unknown },
 ): SesionCaptura | null {
   aplicarCierresPorInactividad(store, ahora);
-  const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  let abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  if (!abierta && opts?.borrador != null) {
+    tocarSesionCaptura(store, user, modulo, ahora, { borrador: opts.borrador });
+    abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  }
   if (!abierta) return null;
+  if (opts?.borrador !== undefined) {
+    abierta.borrador = sanitizarBorrador(opts.borrador);
+  }
   if (!sesionTieneTrabajo(abierta)) return null;
   abierta.cerradaEn = ahora.toISOString();
   abierta.motivoCierre = "terminada";

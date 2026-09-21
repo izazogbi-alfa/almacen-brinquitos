@@ -77,7 +77,14 @@ type InventoryValue = {
     sesionId: string,
     password: string,
   ) => Promise<void>;
-  terminarSesion: (modulo: ModuloSesion) => Promise<SesionCaptura>;
+  terminarSesion: (
+    modulo: ModuloSesion,
+    borrador?: BorradorSesion,
+  ) => Promise<SesionCaptura>;
+  abandonarSesion: (
+    modulo: ModuloSesion,
+    borrador?: BorradorSesion,
+  ) => Promise<void>;
   borrarSesionTerminada: (
     sesionId: string,
     password: string,
@@ -503,12 +510,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 
   const terminarSesion = useCallback(
-    async (modulo: ModuloSesion) => {
+    async (modulo: ModuloSesion, borrador?: BorradorSesion) => {
       const data = (await postAccion({
         accion: "terminar-sesion",
         modulo,
+        borrador,
       })) as { sesion: SesionCaptura };
       return data.sesion;
+    },
+    [postAccion],
+  );
+
+  const abandonarSesion = useCallback(
+    async (modulo: ModuloSesion, borrador?: BorradorSesion) => {
+      await postAccion({
+        accion: "abandonar-pagina",
+        modulo,
+        borrador,
+      });
     },
     [postAccion],
   );
@@ -665,6 +684,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       reanudarSesionPendiente,
       borrarSesionPendiente,
       terminarSesion,
+      abandonarSesion,
       borrarSesionTerminada,
       cerrarSesionInactividad,
       crearPedido,
@@ -691,6 +711,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       reanudarSesionPendiente,
       borrarSesionPendiente,
       terminarSesion,
+      abandonarSesion,
       borrarSesionTerminada,
       cerrarSesionInactividad,
       crearPedido,
