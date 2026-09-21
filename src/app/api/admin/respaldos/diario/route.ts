@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exigirAdmin } from "@/server/auth";
-import { agregarRespaldo, listarRespaldos } from "@/server/respaldos";
+import {
+  agregarRespaldo,
+  cookiesListaRespaldos,
+  listarRespaldos,
+} from "@/server/respaldos";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +26,14 @@ export async function POST() {
       origen: "automatico",
       leerCookie: (name) => jar.get(name)?.value,
     });
-    const items = await listarRespaldos();
+    const items = await listarRespaldos((name) => jar.get(name)?.value);
+    try {
+      for (const c of cookiesListaRespaldos(items)) {
+        jar.set(c);
+      }
+    } catch (cookieError) {
+      console.error("respaldos diario cookie failed", cookieError);
+    }
     return NextResponse.json({ ...resultado, items });
   } catch (err) {
     console.error("respaldo diario admin failed");

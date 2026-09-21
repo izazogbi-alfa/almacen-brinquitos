@@ -4,6 +4,7 @@ import {
   aArchivo,
   aplicarExistenciasRespaldo,
   diaCalendario,
+  incorporarRespaldo,
   metaPublica,
   parseArchivoRespaldo,
   recortarColeccion,
@@ -15,6 +16,7 @@ import {
   type RespaldoMeta,
 } from "@/lib/respaldos";
 import {
+  cookiesIndiceRespaldos,
   guardarColeccionRespaldos,
   leerColeccionRespaldos,
 } from "@/server/respaldos-persist";
@@ -36,13 +38,17 @@ async function hidratar(leerCookie: (name: string) => string | undefined) {
   return hidratarCatalogos(leerCookie);
 }
 
+function esHueco(item: RespaldoCompleto) {
+  return Boolean((item as RespaldoCompleto & { hueco?: boolean }).hueco);
+}
+
 export async function agregarRespaldo(input: {
   origen: OrigenRespaldo;
   leerCookie: (name: string) => string | undefined;
   forzar?: boolean;
 }): Promise<ResultadoNuevoRespaldo> {
   const store = await hidratar(input.leerCookie);
-  const coleccion = await leerColeccionRespaldos();
+  const coleccion = await leerColeccionRespaldos(input.leerCookie);
   const dia = diaCalendario();
   if (
     input.origen === "automatico" &&
@@ -66,10 +72,12 @@ export async function agregarRespaldo(input: {
     sesiones: store.sesiones,
     origen: input.origen,
   });
-  coleccion.items = recortarColeccion([nuevo, ...coleccion.items]);
+  coleccion.items = incorporarRespaldo(coleccion.items, nuevo);
   coleccion.savedAt = nuevo.createdAt;
-  const remoto = await guardarColeccionRespaldos(coleccion);
-  if (!remoto.vias.length) {
+  const remoto = await guardarColeccionRespaldos(coleccion, {
+    escritos: [nuevo.id],
+  });
+  if (!remoto.vias.length || !remoto.persistio) {
     throw new Error(
       "No se pudo guardar el respaldo en la app. Intenta de nuevo.",
     );
@@ -82,19 +90,35 @@ export async function agregarRespaldo(input: {
   };
 }
 
-export async function listarRespaldos(): Promise<RespaldoMeta[]> {
-  const coleccion = await leerColeccionRespaldos();
+export async function listarRespaldos(
+  leerCookie?: (name: string) => string | undefined,
+): Promise<RespaldoMeta[]> {
+  const coleccion = await leerColeccionRespaldos(leerCookie);
   return recortarColeccion(coleccion.items)
     .slice()
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .sort((a, b) => {
+      const porDia = b.dia.localeCompare(a.dia);
+      if (porDia) return porDia;
+      return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+    })
     .map(metaPublica);
+}
+
+export function cookiesListaRespaldos(items: RespaldoMeta[]) {
+  return cookiesIndiceRespaldos({
+    savedAt: items[0]?.createdAt ?? new Date().toISOString(),
+    items,
+  });
 }
 
 export async function obtenerRespaldo(
   id: string,
+  leerCookie?: (name: string) => string | undefined,
 ): Promise<RespaldoCompleto | null> {
-  const coleccion = await leerColeccionRespaldos();
-  return coleccion.items.find((it) => it.id === id) ?? null;
+  const coleccion = await leerColeccionRespaldos(leerCookie);
+  const hit = coleccion.items.find((it) => it.id === id) ?? null;
+  if (!hit || esHueco(hit)) return null;
+  return hit;
 }
 
 async function aplicarArchivoRespaldo(archivo: ArchivoRespaldo) {

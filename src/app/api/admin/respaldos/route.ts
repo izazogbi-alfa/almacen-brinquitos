@@ -1,9 +1,26 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exigirAdmin } from "@/server/auth";
-import { agregarRespaldo, listarRespaldos } from "@/server/respaldos";
+import {
+  agregarRespaldo,
+  cookiesListaRespaldos,
+  listarRespaldos,
+} from "@/server/respaldos";
 
 export const dynamic = "force-dynamic";
+
+function pintarCookiesLista(
+  jar: Awaited<ReturnType<typeof cookies>>,
+  items: Awaited<ReturnType<typeof listarRespaldos>>,
+) {
+  try {
+    for (const c of cookiesListaRespaldos(items)) {
+      jar.set(c);
+    }
+  } catch (error) {
+    console.error("respaldos lista cookie failed", error);
+  }
+}
 
 export async function GET() {
   const { user, error } = await exigirAdmin();
@@ -17,7 +34,9 @@ export async function GET() {
     );
   }
   try {
-    const items = await listarRespaldos();
+    const jar = await cookies();
+    const items = await listarRespaldos((name) => jar.get(name)?.value);
+    pintarCookiesLista(jar, items);
     return NextResponse.json({ items, limite: 10 });
   } catch {
     console.error("respaldos list failed");
@@ -45,7 +64,8 @@ export async function POST() {
       origen: "manual",
       leerCookie: (name) => jar.get(name)?.value,
     });
-    const items = await listarRespaldos();
+    const items = await listarRespaldos((name) => jar.get(name)?.value);
+    pintarCookiesLista(jar, items);
     return NextResponse.json({
       ...resultado,
       items,

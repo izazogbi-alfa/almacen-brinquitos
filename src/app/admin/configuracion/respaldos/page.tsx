@@ -116,6 +116,24 @@ function etiquetaCuando(iso: string) {
   }
 }
 
+function etiquetaDia(dia: string) {
+  const partes = dia.split("-").map(Number);
+  const y = partes[0];
+  const m = partes[1];
+  const d = partes[2];
+  if (!y || !m || !d) return dia;
+  try {
+    return new Date(y, m - 1, d).toLocaleDateString("es-MX", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return dia;
+  }
+}
+
 function PaginaRespaldos() {
   const { user } = useInventory();
   const [items, setItems] = useState<RespaldoMeta[] | null>(null);
@@ -320,11 +338,12 @@ function PaginaRespaldos() {
       </section>
 
       <section className="space-y-3 rounded-2xl border p-4">
-        <h3 className="font-heading text-lg font-semibold">Automático del día</h3>
+        <h3 className="font-heading text-lg font-semibold">Automático por día</h3>
         <p className="text-sm text-muted-foreground">
-          Una copia por día (zona México). El servidor la intenta de madrugada.
-          Si no alcanza, se hace cuando una administradora abre la app. Máximo{" "}
-          {LIMITE_RESPALDOS} automáticas.
+          Cada día (zona México) queda <strong>su propia copia</strong>. Ayer no
+          se borra. El servidor la intenta de madrugada; si no alcanza, se hace
+          al abrir la app. Máximo {LIMITE_RESPALDOS} días; el más viejo sale
+          solo.
         </p>
       </section>
 
@@ -442,8 +461,8 @@ function PaginaRespaldos() {
             }
           />
           <ListaGrupo
-            titulo={`Del día (${automaticos.length} de ${LIMITE_RESPALDOS})`}
-            vacio="No hay respaldos del día."
+            titulo={`Días guardados (${automaticos.length} de ${LIMITE_RESPALDOS})`}
+            vacio="Todavía no hay copias automáticas. La del día se crea sola."
             items={automaticos}
             onRestaurar={(id) => {
               setErrorRestaurar("");
@@ -504,10 +523,14 @@ function ListaGrupo({
             >
               <div>
                 <p className="font-medium leading-tight">
-                  {etiquetaCuando(it.createdAt)}
+                  {it.origen === "automatico"
+                    ? etiquetaDia(it.dia)
+                    : etiquetaCuando(it.createdAt)}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {it.origen === "automatico" ? "Automático del día" : "Guardar ahora"}
+                  {it.origen === "automatico"
+                    ? `Automático · ${etiquetaCuando(it.createdAt)}`
+                    : "Guardar ahora"}
                   {" · "}
                   {it.resumen.esquemas} esquemas · {it.resumen.articulos} artículos
                   con esquema
