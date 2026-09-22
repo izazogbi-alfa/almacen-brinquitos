@@ -24,7 +24,7 @@ export type EsquemaCatalogo = {
   id: string;
   nombre: string;
   tallas: string[];
-  /** PDF: compacto (clave arriba) o detallado (clave en cada color). */
+  /** PDF: compacto o detallado. Vacío = Iza aún no eligió; Guardar lo pide. */
   estiloPdf?: EstiloPdf;
 };
 

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { lineaClaveNombre } from "../src/lib/pdf-celda.ts";
-import { parseEstiloPdf } from "../src/lib/pdf-estilo.ts";
+import {
+  elegirEstiloPdf,
+  exigirEstiloPdf,
+  MENSAJE_ESTILO_PDF_OBLIGATORIO,
+  parseEstiloPdf,
+} from "../src/lib/pdf-estilo.ts";
 import { construirPdfBloques } from "../src/lib/pdf.ts";
 import {
   ANCHO_COLOR_DETALLADO_MM,
@@ -12,8 +17,16 @@ import { bloquesDesdeCeldas } from "../src/lib/tabla-bloques.ts";
 import type { BloquePrenda } from "../src/lib/tabla-bloques.ts";
 import type { Producto } from "../src/lib/types.ts";
 
+assert.equal(elegirEstiloPdf(undefined), undefined);
+assert.equal(elegirEstiloPdf("compacto"), "compacto");
 assert.equal(parseEstiloPdf(undefined), "compacto");
 assert.equal(parseEstiloPdf("detallado"), "detallado");
+assert.throws(
+  () => exigirEstiloPdf(undefined),
+  (err: unknown) =>
+    err instanceof Error && err.message === MENSAJE_ESTILO_PDF_OBLIGATORIO,
+);
+assert.equal(exigirEstiloPdf("compacto"), "compacto");
 assert.equal(lineaClaveNombre("330", "playera básica"), "330 · Playera Básica");
 
 const detalladoLay = layoutCajasTalla(6, undefined, undefined, 0, ANCHO_COLOR_DETALLADO_MM);
