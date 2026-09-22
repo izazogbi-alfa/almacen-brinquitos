@@ -48,14 +48,17 @@ function ListaPendientesModulo({
     reanudarSesionPendiente,
     borrarSesionPendiente,
     borrarSesionTerminada,
+    revertirSesionTerminada,
   } = useInventory();
   const [q, setQ] = useState("");
   const [abriendo, setAbriendo] = useState<string | null>(null);
   const [aBorrar, setABorrar] = useState<SesionCaptura | null>(null);
+  const [aRevertir, setARevertir] = useState<SesionCaptura | null>(null);
   const seccion = archivo
     ? seccionTerminadaDe(modulo)
     : seccionPendienteDe(modulo);
   const permitido = puede(user, modulo);
+  const esAdmin = user?.rol === "admin";
 
   const lista = useMemo(() => {
     if (!permitido) return [];
@@ -99,7 +102,7 @@ function ListaPendientesModulo({
         titulo={seccion.titulo}
         descripcion={
           archivo
-            ? "Consulta por día. Ver PDF abre el informe en la app. Descargar PDF guarda el archivo. Sin líneas: aviso, no se inventa nada. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso."
+            ? "Consulta por día. Ver PDF abre el informe en la app. Descargar PDF guarda el archivo. Sin líneas: aviso, no se inventa nada. Borrar pide tu contraseña y quita esta fila, no el catálogo ni el piso. Quien administra ve Pasar a pendientes: vuelve a En curso para continuar (pide su contraseña y Sí/No)."
             : "Consulta por día. Toca la fila para continuar. Borrar pide tu contraseña."
         }
       />
@@ -186,15 +189,28 @@ function ListaPendientesModulo({
                             </span>
                           </button>
                         )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-12 shrink-0 sm:h-auto sm:w-28"
-                          disabled={abriendo !== null}
-                          onClick={() => setABorrar(sesion)}
-                        >
-                          Borrar
-                        </Button>
+                        <div className="grid shrink-0 grid-cols-1 gap-2 sm:w-40">
+                          {archivo && esAdmin ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-12 whitespace-normal px-2 text-sm leading-tight"
+                              disabled={abriendo !== null}
+                              onClick={() => setARevertir(sesion)}
+                            >
+                              Pasar a pendientes
+                            </Button>
+                          ) : null}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-12 sm:h-auto sm:min-h-12"
+                            disabled={abriendo !== null}
+                            onClick={() => setABorrar(sesion)}
+                          >
+                            Borrar
+                          </Button>
+                        </div>
                       </li>
                     );
                   })}
@@ -205,6 +221,20 @@ function ListaPendientesModulo({
         </div>
       )}
 
+      <DialogQuitarConClave
+        abierto={aRevertir !== null}
+        titulo="¿Pasar a pendientes?"
+        descripcion="Sale de ya terminadas y vuelve a En curso. Ahí puedes continuar el mismo registro. Escribe tu contraseña y pulsa Sí. Si pulsas No, se queda terminado."
+        idCampo={`clave-revertir-${modulo}`}
+        etiquetaSi="Sí"
+        onNo={() => setARevertir(null)}
+        onConfirmarConClave={async (password) => {
+          if (!aRevertir) return;
+          await revertirSesionTerminada(aRevertir.id, password);
+          toast.success("Ya está en pendientes. Toca la fila para continuar.");
+          setARevertir(null);
+        }}
+      />
       <DialogQuitarConClave
         abierto={aBorrar !== null}
         titulo={archivo ? "¿Borrar este terminado?" : "¿Borrar este registro en curso?"}

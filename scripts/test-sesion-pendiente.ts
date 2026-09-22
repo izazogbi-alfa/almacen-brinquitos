@@ -346,6 +346,26 @@ assert.equal(esSesionTerminada(terminadaBtn), true);
 assert.equal(sesionesPendientes([terminadaBtn]).length, 0);
 assert.equal(sesionesTerminadas([terminadaBtn])[0]?.id, "ss-btn-term");
 
+function revertirEnLista(sesiones: SesionCaptura[], sesionId: string) {
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (!sesion || !esSesionTerminada(sesion)) return null;
+  sesion.pendiente = true;
+  sesion.motivoCierre = "pagina";
+  return sesion;
+}
+
+const storeRevert = [abrirYCerrarTerminada()];
+const vuelta = revertirEnLista(storeRevert, "ss-btn-term");
+assert.ok(vuelta);
+assert.equal(vuelta.pendiente, true);
+assert.equal(vuelta.motivoCierre, "pagina");
+assert.ok(vuelta.cerradaEn);
+assert.equal(esSesionTerminada(vuelta), false);
+assert.equal(sesionesPendientes(storeRevert)[0]?.id, "ss-btn-term");
+assert.equal(sesionesTerminadas(storeRevert).length, 0);
+assert.equal(revertirEnLista(storeRevert, "ss-btn-term"), null);
+assert.equal(revertirEnLista(storeRevert, "no-existe"), null);
+
 const soloBorrador: SesionCaptura = {
   ...base(),
   id: "ss-solo-borrador",

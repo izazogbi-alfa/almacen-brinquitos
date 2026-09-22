@@ -94,6 +94,10 @@ type InventoryValue = {
     sesionId: string,
     password: string,
   ) => Promise<void>;
+  revertirSesionTerminada: (
+    sesionId: string,
+    password: string,
+  ) => Promise<void>;
   cerrarSesionInactividad: (modulo: ModuloSesion) => Promise<{
     aviso: string | null;
   }>;
@@ -565,6 +569,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     [postAccion],
   );
 
+  const revertirSesionTerminada = useCallback(
+    async (sesionId: string, password: string) => {
+      await postAccion({
+        accion: "revertir-sesion-terminada",
+        sesionId,
+        password,
+      });
+    },
+    [postAccion],
+  );
+
   const cerrarSesionInactividad = useCallback(
     async (modulo: ModuloSesion) => {
       const data = (await postAccion({
@@ -709,6 +724,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       abandonarSesion,
       guardarRegistro,
       borrarSesionTerminada,
+      revertirSesionTerminada,
       cerrarSesionInactividad,
       crearPedido,
       autorizarPedido,
@@ -737,6 +753,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       abandonarSesion,
       guardarRegistro,
       borrarSesionTerminada,
+      revertirSesionTerminada,
       cerrarSesionInactividad,
       crearPedido,
       autorizarPedido,
