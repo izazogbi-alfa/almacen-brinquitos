@@ -110,7 +110,7 @@ function BloqueInforme({
           <tbody>
             {bloque.filas.map((fila, i) => (
               <tr key={fila.keys.join("-")}>
-                <td className="sticky left-0 z-10 bg-orange-50 px-2 py-2 font-medium capitalize">
+                <td className="sticky left-0 z-10 bg-orange-50 px-2 py-2 font-medium">
                   {etiquetaColor(fila)}
                 </td>
                 {tallas.map((t) => (

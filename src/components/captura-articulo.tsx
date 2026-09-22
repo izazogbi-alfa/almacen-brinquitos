@@ -799,7 +799,7 @@ export function CapturaArticulo({
                               : "outline"
                           }
                           className={cn(
-                            "h-12 w-full capitalize",
+                            "h-12 w-full",
                             mostrandoCaptura && c === colorActivo && btn,
                           )}
                           onClick={() => void abrirHojaColor(c)}

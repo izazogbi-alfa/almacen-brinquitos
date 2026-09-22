@@ -136,7 +136,7 @@ function BloqueTabla({
           <tbody>
             {bloque.filas.map((fila) => (
               <tr key={fila.keys.join("-")} className="border-b last:border-0">
-                <td className="sticky left-0 z-10 bg-background px-2 py-2 font-medium capitalize">
+                <td className="sticky left-0 z-10 bg-background px-2 py-2 font-medium">
                   {etiquetaColor(fila)}
                 </td>
                 {bloque.tallas.map((t) => (

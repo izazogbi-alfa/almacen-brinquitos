@@ -90,7 +90,7 @@ export function HojaCaptura({
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
         <div className="flex items-center justify-between gap-2">
-          <p className="font-heading min-w-0 truncate text-lg font-semibold capitalize">
+          <p className="font-heading min-w-0 truncate text-lg font-semibold">
             {titulo}
           </p>
           <Button

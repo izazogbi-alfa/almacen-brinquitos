@@ -49,7 +49,7 @@ function ChipCatalogo({
             key={item}
             type="button"
             variant={activo ? "default" : "outline"}
-            className="h-11 min-w-11 capitalize"
+            className="h-11 min-w-11"
             aria-pressed={activo}
             onClick={() => onToggle(item)}
           >
