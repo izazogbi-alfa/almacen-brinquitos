@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   let snapshot: Producto[] | null = null;
 
   try {
-    const actualizados = withStore((store) => {
+    const actualizados = await withStore((store) => {
       snapshot = store.productos.map((p) => ({ ...p }));
       const catalogos = normalizarCatalogos(store.catalogos);
       const esquemaId = catalogos.esquemas.find(
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       console.error("asignaciones cookie failed", cookieError);
       if (!remoto.persistio) {
         if (snapshot) {
-          withStore((store) => {
+          await withStore((store) => {
             store.productos = snapshot as Producto[];
           });
         }
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     }
     if (!remoto.persistio && !cookieOk) {
       if (snapshot) {
-        withStore((store) => {
+        await withStore((store) => {
           store.productos = snapshot as Producto[];
         });
       }

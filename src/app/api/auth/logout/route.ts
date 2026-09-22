@@ -5,7 +5,7 @@ import { cookieSesionCaducada, COOKIE, tokenActual } from "@/server/auth";
 import { logout } from "@/server/store";
 
 export async function POST() {
-  logout(await tokenActual());
+  await logout(await tokenActual());
   const jar = await cookies();
   jar.set(cookieSesionCaducada(COOKIE));
   jar.set(cookieSesionCaducada(COOKIE_SESION_ANTIGUA));

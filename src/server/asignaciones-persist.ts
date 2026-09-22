@@ -11,6 +11,8 @@ import {
   parseAsignacionesPersistidas,
   type AsignacionesPersistidas,
 } from "@/lib/asignaciones-articulos";
+import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
+import { DOC_ASIGNACIONES, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
 
 const COOKIE_COUNT = "brq_an";
 const COOKIE_PART = "brq_a";
@@ -168,8 +170,14 @@ export function asignacionesDesdeCookies(
   }
 }
 
-function blobDisponible() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+async function escribirPostgres(data: AsignacionesPersistidas): Promise<boolean> {
+  if (!hayPostgres()) return false;
+  return escribirDoc(DOC_ASIGNACIONES, compactar(data));
+}
+
+async function leerPostgres(): Promise<AsignacionesPersistidas | null> {
+  if (!hayPostgres()) return null;
+  return parseAsignacionesPersistidas(await leerDoc(DOC_ASIGNACIONES));
 }
 
 async function escribirBlob(data: AsignacionesPersistidas): Promise<boolean> {
@@ -382,6 +390,7 @@ export async function leerAsignacionesDuraderas(): Promise<AsignacionesPersistid
       : null,
   );
   const remotos = await Promise.all([
+    leerPostgres(),
     leerBlob(),
     leerKv(),
     leerGithub(),
@@ -405,6 +414,7 @@ export async function guardarAsignacionesDuraderas(
   }
 
   const intentos: Array<[string, Promise<boolean>]> = [
+    ["postgres", escribirPostgres(data)],
     ["blob", escribirBlob(data)],
     ["kv", escribirKv(data)],
     ["github", escribirGithub(data)],
@@ -417,8 +427,7 @@ export async function guardarAsignacionesDuraderas(
     if (ok) vias.push(nombre);
   }
 
-  const duradero = vias.some((v) => v !== "archivo" || !process.env.VERCEL);
-  return { vias, persistio: duradero };
+  return { vias, persistio: vias.some(esViaDuradera) };
 }
 
 export function mejorAsignaciones(

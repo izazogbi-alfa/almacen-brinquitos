@@ -20,14 +20,14 @@ export async function POST(request: Request) {
   try {
     const jar = await cookies();
     await hidratarUsuarios((name) => jar.get(name)?.value);
-    const result = login(username, password);
+    const result = await login(username, password);
     if (!result) {
       return NextResponse.json(
         { error: "Usuario o contraseña incorrectos." },
         { status: 401 },
       );
     }
-    withStore((store) => {
+    await withStore((store) => {
       abandonarSesionesAbiertas(store, result.user);
     });
     jar.set(cookieSesion(result.token));

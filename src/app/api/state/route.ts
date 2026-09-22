@@ -19,7 +19,7 @@ export async function GET() {
   const store = await hidratarCatalogos((name) => jar.get(name)?.value);
   const cerradas = aplicarCierresPorInactividad(store);
   if (cerradas.length > 0) {
-    withStore(() => undefined);
+    await withStore(() => undefined);
   }
   return NextResponse.json({
     user: jsonUsuario(user),

@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const resultado = withStore((store) => {
+  const resultado = await withStore((store) => {
     const sesionesAntes = store.sesiones;
     const movimientosAntes = store.movimientos;
     const pedidosAntes = store.pedidos;

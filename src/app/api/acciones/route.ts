@@ -28,6 +28,7 @@ import {
   guardarRegistroCaptura,
 } from "@/lib/sesion-store";
 import { esModuloSesion } from "@/lib/sesion-captura";
+import { persistirPdfRegistro, quitarPdfRegistro } from "@/server/pdf-registros";
 
 function normalizarCeldas(
   body: {
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
   try {
     const mods = modulosDe(user);
-    const result = withStore((store) => {
+    const result = await withStore((store) => {
       aplicarCierresPorInactividad(store);
 
       if (accion === "latido-sesion") {
@@ -569,6 +570,24 @@ export async function POST(request: Request) {
 
       throw new Error("Acción no reconocida.");
     });
+
+    const sesion =
+      result && typeof result === "object" && "sesion" in result
+        ? (result as { sesion?: { id: string; cerradaEn?: string; pendiente?: boolean } })
+            .sesion
+        : undefined;
+    if (sesion?.cerradaEn && !sesion.pendiente) {
+      await persistirPdfRegistro(
+        (
+          result as {
+            sesion: import("@/lib/sesion-captura").SesionCaptura;
+          }
+        ).sesion,
+      );
+    }
+    if (accion === "borrar-sesion-terminada" && sesion?.id) {
+      await quitarPdfRegistro(sesion.id);
+    }
 
     return NextResponse.json(result);
   } catch (err) {

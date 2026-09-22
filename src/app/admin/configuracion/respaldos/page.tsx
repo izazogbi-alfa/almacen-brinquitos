@@ -310,7 +310,7 @@ function PaginaRespaldos() {
     <div className="space-y-5">
       <CabeceraConfiguracion
         titulo="Respaldos"
-        descripcion="Copia de listas, esquemas por artículo y, si la copia los trae, existencias y sesiones. Así no se pierden."
+        descripcion="Copia de listas, esquemas por artículo y, si la copia los trae, existencias y sesiones. La copia del servidor es la que se queda. Bajar a mi PC es extra."
         volverHref={HREF_CONFIGURACION}
       />
 

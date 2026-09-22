@@ -181,7 +181,7 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      withStore((store) => {
+      await withStore((store) => {
         store.users = parsed.users;
         store.usuariosGuardadosEn = parsed.savedAt;
       });
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const creado = withStore((store) => {
+      const creado = await withStore((store) => {
         if (store.users.some((u) => u.username.toLowerCase() === username)) {
           throw new Error("Ese usuario ya existe.");
         }
@@ -242,7 +242,7 @@ export async function POST(request: Request) {
         claveAdminDe(body) || (typeof body.password === "string" ? body.password : ""),
       );
       if (falloClave) return falloClave;
-      const actualizado = withStore((store) => {
+      const actualizado = await withStore((store) => {
         const dest = store.users.find((u) => u.id === body.userId);
         if (!dest) throw new Error("Usuario no encontrado.");
         const rol = rolDe(body.rol) ?? dest.rol;
@@ -296,7 +296,7 @@ export async function POST(request: Request) {
           { status: 500 },
         );
       }
-      cambiarContrasenaUsuario(body.userId, nueva);
+      await cambiarContrasenaUsuario(body.userId, nueva);
       const persistido = await persistirPersonas(jar);
       if (persistido.error) {
         return NextResponse.json({ error: persistido.error }, { status: 500 });
@@ -313,7 +313,7 @@ export async function POST(request: Request) {
         claveAdminDe(body) || (typeof body.password === "string" ? body.password : ""),
       );
       if (falloClave) return falloClave;
-      withStore((store) => {
+      await withStore((store) => {
         const dest = store.users.find((u) => u.id === body.userId);
         if (!dest) throw new Error("Usuario no encontrado.");
         if (esIza(dest.username)) {

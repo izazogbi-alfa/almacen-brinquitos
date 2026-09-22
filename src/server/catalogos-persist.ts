@@ -9,6 +9,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import type { Catalogos } from "@/lib/types";
+import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
+import { DOC_CATALOGOS, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
+import { guardarLogoBlob } from "@/server/blob-media";
 
 export type CatalogosPersistidos = {
   catalogos: Catalogos;
@@ -183,8 +186,17 @@ export function catalogosDesdeCookies(
   }
 }
 
-function blobDisponible() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+async function escribirPostgres(data: CatalogosPersistidos): Promise<boolean> {
+  if (!hayPostgres()) return false;
+  return escribirDoc(DOC_CATALOGOS, {
+    savedAt: data.savedAt,
+    catalogos: data.catalogos,
+  });
+}
+
+async function leerPostgres(): Promise<CatalogosPersistidos | null> {
+  if (!hayPostgres()) return null;
+  return parsePersistido(await leerDoc(DOC_CATALOGOS));
 }
 
 async function escribirBlob(data: CatalogosPersistidos): Promise<boolean> {
@@ -386,6 +398,7 @@ export async function leerCatalogosDuraderos(): Promise<CatalogosPersistidos | n
       : null,
   );
   const remotos = await Promise.all([
+    leerPostgres(),
     leerBlob(),
     leerKv(),
     leerGithub(),
@@ -398,10 +411,20 @@ export async function leerCatalogosDuraderos(): Promise<CatalogosPersistidos | n
 
 export async function guardarCatalogosDuraderos(
   data: CatalogosPersistidos,
-): Promise<{ vias: string[]; persistio: boolean }> {
+): Promise<{ vias: string[]; persistio: boolean; data: CatalogosPersistidos }> {
   const vias: string[] = [];
+  let payload = data;
+  if (payload.catalogos.logoDataUrl?.startsWith("data:image/")) {
+    const url = await guardarLogoBlob(payload.catalogos.logoDataUrl);
+    if (url) {
+      payload = {
+        ...payload,
+        catalogos: { ...payload.catalogos, logoDataUrl: url },
+      };
+    }
+  }
   try {
-    escribirCatalogosArchivo(archivoCatalogosLocal(), data);
+    escribirCatalogosArchivo(archivoCatalogosLocal(), payload);
     vias.push("archivo");
   } catch (error) {
     if (!process.env.VERCEL) throw error;
@@ -409,10 +432,11 @@ export async function guardarCatalogosDuraderos(
   }
 
   const intentos: Array<[string, Promise<boolean>]> = [
-    ["blob", escribirBlob(data)],
-    ["kv", escribirKv(data)],
-    ["github", escribirGithub(data)],
-    ["http", escribirHttp(data)],
+    ["postgres", escribirPostgres(payload)],
+    ["blob", escribirBlob(payload)],
+    ["kv", escribirKv(payload)],
+    ["github", escribirGithub(payload)],
+    ["http", escribirHttp(payload)],
   ];
   const resultados = await Promise.all(
     intentos.map(async ([nombre, p]) => [nombre, await p] as const),
@@ -421,10 +445,7 @@ export async function guardarCatalogosDuraderos(
     if (ok) vias.push(nombre);
   }
 
-  const duradero = vias.some(
-    (v) => v !== "archivo" || !process.env.VERCEL,
-  );
-  return { vias, persistio: duradero };
+  return { vias, persistio: vias.some(esViaDuradera), data: payload };
 }
 
 export function aplicarCatalogosAlStore(

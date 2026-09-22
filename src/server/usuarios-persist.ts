@@ -11,6 +11,8 @@ import {
   parseUsuariosPersistidos,
   type UsuariosPersistidos,
 } from "@/lib/usuarios-persist";
+import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
+import { DOC_USUARIOS, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
 
 const COOKIE_COUNT = "brq_un";
 const COOKIE_PART = "brq_u";
@@ -149,8 +151,14 @@ export function usuariosDesdeCookies(
   }
 }
 
-function blobDisponible() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+async function escribirPostgres(data: UsuariosPersistidos): Promise<boolean> {
+  if (!hayPostgres()) return false;
+  return escribirDoc(DOC_USUARIOS, data);
+}
+
+async function leerPostgres(): Promise<UsuariosPersistidos | null> {
+  if (!hayPostgres()) return null;
+  return parseUsuariosPersistidos(await leerDoc(DOC_USUARIOS));
 }
 
 async function escribirBlob(data: UsuariosPersistidos): Promise<boolean> {
@@ -354,6 +362,7 @@ export async function leerUsuariosDuraderos(): Promise<UsuariosPersistidos | nul
       : null,
   );
   const remotos = await Promise.all([
+    leerPostgres(),
     leerBlob(),
     leerKv(),
     leerGithub(),
@@ -377,6 +386,7 @@ export async function guardarUsuariosDuraderos(
   }
 
   const intentos: Array<[string, Promise<boolean>]> = [
+    ["postgres", escribirPostgres(data)],
     ["blob", escribirBlob(data)],
     ["kv", escribirKv(data)],
     ["github", escribirGithub(data)],
@@ -389,8 +399,7 @@ export async function guardarUsuariosDuraderos(
     if (ok) vias.push(nombre);
   }
 
-  const duradero = vias.some((v) => v !== "archivo" || !process.env.VERCEL);
-  return { vias, persistio: duradero };
+  return { vias, persistio: vias.some(esViaDuradera) };
 }
 
 export function mejorUsuarios(

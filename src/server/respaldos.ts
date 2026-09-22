@@ -129,7 +129,7 @@ async function aplicarArchivoRespaldo(archivo: ArchivoRespaldo) {
     archivo.asignaciones,
   );
   if (archivo.existencias || archivo.sesiones) {
-    withStore((store) => {
+    await withStore((store) => {
       if (archivo.existencias) {
         store.productos = aplicarExistenciasRespaldo(
           store.productos,

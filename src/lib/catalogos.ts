@@ -52,9 +52,12 @@ function sanitizarLogo(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
   const t = raw.trim();
   if (!t) return undefined;
-  if (!t.startsWith("data:image/")) return undefined;
-  if (t.length > LOGO_MAX) return undefined;
-  return t;
+  if (t.startsWith("data:image/")) {
+    if (t.length > LOGO_MAX) return undefined;
+    return t;
+  }
+  if (/^https:\/\//i.test(t) && t.length < 2048) return t;
+  return undefined;
 }
 
 export function nombreEmpresa(
