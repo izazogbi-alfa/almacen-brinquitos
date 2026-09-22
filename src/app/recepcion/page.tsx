@@ -85,9 +85,9 @@ function RecepcionContent() {
         <EstadoSesion modulo="recepcion" />
         <BotonTerminarSesion modulo="recepcion" />
         <p className="mt-1 text-sm text-emerald-800/80">
-          Misma hoja de captura que existencias, en verde. Marca varias prendas
-          del mismo esquema. Si quedó a medias, retómalo en Registros →
-          Recepción pendientes.
+          Misma hoja que existencias, en verde: Por talla o Por color. Marca
+          varias prendas del mismo esquema. Si quedó a medias, retómalo en
+          Registros → Recepción pendientes.
         </p>
       </div>
       <CapturaArticulo
