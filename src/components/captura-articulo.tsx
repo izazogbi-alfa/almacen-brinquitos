@@ -37,6 +37,11 @@ import {
 import { HojaCaptura } from "@/components/hoja-captura";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  tituloEtiqueta,
+  tituloNombreArticulo,
+  tituloTalla,
+} from "@/lib/titulo-etiqueta";
 
 export type ModoCaptura = "contar" | "entrada" | "pedido";
 
@@ -466,8 +471,8 @@ export function CapturaArticulo({
             key: `ln-${mostrado.id}-${celda.color}-${especificacion || ""}-${sucursal.id}`,
             productoId: mostrado.id,
             sku: mostrado.sku,
-            nombre: mostrado.nombre,
-            color: celda.color,
+            nombre: tituloNombreArticulo(mostrado.nombre),
+            color: tituloEtiqueta(celda.color),
             especificacion: especificacion || undefined,
             sucursalId: sucursal.id,
             sucursalNombre: sucursal.nombre,
@@ -696,7 +701,7 @@ export function CapturaArticulo({
                     )}
                     onClick={() => abrirCaptura(p)}
                   >
-                    {p.sku} {p.nombre}
+                    {p.sku} {tituloNombreArticulo(p.nombre)}
                   </Button>
                 ))}
               </div>
@@ -783,7 +788,7 @@ export function CapturaArticulo({
                             void abrirHojaTalla(t === "Sin talla" ? "" : t)
                           }
                         >
-                          {t}
+                          {t === "Sin talla" ? t : tituloTalla(t)}
                         </Button>
                       ))}
                     </div>
@@ -804,7 +809,7 @@ export function CapturaArticulo({
                           )}
                           onClick={() => void abrirHojaColor(c)}
                         >
-                          {c}
+                          {tituloEtiqueta(c)}
                         </Button>
                       ))}
                     </div>
@@ -905,12 +910,12 @@ export function CapturaArticulo({
                         </span>
                         <FotoProducto
                           src={producto.foto}
-                          alt={producto.nombre}
+                          alt={tituloNombreArticulo(producto.nombre)}
                           className="size-16 max-h-16 shrink-0 object-cover"
                         />
                         <div className="min-w-0">
                           <p className="font-medium">
-                            {producto.sku} {producto.nombre}
+                            {producto.sku} {tituloNombreArticulo(producto.nombre)}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {esquemaDeArticulo(producto, catalogos)?.nombre ??

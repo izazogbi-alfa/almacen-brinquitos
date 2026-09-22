@@ -1,4 +1,9 @@
 import { tallasDeEsquema } from "@/lib/catalogos";
+import {
+  tituloEtiqueta,
+  tituloNombreArticulo,
+  tituloTalla,
+} from "@/lib/titulo-etiqueta";
 import type { Catalogos, Producto } from "@/lib/types";
 
 export type ParTalla = { talla: string; cantidad: number };
@@ -85,7 +90,7 @@ function claveBloque(c: {
 }
 
 function etiquetaTalla(talla: string) {
-  return talla || "Cant.";
+  return talla ? tituloTalla(talla) : "Cant.";
 }
 
 function claveTalla(talla: string) {
@@ -146,7 +151,7 @@ export function bloquesDesdeCeldas(
           key: bk,
           productoId: c.productoId ?? c.sku,
           sku: c.sku,
-          nombre: c.nombre,
+          nombre: tituloNombreArticulo(c.nombre),
           sucursalId: c.sucursalId ?? "",
           sucursalNombre: c.sucursalNombre ?? "",
         },
@@ -210,9 +215,10 @@ export function bloquesDesdeLineasColor(
 }
 
 export function etiquetaColor(fila: FilaColorBloque) {
+  const color = tituloEtiqueta(fila.color);
   return fila.especificacion
-    ? `${fila.color} · ${fila.especificacion}`
-    : fila.color;
+    ? `${color} · ${tituloEtiqueta(fila.especificacion)}`
+    : color;
 }
 
 export function totalesDeBloque(bloque: BloquePrenda) {

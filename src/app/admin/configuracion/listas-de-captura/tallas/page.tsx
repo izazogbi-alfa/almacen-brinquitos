@@ -26,6 +26,7 @@ function PaginaTallas() {
         placeholder="Ej. 1, 1X, 4 o CHICO"
         vacio="Aún no hay tallas sueltas."
         items={draft.tallas}
+        tipo="talla"
         guardando={guardando === "tallas"}
         onChange={(tallas) => setDraft({ ...draft, tallas })}
         onGuardar={(tallas) => guardarBloque("tallas", { tallas })}

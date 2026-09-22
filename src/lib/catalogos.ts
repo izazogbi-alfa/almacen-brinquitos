@@ -1,18 +1,24 @@
 import { TALLAS_LETRA, TALLAS_NINO, TALLAS_XC1092 } from "@/lib/sucursales";
 import { agregarUnicos } from "@/lib/listas";
+import {
+  listaTallas,
+  listaTitulo,
+  nombreArticuloAlGuardar,
+  tituloEtiqueta,
+} from "@/lib/titulo-etiqueta";
 import type { Catalogos, EsquemaCatalogo, Producto } from "@/lib/types";
 
 /** Solo para detectar la semilla de fábrica; no se asigna a artículos ni se restaura al arrancar. */
 export const ESQUEMAS_INICIALES: EsquemaCatalogo[] = [
   {
     id: "nino",
-    nombre: "Ropa de niño",
-    tallas: [...TALLAS_NINO],
+    nombre: "Ropa de Niño",
+    tallas: listaTallas([...TALLAS_NINO]),
   },
   {
     id: "letra",
-    nombre: "Talla de letra",
-    tallas: [...TALLAS_LETRA],
+    nombre: "Talla de Letra",
+    tallas: listaTallas([...TALLAS_LETRA]),
   },
   {
     id: "accesorio",
@@ -23,15 +29,15 @@ export const ESQUEMAS_INICIALES: EsquemaCatalogo[] = [
 
 const COLORES_INICIALES = [
   "Único",
-  "blanco",
-  "rosa",
-  "azul",
-  "rojo",
-  "negro",
-  "beige",
-  "verde",
-  "amarillo",
-  "gris",
+  "Blanco",
+  "Rosa",
+  "Azul",
+  "Rojo",
+  "Negro",
+  "Beige",
+  "Verde",
+  "Amarillo",
+  "Gris",
 ];
 
 function tallasIguales(a: string[], b: string[]) {
@@ -70,8 +76,8 @@ export function nombreEmpresa(
 export function catalogosVacios(): Catalogos {
   return {
     esquemas: [],
-    colores: [...COLORES_INICIALES],
-    tallas: agregarUnicos([...TALLAS_XC1092], [...TALLAS_LETRA]),
+    colores: listaTitulo(COLORES_INICIALES),
+    tallas: listaTallas(agregarUnicos([...TALLAS_XC1092], [...TALLAS_LETRA])),
     especificaciones: [],
   };
 }
@@ -84,8 +90,8 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
         .filter((e) => e && typeof e === "object")
         .map((e) => ({
           id: e.id?.trim() || `esq-${Date.now()}`,
-          nombre: e.nombre?.trim() || "Esquema",
-          tallas: Array.isArray(e.tallas) ? e.tallas.filter(Boolean) : [],
+          nombre: tituloEtiqueta(e.nombre?.trim() || "Esquema"),
+          tallas: listaTallas(Array.isArray(e.tallas) ? e.tallas : []),
         }))
         .filter((e) => !esEsquemaDeFabrica(e))
     : [];
@@ -94,13 +100,11 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
   return {
     esquemas,
     colores: Array.isArray(raw.colores)
-      ? raw.colores.filter(Boolean)
+      ? listaTitulo(raw.colores)
       : base.colores,
-    tallas: Array.isArray(raw.tallas)
-      ? raw.tallas.filter(Boolean)
-      : base.tallas,
+    tallas: Array.isArray(raw.tallas) ? listaTallas(raw.tallas) : base.tallas,
     especificaciones: Array.isArray(raw.especificaciones)
-      ? raw.especificaciones.filter(Boolean)
+      ? listaTitulo(raw.especificaciones)
       : [],
     ...(empresaNombre ? { empresaNombre } : {}),
     ...(logoDataUrl ? { logoDataUrl } : {}),
@@ -135,12 +139,28 @@ export function sanitizarArticuloSinFabrica(
   catalogos: Catalogos,
 ): Producto {
   const id = producto.esquemaConteo?.trim();
-  if (id && esquemaPorId(catalogos, id)) return producto;
-  if (id && !esIdEsquemaFabrica(id)) return producto;
-  if (!id && !producto.tallas?.length) return producto;
-  return {
+  if (id && esquemaPorId(catalogos, id)) {
+    return normalizarEtiquetasProducto(producto);
+  }
+  if (id && !esIdEsquemaFabrica(id)) {
+    return normalizarEtiquetasProducto(producto);
+  }
+  if (!id && !producto.tallas?.length) {
+    return normalizarEtiquetasProducto(producto);
+  }
+  return normalizarEtiquetasProducto({
     ...producto,
     esquemaConteo: undefined,
     tallas: [],
+  });
+}
+
+export function normalizarEtiquetasProducto(producto: Producto): Producto {
+  return {
+    ...producto,
+    nombre: nombreArticuloAlGuardar(producto.nombre ?? ""),
+    colores: listaTitulo(producto.colores ?? []),
+    tallas: listaTallas(producto.tallas ?? []),
+    especificaciones: listaTitulo(producto.especificaciones ?? []),
   };
 }
