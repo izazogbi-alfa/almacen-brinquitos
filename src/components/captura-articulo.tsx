@@ -32,6 +32,7 @@ import {
   colorAnteriorEnLista,
   siguienteColorEnLista,
   siguienteTallaEnEsquema,
+  tallaAnteriorEnEsquema,
 } from "@/lib/captura-tallas";
 import { HojaCaptura } from "@/components/hoja-captura";
 import type { Producto } from "@/lib/types";
@@ -53,6 +54,8 @@ export type CapturaPayload = {
 };
 
 type ParTalla = { talla: string; cantidad: number };
+type CeldaBorrador = { talla: string; color: string; cantidad: number };
+export type EjeCaptura = "talla" | "color";
 
 export type LineaTabla = LineaColorTabla;
 
@@ -113,7 +116,10 @@ export function CapturaArticulo({
   const [talla, setTalla] = useState("");
   const [especificacion, setEspecificacion] = useState("");
   const [cantidad, setCantidad] = useState("1");
-  const [borrador, setBorrador] = useState<ParTalla[]>([]);
+  const [borrador, setBorrador] = useState<CeldaBorrador[]>([]);
+  const [eje, setEje] = useState<EjeCaptura>(() =>
+    modo === "pedido" ? "color" : "talla",
+  );
   const [lineas, setLineas] = useState<LineaTabla[]>(lineasIniciales ?? []);
   const cantidadRef = useRef<HTMLInputElement>(null);
 
@@ -164,6 +170,9 @@ export function CapturaArticulo({
       : [];
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
+  const tallasDeRejilla = encabezados.filter((t) => t !== "");
+  const elegirEje = modo !== "pedido";
+  const ejeActivo: EjeCaptura = elegirEje ? eje : "color";
 
   const coincidenciasDelEsquema = articulosDelMismoEsquema(
     coincidencias,
@@ -318,12 +327,27 @@ export function CapturaArticulo({
   }
 
   async function abrirHojaColor(c: string) {
-    if (mostrandoCaptura && c !== colorActivo) {
-      await guardarColorActual();
+    if (mostrandoCaptura && (c !== colorActivo || ejeActivo !== "color")) {
+      await guardarEjeActual();
     }
     aplicarColor(c);
     setMostrandoCaptura(true);
     onInicioRegistro?.();
+  }
+
+  async function abrirHojaTalla(t: string) {
+    if (mostrandoCaptura && (t !== tallaActiva || ejeActivo !== "talla")) {
+      await guardarEjeActual();
+    }
+    aplicarTalla(t);
+    setMostrandoCaptura(true);
+    onInicioRegistro?.();
+  }
+
+  function elegirModoCaptura(siguiente: EjeCaptura) {
+    setEje(siguiente);
+    setMostrandoCaptura(false);
+    setBorrador([]);
   }
 
   function enfocarCantidad() {
@@ -335,15 +359,27 @@ export function CapturaArticulo({
     }, 50);
   }
 
-  function guardarCantidadDeTalla(tallaGuardar: string, valor: string) {
-    const n = Number(valor);
+  function guardarCantidadActual() {
+    const n = Number(cantidad);
     if (!Number.isFinite(n) || n < 0) return;
     if (modo !== "contar" && n <= 0) return;
-    if (!tallaGuardar && encabezados.some((t) => t !== "")) return;
+    if (!tallaActiva && encabezados.some((t) => t !== "")) return;
     setBorrador((prev) => {
-      const resto = prev.filter((p) => p.talla !== tallaGuardar);
-      return [...resto, { talla: tallaGuardar, cantidad: n }];
+      const resto = prev.filter(
+        (p) => !(p.talla === tallaActiva && p.color === colorActivo),
+      );
+      return [
+        ...resto,
+        { talla: tallaActiva, color: colorActivo, cantidad: n },
+      ];
     });
+  }
+
+  function cantidadInicial(t: string, c: string) {
+    if (mostrado && sucursalId && modo === "contar") {
+      return String(cantidadEn(mostrado, sucursalId, t, c));
+    }
+    return "1";
   }
 
   function aplicarColor(c: string) {
@@ -351,38 +387,50 @@ export function CapturaArticulo({
     setColor(c);
     setTalla(primera);
     setBorrador([]);
-    if (mostrado && sucursalId && modo === "contar") {
-      setCantidad(String(cantidadEn(mostrado, sucursalId, primera, c)));
-    } else {
-      setCantidad("1");
-    }
+    setCantidad(cantidadInicial(primera, c));
+    enfocarCantidad();
+  }
+
+  function aplicarTalla(t: string) {
+    const primero = colores[0] ?? "Único";
+    setTalla(t);
+    setColor(primero);
+    setBorrador([]);
+    setCantidad(cantidadInicial(t, primero));
     enfocarCantidad();
   }
 
   function cambiarTalla(t: string) {
     if (t !== tallaActiva) {
-      guardarCantidadDeTalla(tallaActiva, cantidad);
+      guardarCantidadActual();
     }
     setTalla(t);
-    if (mostrado && sucursalId && modo === "contar") {
-      setCantidad(String(cantidadEn(mostrado, sucursalId, t, colorActivo)));
-    }
+    setCantidad(cantidadInicial(t, colorActivo));
     enfocarCantidad();
   }
 
-  function paresListos(): ParTalla[] {
+  function cambiarColor(c: string) {
+    if (c !== colorActivo) {
+      guardarCantidadActual();
+    }
+    setColor(c);
+    setCantidad(cantidadInicial(tallaActiva, c));
+    enfocarCantidad();
+  }
+
+  function celdasListas(): CeldaBorrador[] {
     const n = Number(cantidad);
     const vigente =
       Number.isFinite(n) && n >= 0 && (modo === "contar" || n > 0)
-        ? { talla: tallaActiva, cantidad: n }
+        ? { talla: tallaActiva, color: colorActivo, cantidad: n }
         : null;
     const base = [...borrador];
-    if (vigente && !base.some((p) => p.talla === vigente.talla)) {
-      base.push(vigente);
-    } else if (vigente) {
-      return base.map((p) => (p.talla === vigente.talla ? vigente : p));
-    }
-    return base;
+    if (!vigente) return base;
+    const i = base.findIndex(
+      (p) => p.talla === vigente.talla && p.color === vigente.color,
+    );
+    if (i < 0) return [...base, vigente];
+    return base.map((p, idx) => (idx === i ? vigente : p));
   }
 
   function publicarTabla(next: LineaTabla[]) {
@@ -390,69 +438,70 @@ export function CapturaArticulo({
     onTablaChange?.(next);
   }
 
-  function fusionarLineasConPares(pares: ParTalla[]): LineaTabla[] {
+  function fusionarLineasConCeldas(celdas: CeldaBorrador[]): LineaTabla[] {
     if (!mostrado || !sucursal) return lineas;
-    const idx = lineas.findIndex(
-      (x) =>
-        x.productoId === mostrado.id &&
-        x.color === colorActivo &&
-        x.especificacion === especificacion &&
-        x.sucursalId === sucursal.id,
-    );
-    if (idx >= 0) {
-      const next = [...lineas];
-      const prevPares = next[idx].pares;
-      const merged = [...prevPares];
-      for (const p of pares) {
-        const i = merged.findIndex((m) => m.talla === p.talla);
-        if (i >= 0) merged[i] = p;
-        else merged.push(p);
+    let next = [...lineas];
+    for (const celda of celdas) {
+      const idx = next.findIndex(
+        (x) =>
+          x.productoId === mostrado.id &&
+          x.color === celda.color &&
+          x.especificacion === especificacion &&
+          x.sucursalId === sucursal.id,
+      );
+      const par: ParTalla = { talla: celda.talla, cantidad: celda.cantidad };
+      if (idx >= 0) {
+        const merged = [...next[idx].pares];
+        const i = merged.findIndex((m) => m.talla === par.talla);
+        if (i >= 0) merged[i] = par;
+        else merged.push(par);
+        next[idx] = { ...next[idx], pares: merged };
+      } else {
+        next = [
+          ...next,
+          {
+            key: `ln-${mostrado.id}-${celda.color}-${especificacion || ""}-${sucursal.id}`,
+            productoId: mostrado.id,
+            sku: mostrado.sku,
+            nombre: mostrado.nombre,
+            color: celda.color,
+            especificacion: especificacion || undefined,
+            sucursalId: sucursal.id,
+            sucursalNombre: sucursal.nombre,
+            pares: [par],
+          },
+        ];
       }
-      next[idx] = { ...next[idx], pares: merged };
-      return next;
     }
-    return [
-      ...lineas,
-      {
-        key: `ln-${Date.now()}`,
-        productoId: mostrado.id,
-        sku: mostrado.sku,
-        nombre: mostrado.nombre,
-        color: colorActivo,
-        especificacion: especificacion || undefined,
-        sucursalId: sucursal.id,
-        sucursalNombre: sucursal.nombre,
-        pares,
-      },
-    ];
+    return next;
   }
 
-  async function guardarColorActual(): Promise<LineaTabla[]> {
-    guardarCantidadDeTalla(tallaActiva, cantidad);
-    const pares = paresListos();
-    if (!mostrado || !sucursal || pares.length === 0) return lineas;
+  async function guardarEjeActual(): Promise<LineaTabla[]> {
+    guardarCantidadActual();
+    const celdas = celdasListas();
+    if (!mostrado || !sucursal || celdas.length === 0) return lineas;
     try {
       await onCommit({
         producto: mostrado,
         sucursalId: sucursal.id,
         sucursalNombre: sucursal.nombre,
-        celdas: pares.map((p) => ({
+        celdas: celdas.map((p) => ({
           talla: p.talla,
-          color: colorActivo,
+          color: p.color,
           cantidad: p.cantidad,
         })),
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo guardar el conteo.");
     }
-    const next = fusionarLineasConPares(pares);
+    const next = fusionarLineasConCeldas(celdas);
     publicarTabla(next);
     setBorrador([]);
     return next;
   }
 
   async function irAlSiguienteColorTrasGuardar() {
-    await guardarColorActual();
+    await guardarEjeActual();
     const next = siguienteColorEnLista(colores, colorActivo);
     if (next) {
       aplicarColor(next);
@@ -461,10 +510,30 @@ export function CapturaArticulo({
     setMostrandoCaptura(false);
   }
 
-  function avanzarTallaOGuardarColor() {
+  async function irAlSiguienteTallaTrasGuardar() {
+    await guardarEjeActual();
+    const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
+    if (next) {
+      aplicarTalla(next);
+      return;
+    }
+    setMostrandoCaptura(false);
+  }
+
+  function avanzarEnter() {
     const n = Number(cantidad);
     if (!Number.isFinite(n) || n < 0) return;
     if (modo !== "contar" && n <= 0) return;
+    if (ejeActivo === "talla") {
+      const next = siguienteColorEnLista(colores, colorActivo);
+      if (next) {
+        cambiarColor(next);
+        if (modo !== "contar") setCantidad("1");
+        return;
+      }
+      void irAlSiguienteTallaTrasGuardar();
+      return;
+    }
     const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
     if (next) {
       cambiarTalla(next);
@@ -474,8 +543,19 @@ export function CapturaArticulo({
     void irAlSiguienteColorTrasGuardar();
   }
 
-  function saltarEsteColor() {
+  function saltarEje() {
     setBorrador([]);
+    if (ejeActivo === "talla") {
+      const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
+      if (next) {
+        aplicarTalla(next);
+        return;
+      }
+      const otro = tallasDeRejilla.find((t) => t !== tallaActiva);
+      if (otro) aplicarTalla(otro);
+      else enfocarCantidad();
+      return;
+    }
     const next = siguienteColorEnLista(colores, colorActivo);
     if (next) {
       aplicarColor(next);
@@ -486,7 +566,17 @@ export function CapturaArticulo({
     else enfocarCantidad();
   }
 
-  function regresarColor() {
+  function regresarEje() {
+    if (ejeActivo === "talla") {
+      const prev = tallaAnteriorEnEsquema(encabezados, tallaActiva);
+      if (!prev) {
+        toast.message("Ya es la primera talla.");
+        return;
+      }
+      setBorrador([]);
+      aplicarTalla(prev);
+      return;
+    }
     const prev = colorAnteriorEnLista(colores, colorActivo);
     if (!prev) {
       toast.message("Ya es el primer color.");
@@ -497,7 +587,7 @@ export function CapturaArticulo({
   }
 
   async function pendienteGuardar() {
-    const next = await guardarColorActual();
+    const next = await guardarEjeActual();
     if (next.length === 0) {
       toast.error("Cuenta al menos una talla antes de dejarlo pendiente.");
       return;
@@ -511,7 +601,7 @@ export function CapturaArticulo({
   }
 
   async function terminarGuardar() {
-    const next = await guardarColorActual();
+    const next = await guardarEjeActual();
     if (next.length === 0) {
       toast.error("Cuenta al menos una talla antes de terminar.");
       return;
@@ -629,26 +719,95 @@ export function CapturaArticulo({
                   Marcar más de la búsqueda
                 </Button>
               </div>
-              {colores.length > 0 && esquemaActivo ? (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {colores.map((c) => (
-                    <Button
-                      key={c}
-                      type="button"
-                      variant={
-                        mostrandoCaptura && c === colorActivo
-                          ? "default"
-                          : "outline"
-                      }
-                      className={cn(
-                        "h-12 w-full capitalize",
-                        mostrandoCaptura && c === colorActivo && btn,
-                      )}
-                      onClick={() => void abrirHojaColor(c)}
-                    >
-                      {c}
-                    </Button>
-                  ))}
+              {esquemaActivo ? (
+                <div className="space-y-2">
+                  {elegirEje ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Cómo capturar</p>
+                      <p className="text-xs text-muted-foreground">
+                        Por talla: eliges una talla y Enter recorre todos los
+                        colores. Por color: eliges un color y Enter recorre las
+                        tallas.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={ejeActivo === "talla" ? "default" : "outline"}
+                          className={cn(
+                            "h-12 w-full",
+                            ejeActivo === "talla" && btn,
+                          )}
+                          onClick={() => elegirModoCaptura("talla")}
+                        >
+                          Por talla
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={ejeActivo === "color" ? "default" : "outline"}
+                          className={cn(
+                            "h-12 w-full",
+                            ejeActivo === "color" && btn,
+                          )}
+                          onClick={() => elegirModoCaptura("color")}
+                        >
+                          Por color
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                  {ejeActivo === "talla" ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {(tallasDeRejilla.length > 0
+                        ? tallasDeRejilla
+                        : ["Sin talla"]
+                      ).map((t) => (
+                        <Button
+                          key={t}
+                          type="button"
+                          variant={
+                            mostrandoCaptura &&
+                            (t === tallaActiva ||
+                              (t === "Sin talla" && !tallaActiva))
+                              ? "default"
+                              : "outline"
+                          }
+                          className={cn(
+                            "h-12 w-full",
+                            mostrandoCaptura &&
+                              (t === tallaActiva ||
+                                (t === "Sin talla" && !tallaActiva)) &&
+                              btn,
+                          )}
+                          onClick={() =>
+                            void abrirHojaTalla(t === "Sin talla" ? "" : t)
+                          }
+                        >
+                          {t}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : colores.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {colores.map((c) => (
+                        <Button
+                          key={c}
+                          type="button"
+                          variant={
+                            mostrandoCaptura && c === colorActivo
+                              ? "default"
+                              : "outline"
+                          }
+                          className={cn(
+                            "h-12 w-full capitalize",
+                            mostrandoCaptura && c === colorActivo && btn,
+                          )}
+                          onClick={() => void abrirHojaColor(c)}
+                        >
+                          {c}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -663,7 +822,7 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Marca varias prendas que se cuentan igual (mismo esquema, ej. 1, 1X, 2–18, 34–42, 44–50). Luego toca un color, escribe la cantidad y pulsa Enter: pasa a la siguiente talla. Al terminar el color se guarda solo. Un PDF junta todas. Si no hay esquema, hay que asignarlo en Artículos."
+              detalle="Marca varias prendas del mismo esquema. En Existencias y Recepción elige Por talla (viene primero) o Por color. Por talla: toca una talla, cantidad y Enter recorre los colores; al terminar pasa a la siguiente talla. Por color: toca un color y Enter recorre las tallas. Un PDF junta todas."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -775,11 +934,16 @@ export function CapturaArticulo({
               cantidad={cantidad}
               verde={verde}
               guardando={guardando}
-              puedeRegresar={Boolean(colorAnteriorEnLista(colores, colorActivo))}
+              eje={ejeActivo}
+              puedeRegresar={
+                ejeActivo === "talla"
+                  ? Boolean(tallaAnteriorEnEsquema(encabezados, tallaActiva))
+                  : Boolean(colorAnteriorEnLista(colores, colorActivo))
+              }
               onCantidad={setCantidad}
-              onEnter={avanzarTallaOGuardarColor}
-              onSaltar={saltarEsteColor}
-              onRegresar={regresarColor}
+              onEnter={avanzarEnter}
+              onSaltar={saltarEje}
+              onRegresar={regresarEje}
               onCerrar={() => setMostrandoCaptura(false)}
               onPendiente={() => void pendienteGuardar()}
               onTerminar={() => void terminarGuardar()}
@@ -796,7 +960,7 @@ export function CapturaArticulo({
             <TablaPrendas
               lineas={lineas}
               acento={acento}
-              vacioDetalle="Guarda un color (Enter en la última talla, o Terminar guardar) para que aparezca aquí, debajo de la clave."
+              vacioDetalle="Guarda con Enter (última talla o último color del eje) o Terminar guardar para que aparezca aquí, debajo de la clave."
               pdfArchivo={
                 pdfArchivo ??
                 (modo === "entrada"

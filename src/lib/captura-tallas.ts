@@ -33,3 +33,15 @@ export function colorAnteriorEnLista(
   if (i <= 0) return null;
   return colores[i - 1];
 }
+
+/** Talla anterior del esquema, o null si ya es la primera. */
+export function tallaAnteriorEnEsquema(
+  tallas: string[],
+  actual: string,
+): string | null {
+  const lista = tallas.filter((t) => t !== "");
+  if (lista.length === 0) return null;
+  const i = lista.indexOf(actual);
+  if (i <= 0) return null;
+  return lista[i - 1];
+}

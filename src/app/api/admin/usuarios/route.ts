@@ -252,6 +252,23 @@ export async function POST(request: Request) {
           );
         }
         dest.rol = rol;
+        const usernameNuevo =
+          typeof body.username === "string"
+            ? body.username.trim().toLowerCase()
+            : dest.username;
+        if (!usernameNuevo) {
+          throw new Error("El nombre de usuario no puede quedar vacío.");
+        }
+        if (
+          store.users.some(
+            (u) =>
+              u.id !== dest.id &&
+              u.username.toLowerCase() === usernameNuevo,
+          )
+        ) {
+          throw new Error("Ese nombre de usuario ya lo usa otra persona.");
+        }
+        dest.username = usernameNuevo;
         dest.modulos = modsDe(rol, body.modulos, dest.username);
         return publicoDe(dest);
       });
@@ -316,7 +333,7 @@ export async function POST(request: Request) {
       await withStore((store) => {
         const dest = store.users.find((u) => u.id === body.userId);
         if (!dest) throw new Error("Usuario no encontrado.");
-        if (esIza(dest.username)) {
+        if (esIza(dest.username) || dest.id === "u-iza") {
           throw new Error("No se puede quitar a Iza. Esa cuenta se queda.");
         }
         if (ultimoAdmin(store, dest.id)) {

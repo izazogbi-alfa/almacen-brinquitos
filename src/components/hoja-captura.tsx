@@ -17,6 +17,7 @@ export function HojaCaptura({
   cantidad,
   verde,
   guardando,
+  eje = "color",
   puedeRegresar,
   onCantidad,
   onEnter,
@@ -31,6 +32,7 @@ export function HojaCaptura({
   cantidad: string;
   verde?: boolean;
   guardando?: boolean;
+  eje?: "talla" | "color";
   puedeRegresar: boolean;
   onCantidad: (valor: string) => void;
   onEnter: () => void;
@@ -70,20 +72,26 @@ export function HojaCaptura({
 
   const slim =
     "h-9 px-1.5 text-[11px] leading-tight font-medium sm:text-xs";
+  const etiquetaRegresar =
+    eje === "talla" ? "Regresar talla" : "Regresar color";
+  const etiquetaSaltar = eje === "talla" ? "Saltar talla" : "Saltar color";
+  const titulo =
+    eje === "talla"
+      ? `${talla || "Sin talla"}${color ? ` · ${color}` : ""}`
+      : `${color}${talla ? ` · ${talla}` : ""}`;
 
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20" aria-hidden />
       <div
         role="dialog"
-        aria-label={`${color}${talla ? ` talla ${talla}` : ""}`}
+        aria-label={titulo}
         className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-3xl rounded-t-2xl border-t bg-background px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(15,23,42,0.18)] md:max-w-5xl"
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
         <div className="flex items-center justify-between gap-2">
           <p className="font-heading min-w-0 truncate text-lg font-semibold capitalize">
-            {color}
-            {talla ? ` · ${talla}` : ""}
+            {titulo}
           </p>
           <Button
             type="button"
@@ -102,10 +110,10 @@ export function HojaCaptura({
             disabled={!puedeRegresar}
             onClick={onRegresar}
           >
-            Regresar color
+            {etiquetaRegresar}
           </Button>
           <Button type="button" variant="outline" className={slim} onClick={onSaltar}>
-            Saltar color
+            {etiquetaSaltar}
           </Button>
           <Button
             type="button"
