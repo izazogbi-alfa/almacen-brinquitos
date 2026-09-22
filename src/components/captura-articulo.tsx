@@ -195,6 +195,8 @@ export function CapturaArticulo({
     setBorrador([]);
     if (modo === "contar" && sucId) {
       setCantidad(String(cantidadEn(producto, sucId, t0, c0)));
+    } else if (modo === "entrada") {
+      setCantidad("0");
     } else {
       setCantidad("1");
     }
@@ -379,6 +381,7 @@ export function CapturaArticulo({
     if (mostrado && sucursalId && modo === "contar") {
       return String(cantidadEn(mostrado, sucursalId, t, c));
     }
+    if (modo === "entrada") return "0";
     return "1";
   }
 
@@ -528,7 +531,6 @@ export function CapturaArticulo({
       const next = siguienteColorEnLista(colores, colorActivo);
       if (next) {
         cambiarColor(next);
-        if (modo !== "contar") setCantidad("1");
         return;
       }
       void irAlSiguienteTallaTrasGuardar();
@@ -537,7 +539,6 @@ export function CapturaArticulo({
     const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
     if (next) {
       cambiarTalla(next);
-      if (modo !== "contar") setCantidad("1");
       return;
     }
     void irAlSiguienteColorTrasGuardar();
