@@ -1,6 +1,7 @@
 import {
   SESION_INACTIVIDAD_MS,
   asegurarTrabajoSesion,
+  esSesionTerminada,
   sanitizarBorrador,
   sesionPendienteDe,
   sesionTieneTrabajo,
@@ -315,6 +316,26 @@ export function borrarSesionPendiente(
   if (i < 0) return null;
   const [quitada] = store.sesiones.splice(i, 1);
   return quitada ?? null;
+}
+
+/** Pasa un terminado a En curso (pendientes). Mismo id; se puede continuar. */
+export function revertirSesionTerminada(
+  store: StoreConSesiones,
+  sesionId: string,
+  ahora = new Date(),
+): SesionCaptura | null {
+  const sesion = store.sesiones.find((s) => s.id === sesionId);
+  if (!sesion || !esSesionTerminada(sesion)) return null;
+  sesion.pendiente = true;
+  sesion.motivoCierre = "pagina";
+  sesion.ultimaActividad = ahora.toISOString();
+  if (!sesion.cerradaEn) sesion.cerradaEn = ahora.toISOString();
+  store.ultimoGuardado = {
+    timestamp: ahora.toISOString(),
+    userId: sesion.userId,
+    userName: sesion.userName,
+  };
+  return sesion;
 }
 
 /** Quita solo esa captura ya terminada del archivo. No toca catálogo ni piso. */

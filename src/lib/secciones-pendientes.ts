@@ -32,21 +32,21 @@ export const SECCIONES_TERMINADAS = [
     modulo: "existencias" as ModuloSesion,
     href: "/pendientes/existencias/terminadas",
     titulo: "Existencias ya terminadas",
-    detalle: "Terminados. Fecha y sucursal. Consulta o borra.",
+    detalle: "Terminados. Fecha y sucursal. PDF, borrar; Iza puede pasar a pendientes.",
   },
   {
     slug: "recepcion-terminadas" as const,
     modulo: "recepcion" as ModuloSesion,
     href: "/pendientes/recepcion/terminadas",
     titulo: "Recepción ya terminada",
-    detalle: "Terminados. Fecha y sucursal. Consulta o borra.",
+    detalle: "Terminados. Fecha y sucursal. PDF, borrar; Iza puede pasar a pendientes.",
   },
   {
     slug: "pedidos-terminados" as const,
     modulo: "pedidos" as ModuloSesion,
     href: "/pendientes/pedidos/terminadas",
     titulo: "Pedidos ya terminados",
-    detalle: "Terminados. Fecha y sucursal. Consulta o borra.",
+    detalle: "Terminados. Fecha y sucursal. PDF, borrar; Iza puede pasar a pendientes.",
   },
 ] as const;
 

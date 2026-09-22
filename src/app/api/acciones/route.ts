@@ -26,8 +26,9 @@ import {
   borrarSesionTerminada,
   tocarSesionCaptura,
   guardarRegistroCaptura,
+  revertirSesionTerminada,
 } from "@/lib/sesion-store";
-import { esModuloSesion } from "@/lib/sesion-captura";
+import { esModuloSesion, esSesionTerminada } from "@/lib/sesion-captura";
 import { persistirPdfRegistro, quitarPdfRegistro } from "@/server/pdf-registros";
 
 function normalizarCeldas(
@@ -116,6 +117,15 @@ export async function POST(request: Request) {
   const accion = body?.accion;
   if (!accion) {
     return NextResponse.json({ error: "Falta la acción." }, { status: 400 });
+  }
+  if (accion === "revertir-sesion-terminada" && user.rol !== "admin") {
+    return NextResponse.json(
+      {
+        error:
+          "Solo quien administra puede pasar un terminado a pendientes.",
+      },
+      { status: 403 },
+    );
   }
 
   try {
@@ -249,6 +259,45 @@ export async function POST(request: Request) {
           throw new Error(
             "No hay una captura abierta con trabajo para marcar como terminada.",
           );
+        }
+        marcarGuardado(store, user);
+        return { sesion };
+      }
+
+      if (accion === "revertir-sesion-terminada") {
+        if (user.rol !== "admin") {
+          throw new Error(
+            "Solo quien administra puede pasar un terminado a pendientes.",
+          );
+        }
+        const sesionId =
+          typeof body?.sesionId === "string" ? body.sesionId.trim() : "";
+        if (!sesionId) {
+          throw new Error("Falta el registro terminado.");
+        }
+        const password = typeof body?.password === "string" ? body.password : "";
+        if (!password) {
+          throw new Error("Escribe tu contraseña.");
+        }
+        if (!contrasenaCoincide(user.id, password)) {
+          throw new Error("Contraseña incorrecta. No se pasó a pendientes.");
+        }
+        const objetivo = store.sesiones.find((s) => s.id === sesionId);
+        if (!objetivo || !esSesionTerminada(objetivo)) {
+          throw new Error("Ese registro terminado ya no está.");
+        }
+        if (objetivo.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (objetivo.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (objetivo.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
+        const sesion = revertirSesionTerminada(store, sesionId);
+        if (!sesion) {
+          throw new Error("Ese registro terminado ya no está.");
         }
         marcarGuardado(store, user);
         return { sesion };
