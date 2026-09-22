@@ -375,6 +375,15 @@ export async function POST(request: Request) {
         if (!esModuloSesion(body?.modulo)) {
           throw new Error("Falta el módulo de la sesión.");
         }
+        if (body.modulo === "existencias" && !mods.existencias) {
+          throw new Error("No tienes módulo de existencias.");
+        }
+        if (body.modulo === "recepcion" && !mods.recepcion) {
+          throw new Error("No tienes módulo de recepción.");
+        }
+        if (body.modulo === "pedidos" && !mods.pedidos) {
+          throw new Error("No tienes módulo de pedidos.");
+        }
         const sesion = cerrarSesionModulo(store, user, body.modulo);
         return { sesion, aviso: sesion ? "Sesión cerrada por inactividad" : null };
       }

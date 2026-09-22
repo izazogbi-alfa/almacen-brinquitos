@@ -23,7 +23,7 @@ const conFabrica = normalizarCatalogos({
   especificaciones: [],
 });
 assert.equal(conFabrica.esquemas.length, 0);
-assert.deepEqual(conFabrica.colores, ["blanco"]);
+assert.deepEqual(conFabrica.colores, ["Blanco"]);
 
 const custom = {
   id: "esq-iza",
@@ -56,12 +56,12 @@ const map = new Map(cookies.map((c) => [c.name, c.value]));
 const round = catalogosDesdeCookies((name) => map.get(name) || undefined);
 assert.ok(round, "cookie roundtrip");
 assert.equal(round.savedAt, savedAt);
-assert.equal(round.catalogos.esquemas[0].nombre, "Ropa de niña Iza");
+assert.equal(round.catalogos.esquemas[0].nombre, "Ropa de Niña Iza");
 assert.deepEqual(round.catalogos.esquemas[0].tallas, ["2", "4", "6"]);
 
 assert.equal(esquemaPorId(catalogos, undefined), undefined);
 assert.equal(esquemaPorId(catalogos, "nino"), undefined);
-assert.equal(esquemaPorId(catalogos, "esq-iza")?.nombre, "Ropa de niña Iza");
+assert.equal(esquemaPorId(catalogos, "esq-iza")?.nombre, "Ropa de Niña Iza");
 
 const articuloFabrica = sanitizarArticuloSinFabrica(
   {
@@ -89,6 +89,29 @@ const articuloIza = sanitizarArticuloSinFabrica(
 );
 assert.equal(articuloIza.esquemaConteo, "esq-iza");
 assert.deepEqual(articuloIza.tallas, ["2", "4"]);
+
+const nombreMayus = sanitizarArticuloSinFabrica(
+  { ...articuloFabrica, nombre: "CAMISA NIÑO", esquemaConteo: "esq-iza", tallas: ["1x"] },
+  catalogos,
+);
+assert.equal(nombreMayus.nombre, "Camisa Niño");
+assert.deepEqual(nombreMayus.tallas, ["1X"]);
+
+const nombreMixto = sanitizarArticuloSinFabrica(
+  { ...articuloFabrica, nombre: "Camisa nueva", esquemaConteo: "esq-iza" },
+  catalogos,
+);
+assert.equal(nombreMixto.nombre, "Camisa nueva");
+
+const specs = normalizarCatalogos({
+  esquemas: [custom],
+  colores: ["ROJO"],
+  tallas: ["8", "10", "1x"],
+  especificaciones: ["cuello en v"],
+});
+assert.deepEqual(specs.colores, ["Rojo"]);
+assert.deepEqual(specs.tallas, ["8", "10", "1X"]);
+assert.deepEqual(specs.especificaciones, ["Cuello en V"]);
 
 const csv = parseCatalogoCsv(
   "CAMISA NIÑO EXCHICO\nClave:,XC1092,Existencia,0\n",

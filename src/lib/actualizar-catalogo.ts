@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { Producto } from "@/lib/types";
+import { nombreArticuloAlGuardar } from "@/lib/titulo-etiqueta";
 
 export type FilaCatalogo = {
   clave: string;
@@ -384,7 +385,7 @@ export function aplicarFilasCatalogo(
       const creado: Producto = {
         id: idNuevoArticulo(fila.clave.trim(), ids),
         sku: fila.clave.trim(),
-        nombre: fila.nombre.trim(),
+        nombre: nombreArticuloAlGuardar(fila.nombre),
         categoria: "",
         unidad: "pza",
         existencia: 0,
@@ -401,7 +402,9 @@ export function aplicarFilasCatalogo(
     const prev = next[i];
     next[i] = {
       ...prev,
-      nombre: fila.nombre.trim() || prev.nombre,
+      nombre: fila.nombre.trim()
+        ? nombreArticuloAlGuardar(fila.nombre)
+        : prev.nombre,
       foto: fila.foto ? fila.foto : prev.foto,
     };
   }

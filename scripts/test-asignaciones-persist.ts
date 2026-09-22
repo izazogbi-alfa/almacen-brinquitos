@@ -54,6 +54,7 @@ const deIza = sanitizarArticuloSinFabrica(
   catalogos,
 );
 assert.equal(deIza.esquemaConteo, "esq-baccus");
+assert.deepEqual(deIza.colores, ["Blanco"]);
 
 const sinCatalogoAun = sanitizarArticuloSinFabrica(
   { ...base, esquemaConteo: "esq-baccus", tallas: ["1"] },
@@ -82,6 +83,7 @@ const persistido = parseAsignacionesPersistidas({
 });
 assert.ok(persistido);
 assert.equal(persistido.asignaciones.XC1092.esquemaConteo, "esq-baccus");
+assert.deepEqual(persistido.asignaciones.XC1092.colores, ["Blanco"]);
 
 const cookies = cookiesAsignaciones({
   savedAt,
@@ -92,5 +94,6 @@ const round = asignacionesDesdeCookies((name) => map.get(name) || undefined);
 assert.ok(round, "cookie roundtrip asignaciones");
 assert.equal(round.asignaciones.XC1092.esquemaConteo, "esq-baccus");
 assert.deepEqual(round.asignaciones.XC1092.tallas, ["1", "1X"]);
+assert.deepEqual(round.asignaciones.XC1092.colores, ["Blanco"]);
 
 console.log("ok asignaciones", cookies.filter((c) => c.value).length, "cookies");

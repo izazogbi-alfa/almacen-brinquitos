@@ -11,6 +11,7 @@ import {
   PDF_MARGEN_MM,
 } from "@/lib/pdf-layout";
 import { esPdfExistencias, notasPdfInforme } from "@/lib/pdf-clave";
+import { tituloNombreArticulo, tituloTalla } from "@/lib/titulo-etiqueta";
 
 export { esPdfExistencias } from "@/lib/pdf-clave";
 
@@ -209,7 +210,7 @@ function dibujarBloque(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     ink(doc, PDF_COLORES.subClave);
-    const sub = [bloque.nombre, bloque.sucursalNombre]
+    const sub = [tituloNombreArticulo(bloque.nombre), bloque.sucursalNombre]
       .filter(Boolean)
       .join(" · ");
     if (sub) {
@@ -229,7 +230,7 @@ function dibujarBloque(
       return n == null ? "" : String(n);
     }),
   ]);
-  const filaHeader = ["Color", ...tallas.map((t) => t || "Cant.")];
+  const filaHeader = ["Color", ...tallas.map((t) => (t && t !== "Cant." ? tituloTalla(t) : t || "Cant."))];
   const filaTotal = [
     "Total",
     ...tallas.map((t) => String(totales.porTalla[t] ?? 0)),

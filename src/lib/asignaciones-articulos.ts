@@ -1,4 +1,5 @@
 import { sanitizarArticuloSinFabrica } from "@/lib/catalogos";
+import { listaTallas, listaTitulo } from "@/lib/titulo-etiqueta";
 import type { Catalogos, Producto } from "@/lib/types";
 
 export type AsignacionArticulo = {
@@ -39,9 +40,9 @@ export function parseAsignacion(raw: unknown): AsignacionArticulo | null {
   if (!esquemaConteo) return null;
   return {
     esquemaConteo,
-    colores: lista(obj.c ?? obj.colores),
-    tallas: lista(obj.t ?? obj.tallas),
-    especificaciones: lista(obj.s ?? obj.especificaciones),
+    colores: listaTitulo(lista(obj.c ?? obj.colores)),
+    tallas: listaTallas(lista(obj.t ?? obj.tallas)),
+    especificaciones: listaTitulo(lista(obj.s ?? obj.especificaciones)),
   };
 }
 

@@ -35,6 +35,7 @@ import {
 } from "@/lib/articulos-lista";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { tituloNombreArticulo } from "@/lib/titulo-etiqueta";
 
 function ArticulosAdmin() {
   const { productos, catalogos, user, guardarArticulo, clonarAsignacion } =
@@ -262,14 +263,16 @@ function ArticulosAdmin() {
                     >
                       <FotoProducto
                         src={p.foto}
-                        alt={p.nombre}
+                        alt={tituloNombreArticulo(p.nombre)}
                         className="size-14 max-h-14 shrink-0 object-cover"
                       />
                       <div className="min-w-0">
                         <p className="text-xs font-medium tracking-wide text-teal-800 uppercase">
                           Clave {p.sku}
                         </p>
-                        <p className="font-medium leading-tight">{p.nombre}</p>
+        <p className="font-medium leading-tight">
+          {tituloNombreArticulo(p.nombre)}
+        </p>
                       </div>
                     </button>
                   </li>

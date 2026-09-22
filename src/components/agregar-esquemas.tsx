@@ -20,6 +20,10 @@ import {
   resumenConteo,
   textoLista,
 } from "@/lib/asignacion-articulo";
+import {
+  tituloEtiqueta,
+  tituloTalla,
+} from "@/lib/titulo-etiqueta";
 import type { Catalogos } from "@/lib/types";
 
 function ChipCatalogo({
@@ -27,11 +31,13 @@ function ChipCatalogo({
   elegidos,
   onToggle,
   vacio,
+  tipo = "titulo",
 }: {
   items: string[];
   elegidos: string[];
   onToggle: (valor: string) => void;
   vacio: string;
+  tipo?: "titulo" | "talla";
 }) {
   if (items.length === 0) {
     return (
@@ -40,6 +46,7 @@ function ChipCatalogo({
       </p>
     );
   }
+  const mostrar = tipo === "talla" ? tituloTalla : tituloEtiqueta;
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((item) => {
@@ -49,11 +56,11 @@ function ChipCatalogo({
             key={item}
             type="button"
             variant={activo ? "default" : "outline"}
-            className="h-11 min-w-11 capitalize"
+            className="h-11 min-w-11"
             aria-pressed={activo}
             onClick={() => onToggle(item)}
           >
-            {item}
+            {mostrar(item)}
           </Button>
         );
       })}
@@ -224,6 +231,7 @@ export function DialogAgregarEsquemas({
                     <ChipCatalogo
                       items={opcionesTalla}
                       elegidos={tallas}
+                      tipo="talla"
                       onToggle={(valor) =>
                         setTallas(
                           alternarDeCatalogo(opcionesTalla, tallas, valor),

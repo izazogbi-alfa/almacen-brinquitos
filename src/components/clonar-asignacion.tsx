@@ -18,6 +18,7 @@ import { FotoProducto } from "@/components/foto-producto";
 import { filtrarArticulos, ordenarArticulos } from "@/lib/articulos-lista";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { tituloNombreArticulo } from "@/lib/titulo-etiqueta";
 
 export function DialogClonarAsignacion({
   abierto,
@@ -172,7 +173,7 @@ export function DialogClonarAsignacion({
                             >
                               <FotoProducto
                                 src={p.foto}
-                                alt={p.nombre}
+                                alt={tituloNombreArticulo(p.nombre)}
                                 className="size-12 max-h-12 shrink-0 object-cover"
                               />
                               <div className="min-w-0 flex-1">
@@ -180,7 +181,7 @@ export function DialogClonarAsignacion({
                                   Clave {p.sku}
                                 </p>
                                 <p className="font-medium leading-tight">
-                                  {p.nombre}
+                                  {tituloNombreArticulo(p.nombre)}
                                 </p>
                               </div>
                               {activo ? (

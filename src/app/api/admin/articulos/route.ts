@@ -15,6 +15,7 @@ import {
   withStore,
 } from "@/server/store";
 import type { Producto } from "@/lib/types";
+import { nombreArticuloAlGuardar } from "@/lib/titulo-etiqueta";
 
 export const dynamic = "force-dynamic";
 
@@ -101,7 +102,8 @@ export async function POST(request: Request) {
   try {
     const producto = await withStore((store) => {
       if (!clave) throw new Error("Escribe la Clave.");
-      if (!nombre) throw new Error("Escribe el nombre.");
+      const nombreTitulo = nombreArticuloAlGuardar(nombre);
+      if (!nombreTitulo) throw new Error("Escribe el nombre.");
       snapshot = store.productos.map((p) => ({ ...p }));
 
       const catalogos = normalizarCatalogos(store.catalogos);
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
         const creado = {
           id,
           sku: clave,
-          nombre,
+          nombre: nombreTitulo,
           categoria: "",
           unidad: "pza",
           existencia: 0,
@@ -152,7 +154,7 @@ export async function POST(request: Request) {
 
       const prev = store.productos.find((p) => p.id === body.id);
       if (!prev) throw new Error("Artículo no encontrado.");
-      prev.nombre = nombre;
+      prev.nombre = nombreTitulo;
       prev.sku = clave;
       if (!soloIdentidad) {
         if (!esquemaId) {

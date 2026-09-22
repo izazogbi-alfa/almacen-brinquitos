@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { tituloEtiqueta, tituloTalla } from "@/lib/titulo-etiqueta";
 
 const TECLAS = [
   ["1", "2", "3"],
@@ -75,10 +76,12 @@ export function HojaCaptura({
   const etiquetaRegresar =
     eje === "talla" ? "Regresar talla" : "Regresar color";
   const etiquetaSaltar = eje === "talla" ? "Saltar talla" : "Saltar color";
+  const tallaVista = talla ? tituloTalla(talla) : "Sin talla";
+  const colorVista = color ? tituloEtiqueta(color) : "";
   const titulo =
     eje === "talla"
-      ? `${talla || "Sin talla"}${color ? ` · ${color}` : ""}`
-      : `${color}${talla ? ` · ${talla}` : ""}`;
+      ? `${tallaVista}${colorVista ? ` · ${colorVista}` : ""}`
+      : `${colorVista || color}${talla ? ` · ${tituloTalla(talla)}` : ""}`;
 
   return (
     <>
@@ -90,7 +93,7 @@ export function HojaCaptura({
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
         <div className="flex items-center justify-between gap-2">
-          <p className="font-heading min-w-0 truncate text-lg font-semibold capitalize">
+          <p className="font-heading min-w-0 truncate text-lg font-semibold">
             {titulo}
           </p>
           <Button

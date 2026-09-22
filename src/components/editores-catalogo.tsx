@@ -7,7 +7,8 @@ import { ListaOrdenable, TEXTO_ORDEN } from "@/components/lista-ordenable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { agregarUnicos, parseLista, quitarDeLista } from "@/lib/listas";
+import { parseLista, quitarDeLista } from "@/lib/listas";
+import { listaTallas, listaTitulo, tituloEtiqueta, tituloTalla } from "@/lib/titulo-etiqueta";
 import type { EsquemaCatalogo } from "@/lib/types";
 
 export function EditorChips({
@@ -19,6 +20,7 @@ export function EditorChips({
   guardando,
   onChange,
   onGuardar,
+  tipo = "titulo",
 }: {
   titulo: string;
   descripcion: string;
@@ -28,14 +30,16 @@ export function EditorChips({
   guardando: boolean;
   onChange: (items: string[]) => void;
   onGuardar: (items: string[]) => Promise<void>;
+  tipo?: "titulo" | "talla";
 }) {
   const [entrada, setEntrada] = useState("");
   const [quitar, setQuitar] = useState<string | null>(null);
+  const formatear = tipo === "talla" ? tituloTalla : tituloEtiqueta;
 
   function agregar() {
-    const nuevos = parseLista(entrada);
+    const nuevos = parseLista(entrada).map(formatear);
     if (nuevos.length === 0) return;
-    onChange(agregarUnicos(items, nuevos));
+    onChange(tipo === "talla" ? listaTallas([...items, ...nuevos]) : listaTitulo([...items, ...nuevos]));
     setEntrada("");
   }
 
@@ -54,7 +58,7 @@ export function EditorChips({
         <ListaOrdenable
           items={items}
           getKey={(item) => item}
-          etiqueta={(item) => item}
+          etiqueta={(item) => formatear(item)}
           onReorder={onChange}
           onQuitar={(item) => setQuitar(item)}
         />
@@ -86,7 +90,7 @@ export function EditorChips({
         type="button"
         className="h-12 w-full"
         disabled={guardando}
-        onClick={() => void onGuardar(items)}
+        onClick={() => void onGuardar(tipo === "talla" ? listaTallas(items) : listaTitulo(items))}
       >
         {guardando ? "Guardando…" : "Guardar"}
       </Button>
@@ -128,9 +132,9 @@ export function EditorEsquema({
   const [quitarTalla, setQuitarTalla] = useState<string | null>(null);
 
   function agregar() {
-    const nuevos = parseLista(entrada);
+    const nuevos = parseLista(entrada).map(tituloTalla);
     if (nuevos.length === 0) return;
-    onChange({ ...esquema, tallas: agregarUnicos(esquema.tallas, nuevos) });
+    onChange({ ...esquema, tallas: listaTallas([...esquema.tallas, ...nuevos]) });
     setEntrada("");
   }
 
@@ -142,6 +146,12 @@ export function EditorEsquema({
           className="h-12"
           value={esquema.nombre}
           onChange={(e) => onChange({ ...esquema, nombre: e.target.value })}
+          onBlur={() =>
+            onChange({
+              ...esquema,
+              nombre: tituloEtiqueta(esquema.nombre) || esquema.nombre,
+            })
+          }
         />
       </div>
       <p className="text-sm text-muted-foreground">
@@ -156,7 +166,7 @@ export function EditorEsquema({
         <ListaOrdenable
           items={esquema.tallas}
           getKey={(t) => t}
-          etiqueta={(t) => t}
+          etiqueta={(t) => tituloTalla(t)}
           onReorder={(tallas) => onChange({ ...esquema, tallas })}
           onQuitar={(t) => setQuitarTalla(t)}
         />
@@ -182,7 +192,13 @@ export function EditorEsquema({
         type="button"
         className="h-12 w-full"
         disabled={guardando}
-        onClick={() => void onGuardar(esquema)}
+        onClick={() =>
+          void onGuardar({
+            ...esquema,
+            nombre: tituloEtiqueta(esquema.nombre) || esquema.nombre,
+            tallas: listaTallas(esquema.tallas),
+          })
+        }
       >
         {guardando ? "Guardando…" : "Guardar"}
       </Button>
