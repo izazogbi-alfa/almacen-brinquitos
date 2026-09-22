@@ -25,7 +25,7 @@ import {
   PRESETS_USUARIO,
 } from "@/lib/modulos";
 import type { ModulosUsuario, RolUsuario, UsuarioPublico } from "@/lib/types";
-import { esIza, parseUsuariosPersistidos } from "@/lib/usuarios-persist";
+import { esCuentaIza, parseUsuariosPersistidos } from "@/lib/usuarios-persist";
 
 const LS_USUARIOS = "brq_usuarios";
 
@@ -161,7 +161,7 @@ function RolBotones({
 type PendienteClave = "crear" | "guardar" | "quitar" | null;
 
 function PersonasAdmin() {
-  const { user, logout } = useInventory();
+  const { user, logout, retry } = useInventory();
   const [usuarios, setUsuarios] = useState<UsuarioPublico[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -173,6 +173,7 @@ function PersonasAdmin() {
   const [editar, setEditar] = useState<UsuarioPublico | null>(null);
   const [editRol, setEditRol] = useState<RolUsuario>("operador");
   const [editModulos, setEditModulos] = useState<ModulosUsuario>(modsVacios);
+  const [editUsername, setEditUsername] = useState("");
   const [cambiarClave, setCambiarClave] = useState<UsuarioPublico | null>(null);
   const [pendiente, setPendiente] = useState<PendienteClave>(null);
   const [quitar, setQuitar] = useState<UsuarioPublico | null>(null);
@@ -235,10 +236,11 @@ function PersonasAdmin() {
     setEditar(u);
     setEditRol(u.rol);
     setEditModulos({ ...u.modulos });
+    setEditUsername(u.username);
   }
 
   function puedeQuitar(u: UsuarioPublico) {
-    if (esIza(u.username)) return false;
+    if (esCuentaIza(u)) return false;
     if (u.rol === "admin" && admins <= 1) return false;
     return true;
   }
@@ -254,7 +256,7 @@ function PersonasAdmin() {
     <div className="space-y-6">
       <CabeceraUsuarios
         titulo="Personas"
-        descripcion="Lista compacta: nombre, Editar y Eliminar. Crear o cambiar pide tu contraseña. No se puede quitar a Iza ni a la última administradora. Los cambios se quedan (archivo, cookies y respaldo en el teléfono)."
+        descripcion="Lista compacta: nombre, Editar y Eliminar. En Editar puedes cambiar el nombre de usuario (el de entrar). Crear, guardar o quitar pide tu contraseña y Sí/No. Vacío o duplicado no se guarda. No se puede quitar a Iza ni a la última administradora."
       />
 
       <form
@@ -351,7 +353,7 @@ function PersonasAdmin() {
                     <p className="truncate text-xs text-muted-foreground">
                       @{u.username} · {etiquetaRol(u.rol)}
                       {u.id === user.id ? " · tú" : ""}
-                      {esIza(u.username) ? " · no se elimina" : ""}
+                      {esCuentaIza(u) ? " · no se elimina" : ""}
                     </p>
                   </button>
                   <Button
@@ -392,12 +394,26 @@ function PersonasAdmin() {
             <DialogTitle>{editar?.nombre ?? "Editar"}</DialogTitle>
             <DialogDescription>
               {editar
-                ? `@${editar.username}. Cambia rol o permisos y pulsa Guardar: pide tu contraseña.`
+                ? `Nombre de usuario es con el que entra (@${editar.username}). No dejes vacío ni uses uno que ya existe. Cambia rol o permisos. Guardar pide tu contraseña y Sí/No.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           {editar ? (
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-username">Nombre de usuario</Label>
+                <Input
+                  id="edit-username"
+                  className="h-11"
+                  autoComplete="off"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Así entra esta persona. Incluye a quien administra. Tras
+                  guardar, el anterior ya no sirve.
+                </p>
+              </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium">Rol</p>
                 <RolBotones
@@ -427,7 +443,24 @@ function PersonasAdmin() {
             <Button
               type="button"
               className="h-11 w-full"
-              onClick={() => setPendiente("guardar")}
+              onClick={() => {
+                const usernameNuevo = editUsername.trim().toLowerCase();
+                if (!usernameNuevo) {
+                  toast.error("El nombre de usuario no puede quedar vacío.");
+                  return;
+                }
+                if (
+                  usuarios.some(
+                    (u) =>
+                      u.id !== editar?.id &&
+                      u.username.toLowerCase() === usernameNuevo,
+                  )
+                ) {
+                  toast.error("Ese nombre de usuario ya lo usa otra persona.");
+                  return;
+                }
+                setPendiente("guardar");
+              }}
             >
               Guardar
             </Button>
@@ -488,7 +521,7 @@ function PersonasAdmin() {
           pendiente === "crear"
             ? `Para crear a «${nuevoNombre || nuevoUsuario}» escribe tu contraseña y pulsa Sí. Si pulsas No, no se crea.`
             : pendiente === "guardar" && editar
-              ? `Para guardar a «${editar.nombre}» escribe tu contraseña y pulsa Sí. Si pulsas No, no se guarda.`
+              ? `Para guardar a «${editar.nombre}» (@${editUsername.trim() || editar.username}) escribe tu contraseña y pulsa Sí. Si pulsas No, no se guarda.`
               : quitar
                 ? `Para eliminar a «${quitar.nombre}» (@${quitar.username}) escribe tu contraseña y pulsa Sí. Si pulsas No o la contraseña no es, se queda.`
                 : ""
@@ -523,16 +556,26 @@ function PersonasAdmin() {
           }
           if (pendiente === "guardar") {
             if (!editar) return;
+            const usernameNuevo = editUsername.trim().toLowerCase();
+            if (!usernameNuevo) {
+              throw new Error("El nombre de usuario no puede quedar vacío.");
+            }
             await post({
               accion: "actualizar",
               userId: editar.id,
+              username: usernameNuevo,
               rol: editRol,
               modulos: editModulos,
               claveAdmin,
             });
-            toast.success(`Listo: ${editar.nombre}`);
+            toast.success(
+              usernameNuevo === editar.username
+                ? `Listo: ${editar.nombre}`
+                : `Ahora entra con «${usernameNuevo}». El anterior ya no sirve.`,
+            );
             setPendiente(null);
             setEditar(null);
+            if (editar.id === user.id) await retry();
             return;
           }
           if (pendiente === "quitar") {

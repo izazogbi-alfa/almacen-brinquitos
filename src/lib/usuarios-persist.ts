@@ -17,9 +17,15 @@ export type UsuariosPersistidos = {
 
 export const USERNAMES_SEMILLA = ["iza", "almacen1", "almacen2"] as const;
 export const USERNAME_IZA = "iza";
+export const ID_IZA = "u-iza";
 
 export function esIza(username: string) {
   return username.trim().toLowerCase() === USERNAME_IZA;
+}
+
+/** Cuenta de Iza: por id de semilla, aunque haya cambiado el nombre de usuario. */
+export function esCuentaIza(u: { id?: string; username: string }) {
+  return u.id === ID_IZA || esIza(u.username);
 }
 
 function rolDe(valor: unknown): RolUsuario | null {
@@ -93,8 +99,11 @@ export function mezclarUsuarios(
 ): UsuarioPersistido[] {
   const map = new Map<string, UsuarioPersistido>();
   for (const u of persistidos) map.set(u.username.toLowerCase(), u);
-  const iza = semillas.find((s) => esIza(s.username));
-  if (iza && !map.has(USERNAME_IZA)) map.set(USERNAME_IZA, iza);
+  const ids = new Set(persistidos.map((u) => u.id));
+  const iza = semillas.find((s) => s.id === ID_IZA || esIza(s.username));
+  if (iza && !ids.has(iza.id) && !map.has(USERNAME_IZA)) {
+    map.set(USERNAME_IZA, iza);
+  }
   return [...map.values()];
 }
 

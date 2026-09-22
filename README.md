@@ -20,7 +20,7 @@ La barra sigue diciendo **Usuarios**. Esa pantalla es un hub con botones grandes
 2. Pulsa **Personas**. **Volver** regresa al hub.
 3. **Persona nueva:** usuario, contraseña, nombre, rol Administrador o Usuario. Al crear pide **tu** contraseña y Sí/No.
 4. Si es Usuario: atajos **Solo almacén** / **Entrada** / **Almacén completo**, luego **Permisos por usuario** (**Permitir / No permitir** en Existencias, Recepción, Pedidos, Artículos, Configuración). No permitir: no sale en el menú, no entra a capturar y no ve esos botones en **Registros**. Administradora ve todo.
-5. Lista: cada fila es el **nombre**, con **Editar** y **Eliminar** al lado (en el teléfono también puedes tocar el nombre). **Editar** abre la ficha (rol, permisos, cambiar contraseña). Guardar pide tu contraseña.
+5. Lista: cada fila es el **nombre**, con **Editar** y **Eliminar** al lado (en el teléfono también puedes tocar el nombre). **Editar** abre la ficha: **nombre de usuario** (el de entrar), rol, permisos y cambiar contraseña. Guardar pide tu contraseña y **Sí / No**. Vacío o un usuario que ya existe: no se guarda. Tras cambiar el usuario, se entra con el nuevo; el anterior ya no sirve. Iza también puede cambiar el suyo.
 6. **Eliminar:** fila compacta (nombre · Editar · Eliminar). Pide tu contraseña y **Sí / No**. **No se puede quitar a `iza`** ni a la última administradora. El borrado se escribe en el servidor (y un respaldo del navegador): esa persona **no vuelve** y **no puede entrar**.
 7. Lo no marcado no sale en el menú y la ruta lo bloquea. Autorizar pedidos no se cede.
 8. **Las personas se quedan:** al crear, editar o eliminar, se guarda en el servidor. El navegador guarda un respaldo y, si el servidor se reinició, Iza lo reenvía al entrar. Cerrar el navegador, otra pestaña o recargar **no borra** a la gente nueva **ni revive** a quien eliminaste. `iza` no se quita. El login usa el usuario y la contraseña que acabas de crear. **Editar** (o toca el nombre) abre la ficha; Guardar también pide tu contraseña.
@@ -37,7 +37,7 @@ Iza arma las listas en **Configuración**: un hub con botones grandes. El **prim
 
 ## Cómo probar
 
-**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). **Configuración** → **Respaldos** → **Guardar ahora**. Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → marca varias del mismo esquema → color → cantidad → Enter.
+**Como Iza:** entra → **Usuarios** → **Personas** → crea, cambia nombre de usuario, cambia contraseña o quita gente → **Volver**. **Configuración** → **Listas de captura** → pulsa un botón (esquemas, colores, tallas o especificaciones) → arma esa lista → **Volver** (a Listas de captura) → **Volver** (a Configuración). **Configuración** → **Respaldos** → **Guardar ahora**. Luego **Artículos** → abre una ficha → **Agregar esquemas** → elige el que mejor le queda → contraseña. Opcional: **Clonar a otros artículos**. **Guardar ficha** solo guarda Clave y nombre. Luego captura: sucursal → busca → marca varias del mismo esquema → **Por talla** o **Por color** → cantidad → Enter.
 
 **Como usuario de almacén:** `almacen1` → sucursal → busca. Recepción verde usa el mismo formato. Sin módulos de Configuración, Artículos ni Usuarios.
 
@@ -50,14 +50,14 @@ En el menú de abajo, **Registros** está siempre (aunque no haya capturas). Es 
 1. Elige sucursal.
 2. Busca Clave o nombre (ej. `Baccus`, `XC1092`).
 3. **Marca varias** que usen el **mismo esquema** (mismas tallas, ej. 1, 1X, 2–18, 34–42, 44–50). Si una se cuenta distinto, sale un aviso y no se suma. Las que no tienen esquema quedan apagadas: hay que asignarlo en Artículos (no se usa fábrica).
-4. Toca un **color**: abre una **hoja inferior** de captura (no una ficha larga). Arriba: color · talla y acciones delgadas (**Regresar color**, **Saltar color**, **Pendiente guardar**, **Terminar guardar**). En el centro la cantidad. Abajo el **teclado** 0–9, borrar y **Enter** (siguiente talla). La hoja se queda abierta al pasar de talla; al siguiente color solo cambia el título. Eso **abre el registro**. **Pendiente guardar** deja **EN CURSO** en **Registros → Existencias pendientes**. **Terminar guardar** archiva en ya terminadas. Ya no hay **Sacar**.
-5. **Contar** deja la cantidad en piso. Tras cada cantidad + **Enter**, pasa sola a la siguiente talla del mismo color.
+4. Toca **Por talla** (viene primero) o **Por color**. **Por talla:** toca una talla; la hoja pide cantidad de **cada color** y Enter pasa al siguiente color; al terminar esa talla pasa sola a la siguiente. **Por color:** toca un color y Enter recorre las **tallas** (como antes). La hoja inferior tiene **Regresar talla / Saltar talla** o **Regresar color / Saltar color**, más **Pendiente guardar** y **Terminar guardar**. Eso **abre el registro**. **Pendiente guardar** deja **EN CURSO** en **Registros → Existencias pendientes**. **Terminar guardar** archiva en ya terminadas. Ya no hay **Sacar**.
+5. **Contar** deja la cantidad en piso. Tras cada cantidad + **Enter**, avanza en el eje elegido (colores si es Por talla; tallas si es Por color).
 6. Si **cierras la pestaña**, la captura queda **en curso**. **No hay** botón naranja Continuar en Existencias: retómalo en **Registros**. A los **10 minutos sin capturar** se cierra igual. **Cerrar registro** (si hay sesión abierta) también archiva.
 7. **Descargar PDF de esta tabla** junta las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF de esta sesión**. El PDF es **carta US horizontal**. Encabezado de informe: logo + nombre (**Configuración → Informe PDF**), sucursal y fecha. Las cajas de talla van en **una sola fila**. Franja verde de **Clave** (solo el código, para saber de qué existencia es; **no** se imprime el nombre del esquema ni el tipo). Pedidos y Recepción sí pueden mostrar esquema en su PDF.
 
 ## Recepción
 
-Misma hoja de captura (teclado y Enter), título **Entrada de mercancía**, color verde. **Pendiente guardar** y **Terminar guardar** salen en **Registros**. Carta horizontal, tallas en una fila, encabezado de informe.
+Misma hoja de captura (Por talla o Por color, teclado y Enter), título **Entrada de mercancía**, color verde. **Pendiente guardar** y **Terminar guardar** salen en **Registros**. Carta horizontal, tallas en una fila, encabezado de informe.
 
 ## Pedidos
 

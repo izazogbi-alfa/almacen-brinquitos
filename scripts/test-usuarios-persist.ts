@@ -56,8 +56,13 @@ function mezclarUsuarios(
 ) {
   const map = new Map<string, UsuarioPersistido>();
   for (const u of persistidos) map.set(u.username.toLowerCase(), u);
-  const izaSeed = semillas.find((s) => s.username.toLowerCase() === "iza");
-  if (izaSeed && !map.has("iza")) map.set("iza", izaSeed);
+  const ids = new Set(persistidos.map((u) => u.id));
+  const izaSeed = semillas.find(
+    (s) => s.id === "u-iza" || s.username.toLowerCase() === "iza",
+  );
+  if (izaSeed && !ids.has(izaSeed.id) && !map.has("iza")) {
+    map.set("iza", izaSeed);
+  }
   return [...map.values()];
 }
 
@@ -119,5 +124,15 @@ assert.equal(
     ?.passwordHash,
   izaNueva.passwordHash,
 );
+
+const izaRenombrada = { ...iza, username: "iza-admin" };
+const mezcladoRenombre = mezclarUsuarios(
+  [izaRenombrada, nueva],
+  [iza, almacen1, almacen2],
+);
+assert.equal(mezcladoRenombre.some((u) => u.username === "iza"), false);
+assert.ok(mezcladoRenombre.some((u) => u.username === "iza-admin"));
+assert.ok(mezcladoRenombre.some((u) => u.username === "lola"));
+assert.equal(mezcladoRenombre.filter((u) => u.id === "u-iza").length, 1);
 
 console.log("ok usuarios-persist");
