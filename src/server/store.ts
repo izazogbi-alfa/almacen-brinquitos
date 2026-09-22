@@ -60,6 +60,15 @@ import {
   mejorUsuarios,
   usuariosDesdeCookies,
 } from "@/server/usuarios-persist";
+import {
+  aplicarMetaAlStore,
+  aplicarRegistrosAlStore,
+  aplicarStockAlStore,
+  leerDocsPostgres,
+  persistirStoreEnPostgres,
+  postgresTieneDatos,
+} from "@/server/store-duradero";
+import { hayPostgres } from "@/server/postgres";
 
 export type UsuarioInterno = {
   id: string;
@@ -96,6 +105,9 @@ const DATA_DIR = process.env.VERCEL
 const STORE_PATH = join(DATA_DIR, "store.json");
 
 let memoryStore: AppStore | null = null;
+let postgresListo = false;
+let postgresEnCurso: Promise<void> | null = null;
+let postgresEstabaVacio = false;
 
 const DEMO_USERS: {
   id: string;
@@ -363,15 +375,57 @@ function persistStore(store: AppStore) {
   }
 }
 
+async function saveStore(store: AppStore) {
+  memoryStore = store;
+  persistStore(store);
+  if (hayPostgres()) {
+    await persistirStoreEnPostgres(store);
+  }
+}
+
 function saveRaw(store: AppStore) {
   memoryStore = store;
   persistStore(store);
+  if (hayPostgres()) {
+    void persistirStoreEnPostgres(store).catch((error) => {
+      console.error("postgres store persist failed", error);
+    });
+  }
+}
+
+async function hidratarPostgres(store: AppStore) {
+  if (postgresListo || !hayPostgres()) {
+    postgresListo = postgresListo || !hayPostgres();
+    return;
+  }
+  if (!postgresEnCurso) {
+    postgresEnCurso = (async () => {
+      const docs = await leerDocsPostgres();
+      postgresEstabaVacio = !postgresTieneDatos(docs);
+      if (postgresEstabaVacio) {
+        postgresListo = true;
+        return;
+      }
+      if (docs.usuarios) aplicarUsuariosAlStore(store, docs.usuarios);
+      if (docs.asignaciones) aplicarAsignacionesAlStore(store, docs.asignaciones);
+      if (docs.stock) aplicarStockAlStore(store, docs.stock);
+      if (docs.registros) aplicarRegistrosAlStore(store, docs.registros);
+      if (docs.meta) aplicarMetaAlStore(store, docs.meta);
+      persistStore(store);
+      postgresListo = true;
+    })().catch((error) => {
+      postgresEnCurso = null;
+      console.error("postgres hydrate failed", error);
+    });
+  }
+  await postgresEnCurso;
 }
 
 export async function hidratarCatalogos(
   leerCookie: (name: string) => string | undefined,
 ) {
   const store = loadRaw();
+  await hidratarPostgres(store);
   const mejorCatalogo = mejorCatalogos(
     store.catalogosGuardadosEn
       ? {
@@ -413,6 +467,10 @@ export async function hidratarCatalogos(
   if (mejorUsuariosData) aplicarUsuariosAlStore(store, mejorUsuariosData);
 
   memoryStore = store;
+  if (hayPostgres() && postgresEstabaVacio) {
+    await persistirStoreEnPostgres(store);
+    postgresEstabaVacio = false;
+  }
   return store;
 }
 
@@ -422,36 +480,39 @@ export async function guardarCatalogosEnStore(catalogos: Catalogos) {
     savedAt: new Date().toISOString(),
   };
   const remoto = await guardarCatalogosDuraderos(data);
-  const store = withStore((s) => {
-    aplicarCatalogosAlStore(s, data);
+  const persistido = remoto.data ?? data;
+  const store = await withStore((s) => {
+    aplicarCatalogosAlStore(s, persistido);
     return s;
   });
-  return { store, data, remoto };
+  return { store, data: persistido, remoto };
 }
 
 export async function guardarAsignacionesEnStore(
   asignaciones?: Record<string, AsignacionArticulo>,
 ) {
   const store = loadRaw();
+  await hidratarPostgres(store);
   const data: AsignacionesPersistidas = {
     savedAt: new Date().toISOString(),
     asignaciones: asignaciones ?? extraerAsignaciones(store.productos),
   };
   const remoto = await guardarAsignacionesDuraderas(data);
   aplicarAsignacionesAlStore(store, data);
-  saveRaw(store);
+  await saveStore(store);
   return { store, data, remoto };
 }
 
 export async function guardarUsuariosEnStore(users?: UsuarioInterno[]) {
   const store = loadRaw();
+  await hidratarPostgres(store);
   const data: UsuariosPersistidos = {
     savedAt: new Date().toISOString(),
     users: users ?? store.users,
   };
   const remoto = await guardarUsuariosDuraderos(data);
   aplicarUsuariosAlStore(store, data);
-  saveRaw(store);
+  await saveStore(store);
   return { store, data, remoto };
 }
 
@@ -465,6 +526,7 @@ export async function hidratarUsuarios(
   leerCookie: (name: string) => string | undefined,
 ) {
   const store = loadRaw();
+  await hidratarPostgres(store);
   const mejor = mejorUsuarios(
     store.usuariosGuardadosEn
       ? { savedAt: store.usuariosGuardadosEn, users: store.users }
@@ -474,17 +536,22 @@ export async function hidratarUsuarios(
   );
   if (mejor) {
     aplicarUsuariosAlStore(store, mejor);
-    saveRaw(store);
+    await saveStore(store);
   } else {
     memoryStore = store;
+    if (hayPostgres() && postgresEstabaVacio) {
+      await persistirStoreEnPostgres(store);
+      postgresEstabaVacio = false;
+    }
   }
   return store;
 }
 
-export function withStore<T>(fn: (store: AppStore) => T): T {
+export async function withStore<T>(fn: (store: AppStore) => T): Promise<T> {
   const store = loadRaw();
+  await hidratarPostgres(store);
   const result = fn(store);
-  saveRaw(store);
+  await saveStore(store);
   return result;
 }
 
@@ -544,7 +611,7 @@ export function contrasenaCoincide(userId: string, password: string) {
 
 /** Cambia el hash. No devuelve hash ni clave. */
 export function cambiarContrasenaUsuario(userId: string, nueva: string) {
-  withStore((store) => {
+  return withStore((store) => {
     const dest = store.users.find((u) => u.id === userId);
     if (!dest) throw new Error("Usuario no encontrado.");
     dest.passwordHash = hashPassword(nueva);
@@ -571,8 +638,8 @@ export function login(username: string, password: string) {
 }
 
 export function logout(token: string | undefined) {
-  if (!token) return;
-  withStore((store) => {
+  if (!token) return Promise.resolve();
+  return withStore((store) => {
     store.sessions = store.sessions.filter((s) => s.token !== token);
   });
 }

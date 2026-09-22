@@ -23,6 +23,7 @@ import {
   type IndiceRespaldos,
   type RespaldoCompleto,
 } from "@/lib/respaldos";
+import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
 
 const BLOB_LEGACY = "almacen-brinquitos/respaldos.json";
 const BLOB_INDICE = "almacen-brinquitos/respaldos-indice.json";
@@ -242,10 +243,6 @@ export function indiceDesdeCookies(
     console.error("respaldos cookie decode failed", error);
     return null;
   }
-}
-
-function blobDisponible() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
 async function blobMod() {
@@ -810,8 +807,6 @@ export async function guardarColeccionRespaldos(
     if (!keep.has(id)) await borrarCuerpo(id);
   }
 
-  const duradero = [...vias].some(
-    (v) => v === "blob" || v === "kv" || v === "github" || (v === "archivo" && !process.env.VERCEL),
-  );
+  const duradero = [...vias].some(esViaDuradera);
   return { vias: [...vias], persistio: duradero, indice };
 }

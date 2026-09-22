@@ -32,6 +32,11 @@ function HubConfiguracion() {
           Pulsa un botón. Cada función está aparte. Luego puedes sumar más
           aquí mismo.
         </p>
+        <p className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-900">
+          Lo que guardas ahora vive en el servidor. Recargar o redesplegar no
+          lo borra. En Respaldos, <strong>Bajar a mi PC</strong> es una copia
+          extra.
+        </p>
       </div>
       <div className="grid gap-3">
         {SECCIONES_CONFIGURACION.filter(

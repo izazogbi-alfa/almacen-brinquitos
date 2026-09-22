@@ -99,7 +99,7 @@ export async function POST(request: Request) {
   let snapshot: Producto[] | null = null;
 
   try {
-    const producto = withStore((store) => {
+    const producto = await withStore((store) => {
       if (!clave) throw new Error("Escribe la Clave.");
       if (!nombre) throw new Error("Escribe el nombre.");
       snapshot = store.productos.map((p) => ({ ...p }));
@@ -170,7 +170,7 @@ export async function POST(request: Request) {
       const persistido = await persistirEsquemas(jar);
       if (persistido.error) {
         if (snapshot) {
-          withStore((store) => {
+          await withStore((store) => {
             store.productos = snapshot as Producto[];
           });
         }

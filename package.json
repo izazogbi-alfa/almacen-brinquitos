@@ -12,11 +12,12 @@
     "test:sesion": "node --experimental-strip-types scripts/test-sesion-inactividad.ts && node --experimental-strip-types scripts/test-sesion-pendiente.ts",
     "test:pdf-colores": "node --experimental-strip-types scripts/test-pdf-colores.ts",
     "test:captura-tallas": "node --experimental-strip-types scripts/test-captura-tallas.ts",
-    "test:persist": "node --experimental-strip-types scripts/test-catalogos-persist.ts && node --experimental-strip-types scripts/test-asignaciones-persist.ts && npx --yes tsx scripts/test-respaldos.ts && npx --yes tsx scripts/test-respaldos-persist.ts && node --experimental-strip-types scripts/test-usuarios-persist.ts",
+    "test:persist": "npx --yes tsx scripts/test-catalogos-persist.ts && npx --yes tsx scripts/test-asignaciones-persist.ts && npx --yes tsx scripts/test-respaldos.ts && npx --yes tsx scripts/test-respaldos-persist.ts && npx --yes tsx scripts/test-usuarios-persist.ts && npx --yes tsx scripts/test-store-duradero.ts",
     "test:catalogo": "node --experimental-strip-types scripts/test-actualizar-catalogo.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@neondatabase/serverless": "^1.0.2",
     "@vercel/blob": "^2.8.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
