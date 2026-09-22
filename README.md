@@ -57,7 +57,7 @@ En el menú de abajo, **Registros** está siempre (aunque no haya capturas). Es 
 
 ## Recepción
 
-Misma hoja de captura (Por talla o Por color, teclado y Enter), título **Entrada de mercancía**, color verde. **Pendiente guardar** y **Terminar guardar** salen en **Registros**. Carta horizontal, tallas en una fila, encabezado de informe.
+Misma hoja de captura (Por talla o Por color, teclado y Enter), título **Entrada de mercancía**, color verde. La cantidad empieza en **0** (no 1): escribes lo que llegó; al pasar de color o talla también queda en 0. **Pendiente guardar** y **Terminar guardar** salen en **Registros**. Carta horizontal, tallas en una fila, encabezado de informe.
 
 ## Pedidos
 
