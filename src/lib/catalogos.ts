@@ -6,6 +6,7 @@ import {
   nombreArticuloAlGuardar,
   tituloEtiqueta,
 } from "@/lib/titulo-etiqueta";
+import { parseEstiloPdf } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo, Producto } from "@/lib/types";
 
 /** Solo para detectar la semilla de fábrica; no se asigna a artículos ni se restaura al arrancar. */
@@ -92,6 +93,7 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
           id: e.id?.trim() || `esq-${Date.now()}`,
           nombre: tituloEtiqueta(e.nombre?.trim() || "Esquema"),
           tallas: listaTallas(Array.isArray(e.tallas) ? e.tallas : []),
+          estiloPdf: parseEstiloPdf(e.estiloPdf),
         }))
         .filter((e) => !esEsquemaDeFabrica(e))
     : [];
@@ -126,6 +128,14 @@ export function tallasDeEsquema(
   const esquema = esquemaPorId(catalogos, esquemaId);
   if (!esquema) return [];
   return esquema.tallas;
+}
+
+export function estiloPdfDeArticulo(
+  producto: Pick<Producto, "esquemaConteo"> | undefined,
+  catalogos: Catalogos,
+) {
+  const esquema = esquemaPorId(catalogos, producto?.esquemaConteo);
+  return parseEstiloPdf(esquema?.estiloPdf);
 }
 
 function esIdEsquemaFabrica(id: string) {

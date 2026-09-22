@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseLista, quitarDeLista } from "@/lib/listas";
+import { parseEstiloPdf } from "@/lib/pdf-estilo";
 import { listaTallas, listaTitulo, tituloEtiqueta, tituloTalla } from "@/lib/titulo-etiqueta";
 import type { EsquemaCatalogo } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function EditorChips({
   titulo,
@@ -154,6 +156,28 @@ export function EditorEsquema({
           }
         />
       </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">PDF de este esquema</p>
+        <p className="text-sm text-muted-foreground">
+          Todas las prendas con este esquema salen así. No se pregunta al
+          imprimir. Compacto: clave y nombre arriba. Detallado: clave y nombre
+          en cada color.
+        </p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <BotonEstiloPdf
+            activo={parseEstiloPdf(esquema.estiloPdf) === "compacto"}
+            titulo="PDF compacto"
+            detalle="Clave · nombre una vez, arriba de las tallas."
+            onClick={() => onChange({ ...esquema, estiloPdf: "compacto" })}
+          />
+          <BotonEstiloPdf
+            activo={parseEstiloPdf(esquema.estiloPdf) === "detallado"}
+            titulo="PDF detallado"
+            detalle="Clave · nombre debajo de cada color."
+            onClick={() => onChange({ ...esquema, estiloPdf: "detallado" })}
+          />
+        </div>
+      </div>
       <p className="text-sm text-muted-foreground">
         Tallas de este esquema. Vacío = se cuenta solo con color y cantidad.
         Ordénalas arrastrando las fichas.
@@ -193,10 +217,11 @@ export function EditorEsquema({
         className="h-12 w-full"
         disabled={guardando}
         onClick={() =>
-          void onGuardar({
+            void onGuardar({
             ...esquema,
             nombre: tituloEtiqueta(esquema.nombre) || esquema.nombre,
             tallas: listaTallas(esquema.tallas),
+            estiloPdf: parseEstiloPdf(esquema.estiloPdf),
           })
         }
       >
@@ -242,5 +267,32 @@ export function EditorEsquema({
         }}
       />
     </div>
+  );
+}
+
+function BotonEstiloPdf({
+  activo,
+  titulo,
+  detalle,
+  onClick,
+}: {
+  activo: boolean;
+  titulo: string;
+  detalle: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant={activo ? "default" : "outline"}
+      className={cn(
+        "h-auto min-h-20 w-full flex-col items-start gap-1 whitespace-normal px-4 py-3 text-left",
+      )}
+      aria-pressed={activo}
+      onClick={onClick}
+    >
+      <span className="text-base font-semibold">{titulo}</span>
+      <span className="text-xs font-normal opacity-90">{detalle}</span>
+    </Button>
   );
 }

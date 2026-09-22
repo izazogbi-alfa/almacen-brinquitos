@@ -41,6 +41,7 @@ const mezclado = normalizarCatalogos({
 });
 assert.equal(mezclado.esquemas.length, 1);
 assert.equal(mezclado.esquemas[0].id, "esq-iza");
+assert.equal(mezclado.esquemas[0].estiloPdf, "compacto");
 assert.equal(mezclado.colores.length, 0);
 assert.equal(mezclado.tallas.length, 0);
 
@@ -58,6 +59,15 @@ assert.ok(round, "cookie roundtrip");
 assert.equal(round.savedAt, savedAt);
 assert.equal(round.catalogos.esquemas[0].nombre, "Ropa de Niña Iza");
 assert.deepEqual(round.catalogos.esquemas[0].tallas, ["2", "4", "6"]);
+assert.equal(round.catalogos.esquemas[0].estiloPdf, "compacto");
+
+const detallado = normalizarCatalogos({
+  esquemas: [{ ...custom, estiloPdf: "detallado" }],
+  colores: ["rosa"],
+  tallas: ["2"],
+  especificaciones: [],
+});
+assert.equal(detallado.esquemas[0].estiloPdf, "detallado");
 
 assert.equal(esquemaPorId(catalogos, undefined), undefined);
 assert.equal(esquemaPorId(catalogos, "nino"), undefined);

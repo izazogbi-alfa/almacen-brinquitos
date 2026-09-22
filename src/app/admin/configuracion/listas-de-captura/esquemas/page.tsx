@@ -26,7 +26,7 @@ function PaginaEsquemas() {
     <div className="space-y-4">
       <CabeceraConfiguracion
         titulo="Esquemas de conteo"
-        descripcion="Tú armas los esquemas. No hay listas de fábrica (niño 0–60, letra, accesorio). Cada bloque se guarda con su botón Guardar."
+        descripcion="Tú armas los esquemas. No hay listas de fábrica (niño 0–60, letra, accesorio). Cada bloque se guarda con su botón Guardar. Elige PDF compacto o detallado en el esquema: así salen todas las prendas que lo usan."
       />
       <section className="space-y-3 rounded-xl border p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -44,6 +44,7 @@ function PaginaEsquemas() {
                   id: `esq-${Date.now()}`,
                   nombre: "Esquema nuevo",
                   tallas: [],
+                  estiloPdf: "compacto",
                 },
               ])
             }

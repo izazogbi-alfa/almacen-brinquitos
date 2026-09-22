@@ -3,6 +3,8 @@ import {
   totalesDeBloque,
   type BloquePrenda,
 } from "@/lib/tabla-bloques";
+import { lineaClaveNombre } from "@/lib/pdf-celda";
+import { parseEstiloPdf } from "@/lib/pdf-estilo";
 import { cn } from "@/lib/utils";
 
 export function InformeRegistro({
@@ -14,6 +16,7 @@ export function InformeRegistro({
   notas,
   bloques,
   claveSolo,
+  columnaCodProveedor,
 }: {
   titulo: string;
   empresa?: string;
@@ -23,6 +26,7 @@ export function InformeRegistro({
   notas: string[];
   bloques: BloquePrenda[];
   claveSolo: boolean;
+  columnaCodProveedor?: boolean;
 }) {
   return (
     <article className="min-h-full bg-[#f8fafc] p-4 sm:p-6">
@@ -62,6 +66,7 @@ export function InformeRegistro({
             key={bloque.key}
             bloque={bloque}
             claveSolo={claveSolo}
+            columnaCodProveedor={columnaCodProveedor}
           />
         ))}
       </div>
@@ -72,31 +77,48 @@ export function InformeRegistro({
 function BloqueInforme({
   bloque,
   claveSolo,
+  columnaCodProveedor,
 }: {
   bloque: BloquePrenda;
   claveSolo: boolean;
+  columnaCodProveedor?: boolean;
 }) {
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
   const totales = totalesDeBloque({ ...bloque, tallas });
+  const identidad = lineaClaveNombre(bloque.sku, bloque.nombre);
+  const detallado = parseEstiloPdf(bloque.estiloPdf) === "detallado";
   return (
     <section className="overflow-hidden rounded-lg border border-teal-600">
       <div className="bg-teal-700 px-3 py-2 text-white">
         <p className="font-heading text-lg font-semibold tracking-wide">
           {bloque.sku}
         </p>
-        {claveSolo ? null : (
-          <p className="text-sm text-teal-100">
-            {[bloque.nombre, bloque.sucursalNombre].filter(Boolean).join(" · ")}
-          </p>
-        )}
+        {claveSolo ? null : bloque.sucursalNombre ? (
+          <p className="text-sm text-teal-100">{bloque.sucursalNombre}</p>
+        ) : null}
       </div>
+      {!detallado ? (
+        <p className="border-b bg-white px-3 py-2 text-sm font-semibold text-slate-900">
+          {identidad}
+        </p>
+      ) : null}
       <div className="overflow-x-auto bg-white">
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-teal-800 px-2 py-2 text-left font-semibold text-white">
+              <th
+                className={cn(
+                  "sticky left-0 z-10 bg-teal-800 px-2 py-2 text-left font-semibold text-white",
+                  detallado && "max-w-[55mm]",
+                )}
+              >
                 Color
               </th>
+              {columnaCodProveedor ? (
+                <th className="bg-teal-800 px-2 py-2 text-center font-semibold whitespace-nowrap text-white">
+                  Cód. proveedor
+                </th>
+              ) : null}
               {tallas.map((t) => (
                 <th
                   key={t}
@@ -110,9 +132,26 @@ function BloqueInforme({
           <tbody>
             {bloque.filas.map((fila, i) => (
               <tr key={fila.keys.join("-")}>
-                <td className="sticky left-0 z-10 bg-orange-50 px-2 py-2 font-medium">
-                  {etiquetaColor(fila)}
+                <td
+                  className={cn(
+                    "sticky left-0 z-10 bg-orange-50 px-2 py-1.5",
+                    detallado && "max-w-[55mm]",
+                  )}
+                >
+                  <p className="font-medium leading-tight">
+                    {etiquetaColor(fila)}
+                  </p>
+                  {detallado ? (
+                    <p className="text-[11px] leading-tight text-slate-600">
+                      {identidad}
+                    </p>
+                  ) : null}
                 </td>
+                {columnaCodProveedor ? (
+                  <td className="px-2 py-1.5 text-center text-xs text-slate-700">
+                    {bloque.codigoProveedor || ""}
+                  </td>
+                ) : null}
                 {tallas.map((t) => (
                   <td
                     key={`${fila.keys[0]}-${t}`}
@@ -130,6 +169,9 @@ function BloqueInforme({
               <td className="sticky left-0 z-10 bg-teal-900 px-2 py-2 font-semibold text-white">
                 Total
               </td>
+              {columnaCodProveedor ? (
+                <td className="bg-teal-900 px-2 py-2" />
+              ) : null}
               {tallas.map((t) => (
                 <td
                   key={`tot-${t}`}

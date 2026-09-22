@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookiesCatalogos } from "@/server/catalogos-persist";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { parseLista } from "@/lib/listas";
+import { parseEstiloPdf } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
 import { exigirModulo } from "@/server/auth";
 import { guardarCatalogosEnStore, hidratarCatalogos } from "@/server/store";
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
           tallas: Array.isArray(e.tallas)
             ? e.tallas.map((t) => t.trim()).filter(Boolean)
             : parseLista(String(e.tallas ?? "")),
+          estiloPdf: parseEstiloPdf(e.estiloPdf),
         }))
       : base.esquemas;
     const ids = new Set<string>();

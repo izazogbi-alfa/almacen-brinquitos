@@ -21,6 +21,7 @@ export function TablaPrendas({
   pdfTitulo,
   pdfNotas,
   pdfClaveSolo,
+  pdfModulo = "existencias",
   vacioDetalle,
   acento,
   mostrarPdf = true,
@@ -32,6 +33,7 @@ export function TablaPrendas({
   pdfNotas?: string[];
   /** Solo existencias: franja verde con la Clave, sin esquema. */
   pdfClaveSolo?: boolean;
+  pdfModulo?: "existencias" | "recepcion" | "pedidos";
   vacioDetalle: string;
   acento?: "azul" | "verde";
   mostrarPdf?: boolean;
@@ -40,6 +42,7 @@ export function TablaPrendas({
   const bloques = bloquesDesdeLineasColor(lineas, { productos, catalogos });
   const verde = acento === "verde";
   const conPdf = mostrarPdf;
+  const esPedido = pdfModulo === "pedidos";
 
   function pdf() {
     const sucursal = lineas.find((l) => l.sucursalNombre)?.sucursalNombre;
@@ -54,6 +57,7 @@ export function TablaPrendas({
         fecha: formatoFecha(new Date().toISOString()),
         quien: user?.nombre,
         claveSolo: pdfClaveSolo,
+        columnaCodProveedor: esPedido,
       }),
     );
   }

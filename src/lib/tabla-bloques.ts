@@ -1,4 +1,5 @@
-import { tallasDeEsquema } from "@/lib/catalogos";
+import { estiloPdfDeArticulo, tallasDeEsquema } from "@/lib/catalogos";
+import type { EstiloPdf } from "@/lib/pdf-estilo";
 import {
   tituloEtiqueta,
   tituloNombreArticulo,
@@ -34,6 +35,8 @@ export type BloquePrenda = {
   nombre: string;
   sucursalId: string;
   sucursalNombre: string;
+  codigoProveedor?: string;
+  estiloPdf?: EstiloPdf;
   tallas: string[];
   filas: FilaColorBloque[];
 };
@@ -87,6 +90,28 @@ function claveBloque(c: {
   sucursalId?: string;
 }) {
   return `${c.productoId || c.sku}::${c.sucursalId || ""}`;
+}
+
+function codigoProveedorDe(
+  c: Pick<CeldaPlana, "productoId" | "sku">,
+  ctx?: ContextoTallas,
+) {
+  const prod = ctx?.productos.find(
+    (p) => p.id === c.productoId || p.sku === c.sku,
+  );
+  const raw = prod?.codigoProveedor?.trim();
+  return raw || undefined;
+}
+
+function estiloPdfDeCelda(
+  c: Pick<CeldaPlana, "productoId" | "sku">,
+  ctx?: ContextoTallas,
+): EstiloPdf {
+  if (!ctx) return "compacto";
+  const prod = ctx.productos.find(
+    (p) => p.id === c.productoId || p.sku === c.sku,
+  );
+  return estiloPdfDeArticulo(prod, ctx.catalogos);
 }
 
 function etiquetaTalla(talla: string) {
@@ -154,6 +179,8 @@ export function bloquesDesdeCeldas(
           nombre: tituloNombreArticulo(c.nombre),
           sucursalId: c.sucursalId ?? "",
           sucursalNombre: c.sucursalNombre ?? "",
+          codigoProveedor: codigoProveedorDe(c, ctx),
+          estiloPdf: estiloPdfDeCelda(c, ctx),
         },
         tallas: [],
         ordenEsquema: c.ordenTallas ?? [],

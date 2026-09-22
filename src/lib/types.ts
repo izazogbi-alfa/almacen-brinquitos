@@ -1,3 +1,5 @@
+import type { EstiloPdf } from "./pdf-estilo";
+
 export type EstadoPedido =
   | "borrador"
   | "enviado"
@@ -22,6 +24,8 @@ export type EsquemaCatalogo = {
   id: string;
   nombre: string;
   tallas: string[];
+  /** PDF: compacto (clave arriba) o detallado (clave en cada color). */
+  estiloPdf?: EstiloPdf;
 };
 
 export type Catalogos = {
@@ -63,6 +67,8 @@ export type Producto = {
   colores?: string[];
   especificaciones?: string[];
   existenciasSucursal?: ExistenciaSucursal[];
+  /** Código del proveedor (PDF de pedidos). Vacío = celda vacía. */
+  codigoProveedor?: string;
 };
 
 export type Variante = {

@@ -53,7 +53,7 @@ En el menú de abajo, **Registros** está siempre (aunque no haya capturas). Es 
 4. Toca **Por talla** (viene primero) o **Por color**. **Por talla:** toca una talla; la hoja pide cantidad de **cada color** y Enter pasa al siguiente color; al terminar esa talla pasa sola a la siguiente. **Por color:** toca un color y Enter recorre las **tallas** (como antes). La hoja inferior tiene **Regresar talla / Saltar talla** o **Regresar color / Saltar color**, más **Pendiente guardar** y **Terminar guardar**. Eso **abre el registro**. **Pendiente guardar** deja **EN CURSO** en **Registros → Existencias pendientes**. **Terminar guardar** archiva en ya terminadas. Ya no hay **Sacar**.
 5. **Contar** deja la cantidad en piso. Tras cada cantidad + **Enter**, avanza en el eje elegido (colores si es Por talla; tallas si es Por color).
 6. Si **cierras la pestaña**, la captura queda **en curso**. **No hay** botón naranja Continuar en Existencias: retómalo en **Registros**. A los **10 minutos sin capturar** se cierra igual. **Cerrar registro** (si hay sesión abierta) también archiva.
-7. **Descargar PDF de esta tabla** junta las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF de esta sesión**. El PDF es **carta US horizontal**. Encabezado de informe: logo + nombre (**Configuración → Informe PDF**), sucursal y fecha. Las cajas de talla van en **una sola fila**. Franja verde de **Clave** (solo el código, para saber de qué existencia es; **no** se imprime el nombre del esquema ni el tipo). Pedidos y Recepción sí pueden mostrar esquema en su PDF.
+7. **Descargar PDF de esta tabla** junta las marcadas que ya confirmaste. En **Hoy**, **Descargar PDF de esta sesión**. El PDF es **carta US horizontal**. Encabezado: logo + nombre (**Configuración → Informe PDF**), sucursal y fecha. Tallas en **una sola fila**. Franja verde de **Clave** (sin esquema). El corte **compacto** (clave·nombre arriba) o **detallado** (clave·nombre en cada color) se elige en **el esquema**, no al imprimir ni al Terminar guardar. Pedidos: columna **Cód. proveedor** junto al color.
 
 ## Recepción
 
@@ -61,7 +61,7 @@ Misma hoja de captura (Por talla o Por color, teclado y Enter), título **Entrad
 
 ## Pedidos
 
-Misma captura y misma tabla si el módulo está marcado. Al guardar, el detalle y el PDF del folio agrupan por prenda. El PDF muestra **Hecho por**. Estado *Por autorizar* hasta que una administradora autoriza. Si quedó a medias, retómalo en **Registros → Pedidos pendientes**.
+Misma captura y misma tabla si el módulo está marcado. Al guardar, el detalle y el PDF del folio agrupan por prenda. El PDF usa el compacto/detallado del esquema y muestra **Cód. proveedor** junto al color (vacío si no hay). También **Hecho por**. Estado *Por autorizar* hasta que una administradora autoriza. Si quedó a medias, retómalo en **Registros → Pedidos pendientes**.
 
 ## Cómo correrlo
 
