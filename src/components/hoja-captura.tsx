@@ -30,6 +30,7 @@ export function HojaCaptura({
   onCerrar,
   onPendiente,
   onTerminar,
+  progresoArticulo,
 }: {
   color: string;
   talla: string;
@@ -48,6 +49,7 @@ export function HojaCaptura({
   onCerrar: () => void;
   onPendiente: () => void;
   onTerminar: () => void;
+  progresoArticulo?: string;
 }) {
   const [pisar, setPisar] = useState(true);
   const [celda, setCelda] = useState(`${color}::${talla}`);
@@ -99,11 +101,18 @@ export function HojaCaptura({
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
         <div className="flex items-center justify-between gap-2">
-          <p
-            className="font-heading inline-flex min-h-9 min-w-0 max-w-[calc(100%-4.5rem)] items-center truncate rounded-full bg-teal-800 px-3.5 py-1.5 text-base font-bold tracking-wide text-white sm:min-h-10 sm:text-lg"
-          >
-            {titulo}
-          </p>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            {progresoArticulo ? (
+              <p className="truncate text-xs font-medium text-muted-foreground">
+                {progresoArticulo}
+              </p>
+            ) : null}
+            <p
+              className="font-heading inline-flex min-h-9 min-w-0 max-w-full items-center truncate rounded-full bg-teal-800 px-3.5 py-1.5 text-base font-bold tracking-wide text-white sm:min-h-10 sm:text-lg"
+            >
+              {titulo}
+            </p>
+          </div>
           <Button
             type="button"
             variant="ghost"

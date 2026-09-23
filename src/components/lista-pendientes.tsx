@@ -19,6 +19,7 @@ import {
 } from "@/lib/secciones-pendientes";
 import {
   coincideBusquedaPendiente,
+  resumenEnCursoArticulos,
   rutaDeModuloSesion,
   sesionesPendientes,
   sesionesTerminadas,
@@ -150,10 +151,23 @@ function ListaPendientesModulo({
                     const sucursal = nombreSucursal(sesion);
                     const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
                     const estado = archivo ? "Terminado" : "En curso";
+                    const resumenArticulos = archivo
+                      ? null
+                      : resumenEnCursoArticulos(sesion);
                     const meta = (
                       <>
-                        <span className="text-xs font-semibold uppercase tracking-wide text-teal-800">
-                          {estado}
+                        <span className="block w-full min-w-0 truncate text-xs text-teal-800">
+                          <span className="font-semibold uppercase tracking-wide">
+                            {estado}
+                          </span>
+                          {resumenArticulos ? (
+                            <>
+                              {" · "}
+                              <span className="font-medium normal-case tracking-normal">
+                                {resumenArticulos}
+                              </span>
+                            </>
+                          ) : null}
                         </span>
                         <span className="mt-1 text-sm font-medium">
                           {cuando ? formatoFechaHora(cuando) : "Sin fecha"}

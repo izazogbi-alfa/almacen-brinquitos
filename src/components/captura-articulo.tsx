@@ -117,6 +117,9 @@ export function CapturaArticulo({
     lineasIniciales?.[0]?.productoId ?? null,
   );
   const [mostrandoCaptura, setMostrandoCaptura] = useState(false);
+  const [enModoCaptura, setEnModoCaptura] = useState(
+    () => (lineasIniciales?.length ?? 0) > 0,
+  );
   const [errorEsquema, setErrorEsquema] = useState("");
   const [color, setColor] = useState("");
   const [talla, setTalla] = useState("");
@@ -177,6 +180,104 @@ export function CapturaArticulo({
   const tallasDeRejilla = encabezados.filter((t) => t !== "");
   const ejeActivo: EjeCaptura = eje;
 
+  const indiceArticuloActivo = activoId
+    ? elegidosIds.indexOf(activoId)
+    : -1;
+  function nombreProgresoArticulo(nombre: string): string {
+    const t = tituloNombreArticulo(nombre);
+    if (t.length <= 24) return t;
+    return `${t.slice(0, 23).trimEnd()}…`;
+  }
+
+  const progresoArticulo =
+    enModoCaptura &&
+    indiceArticuloActivo >= 0 &&
+    elegidosIds.length > 0 &&
+    mostrado
+      ? `${indiceArticuloActivo + 1} de ${elegidosIds.length} · ${nombreProgresoArticulo(mostrado.nombre)}`
+      : undefined;
+
+  function datosDeProducto(producto: Producto) {
+    const esq = esquemaDeArticulo(producto, catalogos);
+    const heads = esq
+      ? tallasDeCaptura(producto, catalogos, esq.id)
+      : [];
+    const paleta = coloresDeCaptura(producto, catalogos);
+    return { esq, heads, paleta };
+  }
+
+  function indiceDeArticulo(productoId: string) {
+    return elegidosIds.indexOf(productoId);
+  }
+
+  async function abrirPrimerCeldaDe(producto: Producto) {
+    const { heads, paleta } = datosDeProducto(producto);
+    if (mostrandoCaptura) {
+      await guardarEjeActual();
+    }
+    setActivoId(producto.id);
+    setEspecificacion("");
+    setBorrador([]);
+    const primeroColor = paleta[0] ?? "Único";
+    const primeraTalla = heads.filter((x) => x !== "")[0] ?? "";
+    if (ejeActivo === "talla") {
+      setTalla(primeraTalla);
+      setColor(primeroColor);
+      setCantidad(cantidadInicialDe(producto, primeraTalla, primeroColor));
+    } else {
+      setColor(primeroColor);
+      setTalla(primeraTalla);
+      setCantidad(cantidadInicialDe(producto, primeraTalla, primeroColor));
+    }
+    setMostrandoCaptura(true);
+    onInicioRegistro?.();
+    enfocarCantidad();
+  }
+
+  async function avanzarAlSiguienteArticulo() {
+    const idx = indiceDeArticulo(activoId ?? "");
+    if (idx < 0 || idx >= elegidosIds.length - 1) {
+      setMostrandoCaptura(false);
+      return;
+    }
+    const next = productos.find((p) => p.id === elegidosIds[idx + 1]);
+    if (!next) {
+      setMostrandoCaptura(false);
+      return;
+    }
+    await abrirPrimerCeldaDe(next);
+  }
+
+  async function regresarAlArticuloAnterior() {
+    const idx = indiceDeArticulo(activoId ?? "");
+    if (idx <= 0) {
+      toast.message("Ya es el primer artículo.");
+      return;
+    }
+    const prev = productos.find((p) => p.id === elegidosIds[idx - 1]);
+    if (!prev) return;
+    const { heads, paleta } = datosDeProducto(prev);
+    setActivoId(prev.id);
+    setBorrador([]);
+    if (ejeActivo === "talla") {
+      const tallas = heads.filter((x) => x !== "");
+      const ultimaTalla = tallas[tallas.length - 1] ?? "";
+      const ultimoColor = paleta[paleta.length - 1] ?? "Único";
+      setTalla(ultimaTalla);
+      setColor(ultimoColor);
+      setCantidad(cantidadInicialDe(prev, ultimaTalla, ultimoColor));
+    } else {
+      const ultimoColor = paleta[paleta.length - 1] ?? "Único";
+      const tallas = heads.filter((x) => x !== "");
+      const ultimaTalla = tallas[tallas.length - 1] ?? heads[0] ?? "";
+      setColor(ultimoColor);
+      setTalla(ultimaTalla);
+      setCantidad(cantidadInicialDe(prev, ultimaTalla, ultimoColor));
+    }
+    setMostrandoCaptura(true);
+    enfocarCantidad();
+  }
+
   const coincidenciasDelEsquema = articulosDelMismoEsquema(
     coincidencias,
     esquemaIdBloqueado ??
@@ -228,6 +329,7 @@ export function CapturaArticulo({
           if (prod) preparar(prod);
           else setMostrandoCaptura(false);
         }
+        if (next.length === 0) setEnModoCaptura(false);
         return null;
       }
       setErrorEsquema("");
@@ -317,6 +419,18 @@ export function CapturaArticulo({
     }
   }
 
+  function entrarCaptura() {
+    if (elegidos.length === 0) return;
+    abrirCaptura();
+    setEnModoCaptura(true);
+  }
+
+  function volverASeleccion() {
+    setEnModoCaptura(false);
+    setMostrandoCaptura(false);
+    setBuscado(true);
+  }
+
   function abrirCaptura(producto?: Producto) {
     const p = producto ?? elegidos[0];
     if (!p) return;
@@ -380,12 +494,16 @@ export function CapturaArticulo({
     });
   }
 
-  function cantidadInicial(t: string, c: string) {
-    if (mostrado && sucursalId && modo === "contar") {
-      return String(cantidadEn(mostrado, sucursalId, t, c));
+  function cantidadInicialDe(producto: Producto | null, t: string, c: string) {
+    if (producto && sucursalId && modo === "contar") {
+      return String(cantidadEn(producto, sucursalId, t, c));
     }
     if (modo === "entrada") return "0";
     return "1";
+  }
+
+  function cantidadInicial(t: string, c: string) {
+    return cantidadInicialDe(mostrado, t, c);
   }
 
   function aplicarColor(c: string) {
@@ -513,6 +631,10 @@ export function CapturaArticulo({
       aplicarColor(next);
       return;
     }
+    if (enModoCaptura && elegidosIds.length > 1) {
+      await avanzarAlSiguienteArticulo();
+      return;
+    }
     setMostrandoCaptura(false);
   }
 
@@ -521,6 +643,10 @@ export function CapturaArticulo({
     const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
     if (next) {
       aplicarTalla(next);
+      return;
+    }
+    if (enModoCaptura && elegidosIds.length > 1) {
+      await avanzarAlSiguienteArticulo();
       return;
     }
     setMostrandoCaptura(false);
@@ -562,6 +688,10 @@ export function CapturaArticulo({
   function regresarTalla() {
     const prev = tallaAnteriorEnEsquema(encabezados, tallaActiva);
     if (!prev) {
+      if (enModoCaptura && indiceArticuloActivo > 0) {
+        void regresarAlArticuloAnterior();
+        return;
+      }
       toast.message("Ya es la primera talla.");
       return;
     }
@@ -605,6 +735,10 @@ export function CapturaArticulo({
       talla: tallaActiva,
     });
     if (!dest) {
+      if (enModoCaptura && indiceArticuloActivo > 0) {
+        void regresarAlArticuloAnterior();
+        return;
+      }
       toast.message("Ya es el primer color.");
       return;
     }
@@ -704,7 +838,28 @@ export function CapturaArticulo({
             </Button>
           </form>
 
-          {elegidos.length > 0 ? (
+          {elegidos.length > 0 && !enModoCaptura ? (
+            <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+              <p className="text-sm font-medium">
+                {elegidos.length} artículo{elegidos.length === 1 ? "" : "s"}{" "}
+                marcado{elegidos.length === 1 ? "" : "s"}
+                {esquemaBloqueado ? ` · ${esquemaBloqueado.nombre}` : ""}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Sigue marcando en la lista. Cuando termines, pulsa Capturar
+                abajo.
+              </p>
+              <ul className="space-y-1">
+                {elegidos.map((p) => (
+                  <li key={p.id} className="truncate text-sm">
+                    {p.sku} {tituloNombreArticulo(p.nombre)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {enModoCaptura && elegidos.length > 0 ? (
             <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
               <p className="text-sm font-medium">
                 {elegidos.length} artículo{elegidos.length === 1 ? "" : "s"} del
@@ -736,26 +891,14 @@ export function CapturaArticulo({
                   </Button>
                 ))}
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Button
-                  type="button"
-                  className={cn("h-11", btn)}
-                  onClick={() => abrirCaptura()}
-                >
-                  Capturar las elegidas
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11"
-                  onClick={() => {
-                    setMostrandoCaptura(false);
-                    setBuscado(true);
-                  }}
-                >
-                  Marcar más de la búsqueda
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full"
+                onClick={volverASeleccion}
+              >
+                Marcar más de la búsqueda
+              </Button>
               {esquemaActivo ? (
                 <div className="space-y-2">
                   <div className="space-y-2">
@@ -855,17 +998,17 @@ export function CapturaArticulo({
             </p>
           ) : null}
 
-          {!buscado ? (
+          {!enModoCaptura && !buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Marca varias prendas del mismo esquema. Elige Por talla (viene primero) o Por color. Por talla: toca una talla, cantidad y Enter recorre los colores; Saltar color pasa al siguiente color en esa talla. Por color: toca un color y Enter recorre las tallas. Un PDF junta todas."
+              detalle="Marca varias prendas del mismo esquema. Cuando termines de marcar, pulsa Capturar abajo. Por talla: toca una talla y Enter recorre los colores. Por color: toca un color y Enter recorre las tallas. Un PDF junta todas."
             />
-          ) : coincidencias.length === 0 ? (
+          ) : !enModoCaptura && coincidencias.length === 0 ? (
             <EmptyView
               titulo="No hay coincidencias"
               detalle={`Nada con “${consulta}”.`}
             />
-          ) : (
+          ) : !enModoCaptura ? (
             <div className="space-y-3">
               {coincidencias.every((p) => !esquemaDeArticulo(p, catalogos)) ? (
                 <EmptyView
@@ -961,7 +1104,22 @@ export function CapturaArticulo({
                 })}
               </ul>
             </div>
-          )}
+          ) : null}
+
+          {elegidos.length > 0 && !enModoCaptura ? (
+            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:max-w-5xl">
+              <Button
+                type="button"
+                className={cn(
+                  "pointer-events-auto h-14 w-full text-lg font-semibold shadow-lg",
+                  btn,
+                )}
+                onClick={entrarCaptura}
+              >
+                Capturar ({elegidos.length})
+              </Button>
+            </div>
+          ) : null}
 
           {mostrandoCaptura && mostrado && esquemaActivo ? (
             <HojaCaptura
@@ -971,6 +1129,7 @@ export function CapturaArticulo({
               verde={verde}
               guardando={guardando}
               eje={ejeActivo}
+              progresoArticulo={progresoArticulo}
               puedeRegresarColor={Boolean(
                 destinoRegresarColor({
                   eje: ejeActivo,
@@ -978,10 +1137,14 @@ export function CapturaArticulo({
                   color: colorActivo,
                   tallas: encabezados,
                   talla: tallaActiva,
-                }),
+                }) ||
+                  (enModoCaptura && indiceArticuloActivo > 0),
               )}
               puedeRegresarTalla={Boolean(
-                tallaAnteriorEnEsquema(encabezados, tallaActiva),
+                tallaAnteriorEnEsquema(encabezados, tallaActiva) ||
+                  (enModoCaptura &&
+                    indiceArticuloActivo > 0 &&
+                    ejeActivo === "talla"),
               )}
               onCantidad={setCantidad}
               onEnter={avanzarEnter}
@@ -995,7 +1158,12 @@ export function CapturaArticulo({
             />
           ) : null}
 
-          <div className={mostrandoCaptura ? "pb-80" : undefined}>
+          <div
+            className={cn(
+              mostrandoCaptura ? "pb-80" : undefined,
+              elegidos.length > 0 && !enModoCaptura ? "pb-24" : undefined,
+            )}
+          >
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
             <p className="mb-2 text-xs text-muted-foreground">
               Cada prenda es un bloque (clave y nombre arriba). Colores de
