@@ -1,4 +1,38 @@
+import { tituloNombreArticulo } from "@/lib/titulo-etiqueta";
+
 export const SESION_INACTIVIDAD_MS = 10 * 60 * 1000;
+
+const MAX_NOMBRE_EN_CURSO = 24;
+
+function truncarNombreEnCurso(nombre: string): string {
+  const t = tituloNombreArticulo(nombre);
+  if (t.length <= MAX_NOMBRE_EN_CURSO) return t;
+  return `${t.slice(0, MAX_NOMBRE_EN_CURSO - 1).trimEnd()}…`;
+}
+
+/** Nombres únicos de artículos en el borrador (orden de aparición). */
+export function nombresUnicosDeBorrador(borrador?: BorradorSesion): string[] {
+  const visto = new Set<string>();
+  const out: string[] = [];
+  for (const ln of borrador?.lineas ?? []) {
+    if (!ln.productoId || visto.has(ln.productoId)) continue;
+    visto.add(ln.productoId);
+    const nombre = ln.nombre.trim();
+    if (nombre) out.push(nombre);
+  }
+  return out;
+}
+
+/** Resumen corto para filas pendientes: dos nombres truncados y +N si hay más. */
+export function resumenEnCursoArticulos(sesion: SesionCaptura): string | null {
+  const nombres = nombresUnicosDeBorrador(sesion.borrador);
+  if (nombres.length === 0) return null;
+  const visibles = nombres.slice(0, 2).map(truncarNombreEnCurso);
+  const resto = nombres.length - visibles.length;
+  let texto = visibles.join(", ");
+  if (resto > 0) texto += ` +${resto}`;
+  return texto;
+}
 
 export type ModuloSesion = "existencias" | "pedidos" | "recepcion";
 
