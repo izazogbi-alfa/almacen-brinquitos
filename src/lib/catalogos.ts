@@ -124,6 +124,40 @@ export function esquemaPorId(
   return catalogos.esquemas.find((e) => e.id === id);
 }
 
+export function nombreEsquemaDuplicado(
+  esquemas: EsquemaCatalogo[],
+  nombre: string,
+  exceptoId?: string,
+): boolean {
+  const clave = tituloEtiqueta(nombre).toLocaleLowerCase("es");
+  if (!clave) return false;
+  return esquemas.some(
+    (e) =>
+      e.id !== exceptoId &&
+      tituloEtiqueta(e.nombre).toLocaleLowerCase("es") === clave,
+  );
+}
+
+export function clonarEsquemaCatalogo(
+  origen: EsquemaCatalogo,
+  esquemas: EsquemaCatalogo[],
+): EsquemaCatalogo {
+  const base = tituloEtiqueta(`Copia De ${origen.nombre}`) || "Copia De Esquema";
+  let nombre = base;
+  let n = 2;
+  while (nombreEsquemaDuplicado(esquemas, nombre)) {
+    nombre = tituloEtiqueta(`${base} ${n}`);
+    n += 1;
+  }
+  const estiloPdf = elegirEstiloPdf(origen.estiloPdf);
+  return {
+    id: `esq-${Date.now()}`,
+    nombre,
+    tallas: [...origen.tallas],
+    ...(estiloPdf ? { estiloPdf } : {}),
+  };
+}
+
 export function tallasDeEsquema(
   catalogos: Catalogos,
   esquemaId?: string | null,
