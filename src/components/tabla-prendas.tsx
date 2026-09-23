@@ -7,11 +7,16 @@ import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
 import { useInventory } from "@/lib/inventory-context";
 import { formatoFecha } from "@/lib/format";
 import {
+  cantidadPdf,
+  encabezadosColumnaTalla,
+} from "@/lib/captura-tallas";
+import {
   bloquesDesdeLineasColor,
   etiquetaColor,
   type BloquePrenda,
   type LineaColorTabla,
 } from "@/lib/tabla-bloques";
+import { tituloTalla } from "@/lib/titulo-etiqueta";
 import { cn } from "@/lib/utils";
 
 export function TablaPrendas({
@@ -105,6 +110,8 @@ function BloqueTabla({
   bloque: BloquePrenda;
   onQuitarFila?: (keys: string[]) => void;
 }) {
+  const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
+  const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
   return (
     <article className="overflow-hidden rounded-xl border">
       <header className="border-b bg-muted/50 px-3 py-2">
@@ -126,12 +133,12 @@ function BloqueTabla({
               <th className="sticky left-0 z-10 bg-muted/90 px-2 py-2 text-left font-medium">
                 Color
               </th>
-              {bloque.tallas.map((t) => (
+              {headersTalla.map((h, i) => (
                 <th
-                  key={t}
+                  key={`${tallas[i]}-${h}`}
                   className="min-w-12 px-2 py-2 text-center font-medium"
                 >
-                  {t || "Cant."}
+                  {h}
                 </th>
               ))}
               {onQuitarFila ? <th className="w-10 p-0" /> : null}
@@ -143,12 +150,12 @@ function BloqueTabla({
                 <td className="sticky left-0 z-10 bg-background px-2 py-2 font-medium">
                   {etiquetaColor(fila)}
                 </td>
-                {bloque.tallas.map((t) => (
+                {tallas.map((t) => (
                   <td
                     key={`${fila.keys[0]}-${t}`}
                     className="px-2 py-2 text-center tabular-nums"
                   >
-                    {fila.porTalla[t] ?? ""}
+                    {cantidadPdf(fila.porTalla[t])}
                   </td>
                 ))}
                 {onQuitarFila ? (

@@ -1,3 +1,7 @@
+import {
+  coloresDeCaptura,
+  tallasDeCaptura,
+} from "@/lib/asignacion-articulo";
 import { estiloPdfDeArticulo, tallasDeEsquema } from "@/lib/catalogos";
 import type { EstiloPdf } from "@/lib/pdf-estilo";
 import {
@@ -53,6 +57,7 @@ export type CeldaPlana = {
   talla: string;
   cantidad: number;
   ordenTallas?: string[];
+  ordenColores?: string[];
 };
 
 export type ContextoTallas = {
@@ -68,18 +73,54 @@ export function ordenTallasDeProducto(
   return tallasDeEsquema(catalogos, producto.esquemaConteo);
 }
 
+export function ordenColoresDeProducto(
+  producto: Producto | undefined,
+  catalogos: Catalogos,
+) {
+  if (!producto) return [];
+  return coloresDeCaptura(producto, catalogos);
+}
+
+export function tallasPdfDeProducto(
+  producto: Producto | undefined,
+  catalogos: Catalogos,
+) {
+  if (!producto) return [];
+  const delEsquema = tallasDeCaptura(
+    producto,
+    catalogos,
+    producto.esquemaConteo,
+  );
+  return delEsquema
+    .map((t) => etiquetaTalla(t))
+    .filter((t) => t !== "");
+}
+
+function claveColor(color: string) {
+  return color.toLocaleLowerCase("es");
+}
+
 export function conOrdenDeEsquema(
   celdas: CeldaPlana[],
   ctx: ContextoTallas,
 ): CeldaPlana[] {
   return celdas.map((c) => {
-    if (c.ordenTallas?.length) return c;
     const prod = ctx.productos.find(
       (p) => p.id === c.productoId || p.sku === c.sku,
     );
+    const ordenTallas =
+      c.ordenTallas?.length
+        ? c.ordenTallas
+        : ordenTallasDeProducto(prod, ctx.catalogos);
+    const ordenColores =
+      c.ordenColores?.length
+        ? c.ordenColores
+        : ordenColoresDeProducto(prod, ctx.catalogos);
+    if (c.ordenTallas?.length && c.ordenColores?.length) return c;
     return {
       ...c,
-      ordenTallas: ordenTallasDeProducto(prod, ctx.catalogos),
+      ordenTallas,
+      ordenColores,
     };
   });
 }
@@ -122,7 +163,29 @@ function claveTalla(talla: string) {
   return (talla === "Cant." ? "" : talla).toLocaleLowerCase("es");
 }
 
-/** Columnas = solo tallas capturadas, en el orden del esquema (Configuración). */
+/** Todas las tallas del esquema en orden de captura (1, 1X, 2… sin ordenar numéricamente). */
+export function tallasParaPdf(
+  ordenEsquema: string[] | undefined,
+  capturadas: string[] = [],
+): string[] {
+  if (ordenEsquema?.length) {
+    const vistas = ordenEsquema
+      .map((t) => etiquetaTalla(t))
+      .filter((t) => t !== "");
+    if (vistas.length) return vistas;
+  }
+  const vistas: string[] = [];
+  const seen = new Set<string>();
+  for (const t of capturadas) {
+    const k = etiquetaTalla(t);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    vistas.push(k);
+  }
+  return vistas.length ? vistas : ["Cant."];
+}
+
+/** @deprecated Usar tallasParaPdf. Conservado para llamadas que solo ordenan capturadas. */
 export function ordenarTallasPorEsquema(
   capturadas: string[],
   ordenEsquema: string[] | undefined,
@@ -151,6 +214,36 @@ export function ordenarTallasPorEsquema(
   });
 }
 
+/** Filas = todos los colores del esquema en orden, aunque no se hayan capturado. */
+export function filasCompletasEsquema(
+  filas: FilaColorBloque[],
+  ordenColores: string[] | undefined,
+): FilaColorBloque[] {
+  if (!ordenColores?.length) return filas;
+  const resultado: FilaColorBloque[] = [];
+  const usadas = new Set<string>();
+  for (const color of ordenColores) {
+    const matches = filas.filter(
+      (f) => claveColor(f.color) === claveColor(color),
+    );
+    if (matches.length) {
+      for (const fila of matches) {
+        const k = `${fila.color}::${fila.especificacion ?? ""}`;
+        if (usadas.has(k)) continue;
+        usadas.add(k);
+        resultado.push(fila);
+      }
+    } else {
+      resultado.push({ keys: [], color, porTalla: {} });
+    }
+  }
+  for (const fila of filas) {
+    const k = `${fila.color}::${fila.especificacion ?? ""}`;
+    if (!usadas.has(k)) resultado.push(fila);
+  }
+  return resultado;
+}
+
 export function bloquesDesdeCeldas(
   celdas: CeldaPlana[],
   ctx?: ContextoTallas,
@@ -163,6 +256,7 @@ export function bloquesDesdeCeldas(
       bloque: Omit<BloquePrenda, "tallas" | "filas">;
       tallas: string[];
       ordenEsquema: string[];
+      ordenColores: string[];
       filas: Map<string, FilaColorBloque>;
     }
   >();
@@ -170,6 +264,9 @@ export function bloquesDesdeCeldas(
   for (const c of lista) {
     const bk = claveBloque(c);
     if (!mapa.has(bk)) {
+      const prod = ctx?.productos.find(
+        (p) => p.id === c.productoId || p.sku === c.sku,
+      );
       orden.push(bk);
       mapa.set(bk, {
         bloque: {
@@ -183,13 +280,27 @@ export function bloquesDesdeCeldas(
           estiloPdf: estiloPdfDeCelda(c, ctx),
         },
         tallas: [],
-        ordenEsquema: c.ordenTallas ?? [],
+        ordenEsquema:
+          c.ordenTallas?.length
+            ? c.ordenTallas
+            : ctx
+              ? tallasPdfDeProducto(prod, ctx.catalogos)
+              : [],
+        ordenColores:
+          c.ordenColores?.length
+            ? c.ordenColores
+            : ctx
+              ? ordenColoresDeProducto(prod, ctx.catalogos)
+              : [],
         filas: new Map(),
       });
     }
     const g = mapa.get(bk)!;
     if (!g.ordenEsquema.length && c.ordenTallas?.length) {
       g.ordenEsquema = c.ordenTallas;
+    }
+    if (!g.ordenColores.length && c.ordenColores?.length) {
+      g.ordenColores = c.ordenColores;
     }
     const talla = etiquetaTalla(c.talla);
     g.tallas.push(talla);
@@ -212,8 +323,8 @@ export function bloquesDesdeCeldas(
     const g = mapa.get(k)!;
     return {
       ...g.bloque,
-      tallas: ordenarTallasPorEsquema(g.tallas, g.ordenEsquema),
-      filas: [...g.filas.values()],
+      tallas: tallasParaPdf(g.ordenEsquema, g.tallas),
+      filas: filasCompletasEsquema([...g.filas.values()], g.ordenColores),
     };
   });
 }

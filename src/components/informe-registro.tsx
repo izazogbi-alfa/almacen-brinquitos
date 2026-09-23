@@ -1,10 +1,15 @@
 import {
+  cantidadPdf,
+  encabezadosColumnaTalla,
+} from "@/lib/captura-tallas";
+import {
   etiquetaColor,
   totalesDeBloque,
   type BloquePrenda,
 } from "@/lib/tabla-bloques";
 import { lineaClaveNombre } from "@/lib/pdf-celda";
 import { parseEstiloPdf } from "@/lib/pdf-estilo";
+import { tituloTalla } from "@/lib/titulo-etiqueta";
 import { cn } from "@/lib/utils";
 
 export function InformeRegistro({
@@ -84,6 +89,7 @@ function BloqueInforme({
   columnaCodProveedor?: boolean;
 }) {
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
+  const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
   const totales = totalesDeBloque({ ...bloque, tallas });
   const identidad = lineaClaveNombre(bloque.sku, bloque.nombre);
   const detallado = parseEstiloPdf(bloque.estiloPdf) === "detallado";
@@ -119,12 +125,12 @@ function BloqueInforme({
                   Cód. proveedor
                 </th>
               ) : null}
-              {tallas.map((t) => (
+              {headersTalla.map((h, i) => (
                 <th
-                  key={t}
+                  key={`${tallas[i]}-${h}`}
                   className="min-w-12 bg-amber-600 px-2 py-2 text-center font-semibold text-white"
                 >
-                  {t || "Cant."}
+                  {h}
                 </th>
               ))}
             </tr>
@@ -160,7 +166,7 @@ function BloqueInforme({
                       i % 2 === 0 ? "bg-teal-50" : "bg-white",
                     )}
                   >
-                    {fila.porTalla[t] ?? ""}
+                    {cantidadPdf(fila.porTalla[t])}
                   </td>
                 ))}
               </tr>
@@ -177,7 +183,7 @@ function BloqueInforme({
                   key={`tot-${t}`}
                   className="bg-teal-900 px-2 py-2 text-center font-semibold tabular-nums text-white"
                 >
-                  {totales.porTalla[t] || ""}
+                  {cantidadPdf(totales.porTalla[t])}
                 </td>
               ))}
             </tr>

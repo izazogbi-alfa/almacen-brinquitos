@@ -46,6 +46,41 @@ export function tallaAnteriorEnEsquema(
   return lista[i - 1];
 }
 
+/** Texto (Extra chico, Chico…) frente a numéricas (1, 1X, 2…). */
+export function esListaMedidas(tallas: string[]): boolean {
+  const limpias = tallas.map((t) => t.trim()).filter(Boolean);
+  if (limpias.length === 0) return false;
+  return limpias.every((t) => !/^\d/.test(t));
+}
+
+/** Encabezado de columnas de talla/medida en el PDF. */
+export function tituloEncabezadoTallas(tallas: string[]): string {
+  if (tallas.length === 0 || tallas[0] === "Cant.") return "Cant.";
+  return esListaMedidas(tallas) ? "Medidas" : "Tallas";
+}
+
+/** Cantidad en celda del PDF: vacío o sin captura → 0. */
+export function cantidadPdf(valor: number | null | undefined): string {
+  return valor == null ? "0" : String(valor);
+}
+
+/**
+ * Texto de encabezado por columna de talla/medida.
+ * Una sola columna → «Tallas» o «Medidas»; varias → cada talla en orden del esquema.
+ */
+export function encabezadosColumnaTalla(
+  tallas: string[],
+  tituloTalla: (t: string) => string,
+): string[] {
+  if (tallas.length === 0) return ["Cant."];
+  if (tallas.length === 1 && tallas[0] !== "Cant.") {
+    return [tituloEncabezadoTallas(tallas)];
+  }
+  return tallas.map((t) =>
+    t && t !== "Cant." ? tituloTalla(t) : t || "Cant.",
+  );
+}
+
 export type EjeCapturaTallas = "talla" | "color";
 
 export type CeldaCapturaTallas = { color: string; talla: string };
