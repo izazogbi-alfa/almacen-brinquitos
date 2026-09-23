@@ -14,6 +14,10 @@ import {
   PDF_JSPDF,
   PDF_MARGEN_MM,
 } from "@/lib/pdf-layout";
+import {
+  cantidadPdf,
+  encabezadosColumnaTalla,
+} from "@/lib/captura-tallas";
 import { esPdfExistencias, notasPdfInforme } from "@/lib/pdf-clave";
 import {
   fuenteParaAncho,
@@ -308,9 +312,7 @@ function dibujarBloque(
   }
 
   const fuenteTalla = colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
-  const headersTalla = tallas.map((t) =>
-    t && t !== "Cant." ? tituloTalla(t) : t || "Cant.",
-  );
+  const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
 
   function celdasTalla(
     valores: string[],
@@ -398,10 +400,7 @@ function dibujarBloque(
       }
     }
     celdasTalla(
-      tallas.map((t) => {
-        const n = fila.porTalla[t];
-        return n == null ? "" : String(n);
-      }),
+      tallas.map((t) => cantidadPdf(fila.porTalla[t])),
       altoDatos,
       () => (ri % 2 === 0 ? PDF_COLORES.tallaPar : PDF_COLORES.tallaImpar),
       [15, 23, 42],
@@ -426,7 +425,7 @@ function dibujarBloque(
     );
   }
   celdasTalla(
-    tallas.map((t) => String(totales.porTalla[t] ?? 0)),
+    tallas.map((t) => cantidadPdf(totales.porTalla[t])),
     ALTO_FILA,
     () => PDF_COLORES.totalFondo,
     PDF_COLORES.totalTexto,
