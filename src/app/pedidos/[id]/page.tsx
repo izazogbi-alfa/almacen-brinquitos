@@ -77,6 +77,7 @@ function DetallePedidoContent() {
         sucursal: sucursalPedido,
         fecha: formatoFecha(actual.fecha),
         quien: quienPedido,
+        columnaCodProveedor: true,
       }),
     );
   }

@@ -988,6 +988,13 @@ export function CapturaArticulo({
                 publicarTabla(lineas.filter((x) => !keys.includes(x.key)))
               }
               pdfClaveSolo={modo === "contar"}
+              pdfModulo={
+                modo === "entrada"
+                  ? "recepcion"
+                  : modo === "pedido"
+                    ? "pedidos"
+                    : "existencias"
+              }
             />
           </div>
           {extraAfter}

@@ -3,15 +3,25 @@ import {
   etiquetaColor,
   totalesDeBloque,
   type BloquePrenda,
+  type FilaColorBloque,
 } from "@/lib/tabla-bloques";
 import { PDF_COLORES } from "@/lib/pdf-colores";
 import {
+  ANCHO_COD_PROVEEDOR_MM,
+  ANCHO_COLOR_DETALLADO_MM,
+  ANCHO_COLOR_PREF_MM,
   layoutCajasTalla,
   PDF_JSPDF,
   PDF_MARGEN_MM,
 } from "@/lib/pdf-layout";
 import { esPdfExistencias, notasPdfInforme } from "@/lib/pdf-clave";
-import { tituloNombreArticulo, tituloTalla } from "@/lib/titulo-etiqueta";
+import {
+  fuenteParaAncho,
+  lineaClaveNombre,
+  textoParaAncho,
+} from "@/lib/pdf-celda";
+import type { EstiloPdf } from "@/lib/pdf-estilo";
+import { tituloTalla } from "@/lib/titulo-etiqueta";
 
 export { esPdfExistencias } from "@/lib/pdf-clave";
 
@@ -24,6 +34,9 @@ export type EncabezadoInforme = {
   quien?: string;
   /** Existencias: franja verde solo con la Clave, sin nombre ni esquema. */
   claveSolo?: boolean;
+  estiloPdf?: EstiloPdf;
+  /** Pedidos: columna Cód. proveedor junto al color. */
+  columnaCodProveedor?: boolean;
 };
 
 export function encabezadoInforme(
@@ -34,6 +47,8 @@ export function encabezadoInforme(
     fecha?: string;
     quien?: string;
     claveSolo?: boolean;
+    estiloPdf?: EstiloPdf;
+    columnaCodProveedor?: boolean;
   },
 ): EncabezadoInforme {
   const empresa = ident?.empresaNombre?.trim();
@@ -45,6 +60,9 @@ export function encabezadoInforme(
     fecha: extra.fecha,
     quien: extra.quien,
     claveSolo: extra.claveSolo ?? esPdfExistencias(extra.tituloDoc),
+    estiloPdf: extra.estiloPdf ?? "compacto",
+    columnaCodProveedor:
+      extra.columnaCodProveedor ?? /pedido/i.test(extra.tituloDoc),
   };
 }
 
@@ -115,6 +133,7 @@ export function construirPdfLineas(
 }
 
 const ALTO_FILA = 8;
+const ALTO_FILA_DATOS_DETALLE = 12;
 const ALTO_CLAVE = 12;
 
 function asegurarEspacio(
@@ -180,6 +199,55 @@ function dibujarEncabezadoPagina(doc: jsPDF, encabezado: EncabezadoInforme) {
   return 28;
 }
 
+function pintarCaja(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fondo: readonly [number, number, number],
+) {
+  fill(doc, fondo);
+  stroke(doc, PDF_COLORES.borde);
+  doc.rect(x, y, w, h, "FD");
+}
+
+function dibujarCeldaColor(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fila: FilaColorBloque,
+  bloque: BloquePrenda,
+  detallado: boolean,
+) {
+  pintarCaja(doc, x, y, w, h, PDF_COLORES.colorColFondo);
+  if (w < 4) return;
+  const pad = 1.4;
+  const anchoTxt = Math.max(2, w - pad * 2);
+  const color = plano(etiquetaColor(fila));
+  ink(doc, [15, 23, 42]);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(w < 22 ? 7 : 8);
+  if (detallado) {
+    doc.text(textoParaAncho(doc, color, anchoTxt), x + pad, y + 4.2, {
+      maxWidth: anchoTxt,
+    });
+    const identidad = plano(lineaClaveNombre(bloque.sku, bloque.nombre));
+    doc.setFont("helvetica", "normal");
+    const fuenteNom = fuenteParaAncho(doc, identidad, anchoTxt);
+    doc.setFontSize(fuenteNom);
+    doc.text(textoParaAncho(doc, identidad, anchoTxt), x + pad, y + h - 2.4, {
+      maxWidth: anchoTxt,
+    });
+    return;
+  }
+  doc.text(textoParaAncho(doc, color, anchoTxt), x + pad, y + h / 2 + 1.1, {
+    maxWidth: anchoTxt,
+  });
+}
+
 function dibujarBloque(
   doc: jsPDF,
   bloque: BloquePrenda,
@@ -188,16 +256,28 @@ function dibujarBloque(
 ) {
   let y = y0;
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
+  const detallado = (bloque.estiloPdf ?? encabezado.estiloPdf) === "detallado";
+  const pideProveedor = Boolean(encabezado.columnaCodProveedor);
   const anchoPagina = doc.internal.pageSize.getWidth();
-  const layout = layoutCajasTalla(tallas.length, anchoPagina, PDF_MARGEN_MM);
-  const { colColor, colTalla, anchoTabla } = layout;
+  const layout = layoutCajasTalla(
+    tallas.length,
+    anchoPagina,
+    PDF_MARGEN_MM,
+    pideProveedor ? ANCHO_COD_PROVEEDOR_MM : 0,
+    detallado ? ANCHO_COLOR_DETALLADO_MM : ANCHO_COLOR_PREF_MM,
+  );
+  const { colColor, colTalla, colProveedor, anchoTabla } = layout;
+  const conProveedor = pideProveedor && colProveedor >= 8;
   const totales = totalesDeBloque({ ...bloque, tallas });
+  const altoDatos = detallado ? ALTO_FILA_DATOS_DETALLE : ALTO_FILA;
+  const altoTabla = ALTO_FILA + altoDatos * bloque.filas.length + ALTO_FILA;
+  const identidad = plano(lineaClaveNombre(bloque.sku, bloque.nombre));
 
-  y = asegurarEspacio(doc, y, ALTO_CLAVE + 8, encabezado);
+  y = asegurarEspacio(doc, y, ALTO_CLAVE + 10 + altoTabla, encabezado);
   fill(doc, PDF_COLORES.claveFondo);
   stroke(doc, PDF_COLORES.borde);
   const soloClave = Boolean(encabezado.claveSolo);
-  const altoBanda = soloClave ? 10 : ALTO_CLAVE + 2;
+  const altoBanda = soloClave ? 10 : ALTO_CLAVE;
   doc.rect(PDF_MARGEN_MM, y - 4, anchoTabla, altoBanda, "FD");
   ink(doc, PDF_COLORES.claveTexto);
   doc.setFont("helvetica", "bold");
@@ -206,81 +286,153 @@ function dibujarBloque(
     maxWidth: Math.max(8, anchoTabla - 4),
   });
   y += 6;
-  if (!soloClave) {
+  if (!soloClave && bloque.sucursalNombre?.trim()) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     ink(doc, PDF_COLORES.subClave);
-    const sub = [tituloNombreArticulo(bloque.nombre), bloque.sucursalNombre]
-      .filter(Boolean)
-      .join(" · ");
-    if (sub) {
-      const wrapped = doc.splitTextToSize(plano(sub), Math.max(8, anchoTabla - 4));
-      doc.text(wrapped[0] ?? "", PDF_MARGEN_MM + 2, y + 1, {
-        maxWidth: Math.max(8, anchoTabla - 4),
-      });
-      y += 5;
-    }
+    doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, y + 1, {
+      maxWidth: Math.max(8, anchoTabla - 4),
+    });
+    y += 5;
   }
   y += 4;
 
-  const filasDatos = bloque.filas.map((f) => [
-    etiquetaColor(f),
-    ...tallas.map((t) => {
-      const n = f.porTalla[t];
-      return n == null ? "" : String(n);
-    }),
-  ]);
-  const filaHeader = ["Color", ...tallas.map((t) => (t && t !== "Cant." ? tituloTalla(t) : t || "Cant."))];
-  const filaTotal = [
-    "Total",
-    ...tallas.map((t) => String(totales.porTalla[t] ?? 0)),
-  ];
-  const filas = [filaHeader, ...filasDatos, filaTotal];
-  const altoTabla = ALTO_FILA * filas.length;
-  y = asegurarEspacio(doc, y, altoTabla + 6, encabezado);
+  if (!detallado && identidad) {
+    ink(doc, [15, 23, 42]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(identidad, PDF_MARGEN_MM, y, {
+      maxWidth: Math.max(8, anchoTabla),
+    });
+    y += 5;
+  }
 
   const fuenteTalla = colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
-  const fuenteColor = colColor < 22 ? 6 : 8;
+  const headersTalla = tallas.map((t) =>
+    t && t !== "Cant." ? tituloTalla(t) : t || "Cant.",
+  );
 
-  filas.forEach((cells, ri) => {
-    const esHeader = ri === 0;
-    const esTotal = ri === filas.length - 1;
-    let x = PDF_MARGEN_MM;
-    cells.forEach((cell, ci) => {
-      const w = ci === 0 ? colColor : colTalla;
-      stroke(doc, PDF_COLORES.borde);
-      if (esHeader && ci === 0) fill(doc, PDF_COLORES.headerFondo);
-      else if (esHeader) fill(doc, PDF_COLORES.tallaHeaderFondo);
-      else if (esTotal) fill(doc, PDF_COLORES.totalFondo);
-      else if (ci === 0) fill(doc, PDF_COLORES.colorColFondo);
-      else fill(doc, ri % 2 === 0 ? PDF_COLORES.tallaPar : PDF_COLORES.tallaImpar);
-      doc.rect(x, y, w, ALTO_FILA, "FD");
-      if (esHeader && ci === 0) ink(doc, PDF_COLORES.headerTexto);
-      else if (esHeader) ink(doc, PDF_COLORES.tallaHeaderTexto);
-      else if (esTotal) ink(doc, PDF_COLORES.totalTexto);
-      else ink(doc, [15, 23, 42]);
-      doc.setFont(
-        "helvetica",
-        esHeader || esTotal || ci === 0 ? "bold" : "normal",
-      );
-      doc.setFontSize(ci === 0 ? fuenteColor : fuenteTalla);
-      const txt = plano(cell);
-      if (ci === 0) {
-        if (w >= 4) {
-          doc.text(txt, x + 1.2, y + 5.4, {
-            maxWidth: Math.max(2, w - 2.2),
-          });
-        }
-      } else {
-        doc.text(txt, x + w / 2, y + 5.4, {
-          align: "center",
-          maxWidth: Math.max(2, w - 1),
-        });
-      }
-      x += w;
+  function celdasTalla(
+    valores: string[],
+    alto: number,
+    fondoTalla: () => readonly [number, number, number],
+    tinta: readonly [number, number, number],
+    negrita: boolean,
+  ) {
+    let x = PDF_MARGEN_MM + colColor + (conProveedor ? colProveedor : 0);
+    valores.forEach((cell) => {
+      pintarCaja(doc, x, y, colTalla, alto, fondoTalla());
+      ink(doc, tinta);
+      doc.setFont("helvetica", negrita ? "bold" : "normal");
+      doc.setFontSize(fuenteTalla);
+      doc.text(plano(cell), x + colTalla / 2, y + alto / 2 + 1.1, {
+        align: "center",
+        maxWidth: Math.max(2, colTalla - 1),
+      });
+      x += colTalla;
     });
-    y += ALTO_FILA;
+  }
+
+  pintarCaja(doc, PDF_MARGEN_MM, y, colColor, ALTO_FILA, PDF_COLORES.headerFondo);
+  ink(doc, PDF_COLORES.headerTexto);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("Color", PDF_MARGEN_MM + 1.4, y + 5.4);
+  if (conProveedor) {
+    pintarCaja(
+      doc,
+      PDF_MARGEN_MM + colColor,
+      y,
+      colProveedor,
+      ALTO_FILA,
+      PDF_COLORES.headerFondo,
+    );
+    doc.text("Cod. proveedor", PDF_MARGEN_MM + colColor + colProveedor / 2, y + 5.4, {
+      align: "center",
+      maxWidth: Math.max(4, colProveedor - 1.5),
+    });
+  }
+  celdasTalla(
+    headersTalla,
+    ALTO_FILA,
+    () => PDF_COLORES.tallaHeaderFondo,
+    PDF_COLORES.tallaHeaderTexto,
+    true,
+  );
+  y += ALTO_FILA;
+
+  bloque.filas.forEach((fila, ri) => {
+    dibujarCeldaColor(
+      doc,
+      PDF_MARGEN_MM,
+      y,
+      colColor,
+      altoDatos,
+      fila,
+      bloque,
+      detallado,
+    );
+    if (conProveedor) {
+      pintarCaja(
+        doc,
+        PDF_MARGEN_MM + colColor,
+        y,
+        colProveedor,
+        altoDatos,
+        ri % 2 === 0 ? PDF_COLORES.tallaPar : PDF_COLORES.tallaImpar,
+      );
+      const cod = plano(bloque.codigoProveedor ?? "");
+      ink(doc, [15, 23, 42]);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      if (cod) {
+        doc.text(
+          textoParaAncho(doc, cod, colProveedor - 2),
+          PDF_MARGEN_MM + colColor + colProveedor / 2,
+          y + altoDatos / 2 + 1.1,
+          {
+            align: "center",
+            maxWidth: Math.max(3, colProveedor - 2),
+          },
+        );
+      }
+    }
+    celdasTalla(
+      tallas.map((t) => {
+        const n = fila.porTalla[t];
+        return n == null ? "" : String(n);
+      }),
+      altoDatos,
+      () => (ri % 2 === 0 ? PDF_COLORES.tallaPar : PDF_COLORES.tallaImpar),
+      [15, 23, 42],
+      false,
+    );
+    y += altoDatos;
   });
+
+  pintarCaja(doc, PDF_MARGEN_MM, y, colColor, ALTO_FILA, PDF_COLORES.totalFondo);
+  ink(doc, PDF_COLORES.totalTexto);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("Total", PDF_MARGEN_MM + 1.4, y + 5.4);
+  if (conProveedor) {
+    pintarCaja(
+      doc,
+      PDF_MARGEN_MM + colColor,
+      y,
+      colProveedor,
+      ALTO_FILA,
+      PDF_COLORES.totalFondo,
+    );
+  }
+  celdasTalla(
+    tallas.map((t) => String(totales.porTalla[t] ?? 0)),
+    ALTO_FILA,
+    () => PDF_COLORES.totalFondo,
+    PDF_COLORES.totalTexto,
+    true,
+  );
+  y += ALTO_FILA;
 
   ink(doc, PDF_COLORES.nota);
   doc.setFont("helvetica", "bold");
@@ -307,6 +459,10 @@ export function construirPdfBloques(
     claveSolo:
       encabezado?.claveSolo ??
       esPdfExistencias(encabezado?.tituloDoc ?? titulo),
+    estiloPdf: encabezado?.estiloPdf ?? "compacto",
+    columnaCodProveedor:
+      encabezado?.columnaCodProveedor ??
+      /pedido/i.test(encabezado?.tituloDoc ?? titulo),
   };
   const anchoUtil = doc.internal.pageSize.getWidth() - PDF_MARGEN_MM * 2;
   let y = dibujarEncabezadoPagina(doc, cabe);

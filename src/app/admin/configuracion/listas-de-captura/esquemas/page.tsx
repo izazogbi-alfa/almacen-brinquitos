@@ -11,6 +11,11 @@ import {
   useEditorCatalogos,
 } from "@/components/use-editor-catalogos";
 import type { EsquemaCatalogo } from "@/lib/types";
+import { toast } from "sonner";
+import {
+  elegirEstiloPdf,
+  MENSAJE_ESTILO_PDF_OBLIGATORIO,
+} from "@/lib/pdf-estilo";
 
 function PaginaEsquemas() {
   const { permitido, draft, setDraft, guardando, guardarBloque } =
@@ -26,7 +31,7 @@ function PaginaEsquemas() {
     <div className="space-y-4">
       <CabeceraConfiguracion
         titulo="Esquemas de conteo"
-        descripcion="Tú armas los esquemas. No hay listas de fábrica (niño 0–60, letra, accesorio). Cada bloque se guarda con su botón Guardar."
+        descripcion="Tú armas los esquemas. No hay listas de fábrica (niño 0–60, letra, accesorio). Cada bloque se guarda con su botón Guardar. Hay que elegir PDF compacto o detallado: sin eso no se guarda. Los esquemas viejos sin corte lo piden al editarlos."
       />
       <section className="space-y-3 rounded-xl border p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -69,9 +74,14 @@ function PaginaEsquemas() {
           type="button"
           className="h-12 w-full"
           disabled={guardando === "esquemas-orden" || draft.esquemas.length === 0}
-          onClick={() =>
-            void guardarBloque("esquemas-orden", { esquemas: draft.esquemas })
-          }
+          onClick={() => {
+            const falta = draft.esquemas.find((e) => !elegirEstiloPdf(e.estiloPdf));
+            if (falta) {
+              toast.error(MENSAJE_ESTILO_PDF_OBLIGATORIO);
+              return;
+            }
+            void guardarBloque("esquemas-orden", { esquemas: draft.esquemas });
+          }}
         >
           {guardando === "esquemas-orden" ? "Guardando…" : "Guardar"}
         </Button>

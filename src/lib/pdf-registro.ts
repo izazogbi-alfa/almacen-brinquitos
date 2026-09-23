@@ -39,6 +39,7 @@ function armar(
     fecha: opts.fecha,
     quien: opts.quien,
     claveSolo: opts.claveSolo,
+    columnaCodProveedor: sesion.modulo === "pedidos",
   });
   return { opts, bloques, encabezado };
 }

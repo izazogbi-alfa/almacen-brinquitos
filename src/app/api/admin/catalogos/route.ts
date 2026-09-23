@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cookiesCatalogos } from "@/server/catalogos-persist";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { parseLista } from "@/lib/listas";
+import { elegirEstiloPdf, MENSAJE_ESTILO_PDF_OBLIGATORIO } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
 import { exigirModulo } from "@/server/auth";
 import { guardarCatalogosEnStore, hidratarCatalogos } from "@/server/store";
@@ -28,18 +29,26 @@ export async function POST(request: Request) {
     const store = await hidratarCatalogos((name) => jar.get(name)?.value);
     const base = normalizarCatalogos(store.catalogos);
     const esquemas: EsquemaCatalogo[] = Array.isArray(body.esquemas)
-      ? body.esquemas.map((e, i) => ({
-          id: (e.id || `esq-${i + 1}`).trim(),
-          nombre: (e.nombre || "Esquema").trim(),
-          tallas: Array.isArray(e.tallas)
-            ? e.tallas.map((t) => t.trim()).filter(Boolean)
-            : parseLista(String(e.tallas ?? "")),
-        }))
+      ? body.esquemas.map((e, i) => {
+          const estiloPdf = elegirEstiloPdf(e.estiloPdf);
+          return {
+            id: (e.id || `esq-${i + 1}`).trim(),
+            nombre: (e.nombre || "Esquema").trim(),
+            tallas: Array.isArray(e.tallas)
+              ? e.tallas.map((t) => t.trim()).filter(Boolean)
+              : parseLista(String(e.tallas ?? "")),
+            ...(estiloPdf ? { estiloPdf } : {}),
+          };
+        })
       : base.esquemas;
     const ids = new Set<string>();
     for (const e of esquemas) {
       if (ids.has(e.id)) throw new Error("Hay esquemas con el mismo id.");
       ids.add(e.id);
+      const existia = base.esquemas.some((b) => b.id === e.id);
+      if (!elegirEstiloPdf(e.estiloPdf) && !existia) {
+        throw new Error(MENSAJE_ESTILO_PDF_OBLIGATORIO);
+      }
     }
     const siguiente = normalizarCatalogos({
       esquemas,

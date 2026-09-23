@@ -43,8 +43,8 @@ export function AccionesPdfRegistro({ sesion }: { sesion: SesionCaptura }) {
   }
 
   function ver() {
-    setViendo(true);
     if (sinLineas()) return;
+    setViendo(true);
   }
 
   function descargar() {
@@ -123,9 +123,9 @@ function VisorPdfRegistro({
         <DialogHeader className="pr-8">
           <DialogTitle>PDF · {titulo}</DialogTitle>
           <DialogDescription>
-            Carta horizontal, igual que el archivo. En existencias la franja
-            verde solo lleva la Clave. En el teléfono gira la pantalla si se ve
-            chico.
+            El PDF sigue el esquema de la prenda (compacto o detallado). En
+            existencias la franja verde solo lleva la Clave. En el teléfono
+            gira la pantalla si se ve chico.
           </DialogDescription>
         </DialogHeader>
         {!tiene ? (
@@ -141,6 +141,7 @@ function VisorPdfRegistro({
               notas={notas}
               bloques={bloques}
               claveSolo={opts.claveSolo}
+              columnaCodProveedor={sesion.modulo === "pedidos"}
             />
           </div>
         )}

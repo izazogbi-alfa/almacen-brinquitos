@@ -8,7 +8,7 @@
     "start": "next start --hostname 0.0.0.0 --port 4317",
     "lint": "eslint",
     "test:pdf-layout": "node --experimental-strip-types scripts/test-pdf-layout.ts",
-    "test:pdf-page": "node --experimental-strip-types scripts/test-pdf-jspdf.ts && node --experimental-strip-types scripts/test-pdf-existencias.ts && node --experimental-strip-types scripts/test-pdf-registro.ts",
+    "test:pdf-page": "node --experimental-strip-types scripts/test-pdf-jspdf.ts && node --experimental-strip-types scripts/test-pdf-existencias.ts && node --experimental-strip-types scripts/test-pdf-registro.ts && npx --yes tsx scripts/test-pdf-estilos.ts",
     "test:sesion": "node --experimental-strip-types scripts/test-sesion-inactividad.ts && node --experimental-strip-types scripts/test-sesion-pendiente.ts",
     "test:pdf-colores": "node --experimental-strip-types scripts/test-pdf-colores.ts",
     "test:titulo": "node --experimental-strip-types scripts/test-titulo-etiqueta.ts",

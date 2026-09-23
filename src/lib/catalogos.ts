@@ -6,6 +6,7 @@ import {
   nombreArticuloAlGuardar,
   tituloEtiqueta,
 } from "@/lib/titulo-etiqueta";
+import { elegirEstiloPdf, parseEstiloPdf } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo, Producto } from "@/lib/types";
 
 /** Solo para detectar la semilla de fábrica; no se asigna a artículos ni se restaura al arrancar. */
@@ -88,11 +89,15 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
   const esquemas = Array.isArray(raw.esquemas)
     ? raw.esquemas
         .filter((e) => e && typeof e === "object")
-        .map((e) => ({
-          id: e.id?.trim() || `esq-${Date.now()}`,
-          nombre: tituloEtiqueta(e.nombre?.trim() || "Esquema"),
-          tallas: listaTallas(Array.isArray(e.tallas) ? e.tallas : []),
-        }))
+        .map((e) => {
+          const estiloPdf = elegirEstiloPdf(e.estiloPdf);
+          return {
+            id: e.id?.trim() || `esq-${Date.now()}`,
+            nombre: tituloEtiqueta(e.nombre?.trim() || "Esquema"),
+            tallas: listaTallas(Array.isArray(e.tallas) ? e.tallas : []),
+            ...(estiloPdf ? { estiloPdf } : {}),
+          };
+        })
         .filter((e) => !esEsquemaDeFabrica(e))
     : [];
   const empresaNombre = raw.empresaNombre?.trim().slice(0, 80);
@@ -126,6 +131,14 @@ export function tallasDeEsquema(
   const esquema = esquemaPorId(catalogos, esquemaId);
   if (!esquema) return [];
   return esquema.tallas;
+}
+
+export function estiloPdfDeArticulo(
+  producto: Pick<Producto, "esquemaConteo"> | undefined,
+  catalogos: Catalogos,
+) {
+  const esquema = esquemaPorId(catalogos, producto?.esquemaConteo);
+  return parseEstiloPdf(esquema?.estiloPdf);
 }
 
 function esIdEsquemaFabrica(id: string) {

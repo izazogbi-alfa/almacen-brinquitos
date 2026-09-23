@@ -2,14 +2,21 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { DialogQuitarConClave } from "@/components/dialog-quitar-con-clave";
 import { ListaOrdenable, TEXTO_ORDEN } from "@/components/lista-ordenable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseLista, quitarDeLista } from "@/lib/listas";
+import {
+  elegirEstiloPdf,
+  exigirEstiloPdf,
+  MENSAJE_ESTILO_PDF_OBLIGATORIO,
+} from "@/lib/pdf-estilo";
 import { listaTallas, listaTitulo, tituloEtiqueta, tituloTalla } from "@/lib/titulo-etiqueta";
 import type { EsquemaCatalogo } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function EditorChips({
   titulo,
@@ -130,12 +137,28 @@ export function EditorEsquema({
   const [entrada, setEntrada] = useState("");
   const [quitarEsquema, setQuitarEsquema] = useState(false);
   const [quitarTalla, setQuitarTalla] = useState<string | null>(null);
+  const [avisoEstilo, setAvisoEstilo] = useState(false);
+  const estiloElegido = elegirEstiloPdf(esquema.estiloPdf);
 
   function agregar() {
     const nuevos = parseLista(entrada).map(tituloTalla);
     if (nuevos.length === 0) return;
     onChange({ ...esquema, tallas: listaTallas([...esquema.tallas, ...nuevos]) });
     setEntrada("");
+  }
+
+  function guardarSiHayPdf(siguiente: EsquemaCatalogo) {
+    try {
+      const estiloPdf = exigirEstiloPdf(siguiente.estiloPdf);
+      setAvisoEstilo(false);
+      return onGuardar({ ...siguiente, estiloPdf });
+    } catch (err) {
+      setAvisoEstilo(true);
+      toast.error(
+        err instanceof Error ? err.message : MENSAJE_ESTILO_PDF_OBLIGATORIO,
+      );
+      return Promise.resolve();
+    }
   }
 
   return (
@@ -153,6 +176,44 @@ export function EditorEsquema({
             })
           }
         />
+      </div>
+      <div
+        className={cn(
+          "space-y-2 rounded-lg p-2",
+          avisoEstilo && !estiloElegido && "ring-2 ring-destructive",
+        )}
+      >
+        <p className="text-sm font-medium">PDF de este esquema</p>
+        <p className="text-sm text-muted-foreground">
+          Elige uno. Todas las prendas con este esquema salen así. No se
+          pregunta al imprimir. Compacto: clave y nombre arriba. Detallado:
+          clave y nombre en cada color.
+        </p>
+        {!estiloElegido ? (
+          <p className="text-sm font-medium text-destructive" role="alert">
+            {MENSAJE_ESTILO_PDF_OBLIGATORIO}
+          </p>
+        ) : null}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <BotonEstiloPdf
+            activo={estiloElegido === "compacto"}
+            titulo="PDF compacto"
+            detalle="Clave · nombre una vez, arriba de las tallas."
+            onClick={() => {
+              setAvisoEstilo(false);
+              onChange({ ...esquema, estiloPdf: "compacto" });
+            }}
+          />
+          <BotonEstiloPdf
+            activo={estiloElegido === "detallado"}
+            titulo="PDF detallado"
+            detalle="Clave · nombre debajo de cada color."
+            onClick={() => {
+              setAvisoEstilo(false);
+              onChange({ ...esquema, estiloPdf: "detallado" });
+            }}
+          />
+        </div>
       </div>
       <p className="text-sm text-muted-foreground">
         Tallas de este esquema. Vacío = se cuenta solo con color y cantidad.
@@ -193,7 +254,7 @@ export function EditorEsquema({
         className="h-12 w-full"
         disabled={guardando}
         onClick={() =>
-          void onGuardar({
+          void guardarSiHayPdf({
             ...esquema,
             nombre: tituloEtiqueta(esquema.nombre) || esquema.nombre,
             tallas: listaTallas(esquema.tallas),
@@ -238,9 +299,36 @@ export function EditorEsquema({
           };
           onChange(sig);
           setQuitarTalla(null);
-          void onGuardar(sig);
+          void guardarSiHayPdf(sig);
         }}
       />
     </div>
+  );
+}
+
+function BotonEstiloPdf({
+  activo,
+  titulo,
+  detalle,
+  onClick,
+}: {
+  activo: boolean;
+  titulo: string;
+  detalle: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant={activo ? "default" : "outline"}
+      className={cn(
+        "h-auto min-h-20 w-full flex-col items-start gap-1 whitespace-normal px-4 py-3 text-left",
+      )}
+      aria-pressed={activo}
+      onClick={onClick}
+    >
+      <span className="text-base font-semibold">{titulo}</span>
+      <span className="text-xs font-normal opacity-90">{detalle}</span>
+    </Button>
   );
 }
