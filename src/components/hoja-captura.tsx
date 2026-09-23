@@ -82,11 +82,12 @@ export function HojaCaptura({
 
   const slim =
     "h-10 px-1.5 text-[11px] leading-tight font-medium sm:h-11 sm:text-xs";
-  const tallaVista = talla ? tituloTalla(talla) : "Sin talla";
+  const tallaVista = talla ? tituloTalla(talla) : "";
   const colorVista = color ? tituloEtiqueta(color) : "";
-  const titulo = porTalla
-    ? `${tallaVista}${colorVista ? ` · ${colorVista}` : ""}`
-    : `${colorVista || color}${talla ? ` · ${tituloTalla(talla)}` : ""}`;
+  const titulo =
+    colorVista && tallaVista
+      ? `${colorVista} · ${tallaVista}`
+      : colorVista || tallaVista || "Captura";
 
   return (
     <>
@@ -98,7 +99,9 @@ export function HojaCaptura({
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
         <div className="flex items-center justify-between gap-2">
-          <p className="font-heading min-w-0 truncate text-lg font-semibold">
+          <p
+            className="font-heading inline-flex min-h-9 min-w-0 max-w-[calc(100%-4.5rem)] items-center truncate rounded-full bg-teal-800 px-3.5 py-1.5 text-base font-bold tracking-wide text-white sm:min-h-10 sm:text-lg"
+          >
             {titulo}
           </p>
           <Button
