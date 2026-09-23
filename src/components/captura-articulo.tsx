@@ -29,7 +29,8 @@ import {
   notasPdfSeleccion,
 } from "@/lib/seleccion-mismo-esquema";
 import {
-  colorAnteriorEnLista,
+  destinoRegresarColor,
+  destinoSaltarColor,
   siguienteColorEnLista,
   siguienteTallaEnEsquema,
   tallaAnteriorEnEsquema,
@@ -122,9 +123,7 @@ export function CapturaArticulo({
   const [especificacion, setEspecificacion] = useState("");
   const [cantidad, setCantidad] = useState("1");
   const [borrador, setBorrador] = useState<CeldaBorrador[]>([]);
-  const [eje, setEje] = useState<EjeCaptura>(() =>
-    modo === "pedido" ? "color" : "talla",
-  );
+  const [eje, setEje] = useState<EjeCaptura>("talla");
   const [lineas, setLineas] = useState<LineaTabla[]>(lineasIniciales ?? []);
   const cantidadRef = useRef<HTMLInputElement>(null);
 
@@ -176,8 +175,7 @@ export function CapturaArticulo({
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
   const tallasDeRejilla = encabezados.filter((t) => t !== "");
-  const elegirEje = modo !== "pedido";
-  const ejeActivo: EjeCaptura = elegirEje ? eje : "color";
+  const ejeActivo: EjeCaptura = eje;
 
   const coincidenciasDelEsquema = articulosDelMismoEsquema(
     coincidencias,
@@ -549,47 +547,80 @@ export function CapturaArticulo({
     void irAlSiguienteColorTrasGuardar();
   }
 
-  function saltarEje() {
+  function saltarTalla() {
     setBorrador([]);
-    if (ejeActivo === "talla") {
-      const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
-      if (next) {
-        aplicarTalla(next);
-        return;
-      }
-      const otro = tallasDeRejilla.find((t) => t !== tallaActiva);
-      if (otro) aplicarTalla(otro);
-      else enfocarCantidad();
-      return;
-    }
-    const next = siguienteColorEnLista(colores, colorActivo);
+    const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
     if (next) {
-      aplicarColor(next);
+      aplicarTalla(next);
       return;
     }
-    const otro = colores.find((c) => c !== colorActivo);
-    if (otro) aplicarColor(otro);
+    const otro = tallasDeRejilla.find((t) => t !== tallaActiva);
+    if (otro) aplicarTalla(otro);
     else enfocarCantidad();
   }
 
-  function regresarEje() {
-    if (ejeActivo === "talla") {
-      const prev = tallaAnteriorEnEsquema(encabezados, tallaActiva);
-      if (!prev) {
-        toast.message("Ya es la primera talla.");
-        return;
-      }
-      setBorrador([]);
-      aplicarTalla(prev);
-      return;
-    }
-    const prev = colorAnteriorEnLista(colores, colorActivo);
+  function regresarTalla() {
+    const prev = tallaAnteriorEnEsquema(encabezados, tallaActiva);
     if (!prev) {
-      toast.message("Ya es el primer color.");
+      toast.message("Ya es la primera talla.");
       return;
     }
     setBorrador([]);
-    aplicarColor(prev);
+    aplicarTalla(prev);
+  }
+
+  function saltarColor() {
+    const dest = destinoSaltarColor({
+      eje: ejeActivo,
+      colores,
+      color: colorActivo,
+      tallas: encabezados,
+      talla: tallaActiva,
+    });
+    if (!dest) {
+      toast.message("Ya es el último color.");
+      return;
+    }
+    if (ejeActivo === "talla") {
+      setBorrador((prev) =>
+        prev.filter(
+          (p) => !(p.talla === tallaActiva && p.color === colorActivo),
+        ),
+      );
+      setColor(dest.color);
+      setCantidad(cantidadInicial(dest.talla, dest.color));
+      enfocarCantidad();
+      return;
+    }
+    setBorrador([]);
+    aplicarColor(dest.color);
+  }
+
+  function regresarColor() {
+    const dest = destinoRegresarColor({
+      eje: ejeActivo,
+      colores,
+      color: colorActivo,
+      tallas: encabezados,
+      talla: tallaActiva,
+    });
+    if (!dest) {
+      toast.message("Ya es el primer color.");
+      return;
+    }
+    if (ejeActivo === "talla") {
+      setBorrador((prev) =>
+        prev.filter(
+          (p) => !(p.talla === tallaActiva && p.color === colorActivo),
+        ),
+      );
+      setColor(dest.color);
+      setCantidad(cantidadInicial(dest.talla, dest.color));
+      enfocarCantidad();
+      return;
+    }
+    setBorrador([]);
+    aplicarColor(dest.color);
   }
 
   async function pendienteGuardar() {
@@ -727,40 +758,39 @@ export function CapturaArticulo({
               </div>
               {esquemaActivo ? (
                 <div className="space-y-2">
-                  {elegirEje ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Cómo capturar</p>
-                      <p className="text-xs text-muted-foreground">
-                        Por talla: eliges una talla y Enter recorre todos los
-                        colores. Por color: eliges un color y Enter recorre las
-                        tallas.
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          type="button"
-                          variant={ejeActivo === "talla" ? "default" : "outline"}
-                          className={cn(
-                            "h-12 w-full",
-                            ejeActivo === "talla" && btn,
-                          )}
-                          onClick={() => elegirModoCaptura("talla")}
-                        >
-                          Por talla
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={ejeActivo === "color" ? "default" : "outline"}
-                          className={cn(
-                            "h-12 w-full",
-                            ejeActivo === "color" && btn,
-                          )}
-                          onClick={() => elegirModoCaptura("color")}
-                        >
-                          Por color
-                        </Button>
-                      </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Cómo capturar</p>
+                    <p className="text-xs text-muted-foreground">
+                      Por talla: eliges una talla y Enter recorre todos los
+                      colores. Si un color no llegó, Saltar color pasa al
+                      siguiente color en esa misma talla. Por color: eliges un
+                      color y Enter recorre las tallas.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={ejeActivo === "talla" ? "default" : "outline"}
+                        className={cn(
+                          "h-12 w-full",
+                          ejeActivo === "talla" && btn,
+                        )}
+                        onClick={() => elegirModoCaptura("talla")}
+                      >
+                        Por talla
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={ejeActivo === "color" ? "default" : "outline"}
+                        className={cn(
+                          "h-12 w-full",
+                          ejeActivo === "color" && btn,
+                        )}
+                        onClick={() => elegirModoCaptura("color")}
+                      >
+                        Por color
+                      </Button>
                     </div>
-                  ) : null}
+                  </div>
                   {ejeActivo === "talla" ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {(tallasDeRejilla.length > 0
@@ -828,7 +858,7 @@ export function CapturaArticulo({
           {!buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Marca varias prendas del mismo esquema. En Existencias y Recepción elige Por talla (viene primero) o Por color. Por talla: toca una talla, cantidad y Enter recorre los colores; al terminar pasa a la siguiente talla. Por color: toca un color y Enter recorre las tallas. Un PDF junta todas."
+              detalle="Marca varias prendas del mismo esquema. Elige Por talla (viene primero) o Por color. Por talla: toca una talla, cantidad y Enter recorre los colores; Saltar color pasa al siguiente color en esa talla. Por color: toca un color y Enter recorre las tallas. Un PDF junta todas."
             />
           ) : coincidencias.length === 0 ? (
             <EmptyView
@@ -941,22 +971,31 @@ export function CapturaArticulo({
               verde={verde}
               guardando={guardando}
               eje={ejeActivo}
-              puedeRegresar={
-                ejeActivo === "talla"
-                  ? Boolean(tallaAnteriorEnEsquema(encabezados, tallaActiva))
-                  : Boolean(colorAnteriorEnLista(colores, colorActivo))
-              }
+              puedeRegresarColor={Boolean(
+                destinoRegresarColor({
+                  eje: ejeActivo,
+                  colores,
+                  color: colorActivo,
+                  tallas: encabezados,
+                  talla: tallaActiva,
+                }),
+              )}
+              puedeRegresarTalla={Boolean(
+                tallaAnteriorEnEsquema(encabezados, tallaActiva),
+              )}
               onCantidad={setCantidad}
               onEnter={avanzarEnter}
-              onSaltar={saltarEje}
-              onRegresar={regresarEje}
+              onSaltarColor={saltarColor}
+              onRegresarColor={regresarColor}
+              onSaltarTalla={saltarTalla}
+              onRegresarTalla={regresarTalla}
               onCerrar={() => setMostrandoCaptura(false)}
               onPendiente={() => void pendienteGuardar()}
               onTerminar={() => void terminarGuardar()}
             />
           ) : null}
 
-          <div className={mostrandoCaptura ? "pb-72" : undefined}>
+          <div className={mostrandoCaptura ? "pb-80" : undefined}>
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
             <p className="mb-2 text-xs text-muted-foreground">
               Cada prenda es un bloque (clave y nombre arriba). Colores de

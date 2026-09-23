@@ -99,9 +99,9 @@ function NuevoPedidoContent() {
           Nuevo pedido
         </h2>
         <p className="text-sm text-muted-foreground">
-          Marca varias prendas del mismo esquema. Color, luego tallas. Un
-          pedido y un PDF con todas. Iza autoriza. Si quedó a medias, retómalo
-          en Registros → Pedidos pendientes.
+          Marca varias prendas del mismo esquema. Por talla (viene primero) o
+          Por color. Un pedido y un PDF con todas. Iza autoriza. Si quedó a
+          medias, retómalo en Registros → Pedidos pendientes.
         </p>
         <EstadoSesion modulo="pedidos" />
         <BotonTerminarSesion modulo="pedidos" />

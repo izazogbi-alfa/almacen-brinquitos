@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { tituloEtiqueta, tituloTalla } from "@/lib/titulo-etiqueta";
@@ -19,11 +19,14 @@ export function HojaCaptura({
   verde,
   guardando,
   eje = "color",
-  puedeRegresar,
+  puedeRegresarColor,
+  puedeRegresarTalla,
   onCantidad,
   onEnter,
-  onSaltar,
-  onRegresar,
+  onSaltarColor,
+  onRegresarColor,
+  onSaltarTalla,
+  onRegresarTalla,
   onCerrar,
   onPendiente,
   onTerminar,
@@ -34,23 +37,29 @@ export function HojaCaptura({
   verde?: boolean;
   guardando?: boolean;
   eje?: "talla" | "color";
-  puedeRegresar: boolean;
+  puedeRegresarColor: boolean;
+  puedeRegresarTalla?: boolean;
   onCantidad: (valor: string) => void;
   onEnter: () => void;
-  onSaltar: () => void;
-  onRegresar: () => void;
+  onSaltarColor: () => void;
+  onRegresarColor: () => void;
+  onSaltarTalla?: () => void;
+  onRegresarTalla?: () => void;
   onCerrar: () => void;
   onPendiente: () => void;
   onTerminar: () => void;
 }) {
   const [pisar, setPisar] = useState(true);
+  const [celda, setCelda] = useState(`${color}::${talla}`);
   const acento = verde
     ? "bg-emerald-700 text-white hover:bg-emerald-800"
     : "bg-teal-800 text-white hover:bg-teal-900";
-
-  useEffect(() => {
+  const porTalla = eje === "talla";
+  const celdaAhora = `${color}::${talla}`;
+  if (celda !== celdaAhora) {
+    setCelda(celdaAhora);
     setPisar(true);
-  }, [color, talla]);
+  }
 
   function tecla(k: string) {
     if (k === "enter") {
@@ -72,16 +81,12 @@ export function HojaCaptura({
   }
 
   const slim =
-    "h-9 px-1.5 text-[11px] leading-tight font-medium sm:text-xs";
-  const etiquetaRegresar =
-    eje === "talla" ? "Regresar talla" : "Regresar color";
-  const etiquetaSaltar = eje === "talla" ? "Saltar talla" : "Saltar color";
+    "h-10 px-1.5 text-[11px] leading-tight font-medium sm:h-11 sm:text-xs";
   const tallaVista = talla ? tituloTalla(talla) : "Sin talla";
   const colorVista = color ? tituloEtiqueta(color) : "";
-  const titulo =
-    eje === "talla"
-      ? `${tallaVista}${colorVista ? ` · ${colorVista}` : ""}`
-      : `${colorVista || color}${talla ? ` · ${tituloTalla(talla)}` : ""}`;
+  const titulo = porTalla
+    ? `${tallaVista}${colorVista ? ` · ${colorVista}` : ""}`
+    : `${colorVista || color}${talla ? ` · ${tituloTalla(talla)}` : ""}`;
 
   return (
     <>
@@ -106,17 +111,43 @@ export function HojaCaptura({
           </Button>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {porTalla ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className={slim}
+                disabled={!puedeRegresarTalla}
+                onClick={onRegresarTalla}
+              >
+                Regresar talla
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className={slim}
+                onClick={onSaltarTalla}
+              >
+                Saltar talla
+              </Button>
+            </>
+          ) : null}
           <Button
             type="button"
             variant="outline"
             className={slim}
-            disabled={!puedeRegresar}
-            onClick={onRegresar}
+            disabled={!puedeRegresarColor}
+            onClick={onRegresarColor}
           >
-            {etiquetaRegresar}
+            Regresar color
           </Button>
-          <Button type="button" variant="outline" className={slim} onClick={onSaltar}>
-            {etiquetaSaltar}
+          <Button
+            type="button"
+            variant="outline"
+            className={slim}
+            onClick={onSaltarColor}
+          >
+            Saltar color
           </Button>
           <Button
             type="button"

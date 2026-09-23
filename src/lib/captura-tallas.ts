@@ -45,3 +45,41 @@ export function tallaAnteriorEnEsquema(
   if (i <= 0) return null;
   return lista[i - 1];
 }
+
+export type EjeCapturaTallas = "talla" | "color";
+
+export type CeldaCapturaTallas = { color: string; talla: string };
+
+/**
+ * Saltar color: siguiente color. En Por talla se queda en la misma talla
+ * (no recorre el resto de tallas de ese color). En Por color arranca en
+ * la primera talla del siguiente color.
+ */
+export function destinoSaltarColor(opts: {
+  eje: EjeCapturaTallas;
+  colores: string[];
+  color: string;
+  tallas: string[];
+  talla: string;
+}): CeldaCapturaTallas | null {
+  const color = siguienteColorEnLista(opts.colores, opts.color);
+  if (!color) return null;
+  if (opts.eje === "talla") return { color, talla: opts.talla };
+  const primera = opts.tallas.filter((t) => t !== "")[0] ?? "";
+  return { color, talla: primera };
+}
+
+/** Regresar color: color anterior. Misma talla en Por talla. */
+export function destinoRegresarColor(opts: {
+  eje: EjeCapturaTallas;
+  colores: string[];
+  color: string;
+  tallas: string[];
+  talla: string;
+}): CeldaCapturaTallas | null {
+  const color = colorAnteriorEnLista(opts.colores, opts.color);
+  if (!color) return null;
+  if (opts.eje === "talla") return { color, talla: opts.talla };
+  const primera = opts.tallas.filter((t) => t !== "")[0] ?? "";
+  return { color, talla: primera };
+}
