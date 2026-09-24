@@ -179,7 +179,9 @@ export function tocarSesionCaptura(
   aplicarCierresPorInactividad(store, ahora);
   const iso = ahora.toISOString();
   const crearSiFalta = opts?.crearSiFalta !== false;
-  let abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
+  let abierta = store.sesiones.find(
+    (s) => s.modulo === modulo && !s.cerradaEn && s.userId === user.id,
+  );
   if (!abierta) {
     if (!crearSiFalta) {
       if (opts?.borrador != null) return null;
@@ -223,7 +225,13 @@ export function reanudarSesionPendiente(
           Boolean(s.cerradaEn) &&
           s.pendiente,
       )
-    : sesionPendienteDe(store.sesiones, modulo);
+    : store.sesiones.find(
+        (s) =>
+          s.modulo === modulo &&
+          s.userId === user.id &&
+          Boolean(s.cerradaEn) &&
+          s.pendiente,
+      );
   if (!pendiente) return null;
   const abierta = store.sesiones.find((s) => s.modulo === modulo && !s.cerradaEn);
   if (abierta && abierta.id !== pendiente.id) {

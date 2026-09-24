@@ -593,14 +593,10 @@ export function agregarMovimiento(
 
 export function usuarioPorSesion(token: string | undefined) {
   if (!token) return null;
+  const userId = verificarTokenSesion(token);
+  if (!userId) return null;
   const store = readStore();
-  const firmado = verificarTokenSesion(token);
-  if (firmado) {
-    return store.users.find((u) => u.id === firmado) ?? null;
-  }
-  const sesion = store.sessions.find((s) => s.token === token);
-  if (!sesion) return null;
-  return store.users.find((u) => u.id === sesion.userId) ?? null;
+  return store.users.find((u) => u.id === userId) ?? null;
 }
 
 export function contrasenaCoincide(userId: string, password: string) {

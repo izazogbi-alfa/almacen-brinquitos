@@ -1,14 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-
-const PREFIX = "brq1";
-const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-
-function secret() {
-  return process.env.SESSION_SECRET?.trim() || "almacen-brinquitos-demo";
-}
+import { MAX_AGE_MS, PREFIX } from "@/lib/session-token-verify";
+import { sessionSecret } from "@/server/session-secret";
 
 function hmac(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", sessionSecret()).update(payload).digest("hex");
 }
 
 export function firmarTokenSesion(userId: string) {

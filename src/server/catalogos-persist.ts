@@ -12,6 +12,7 @@ import type { Catalogos } from "@/lib/types";
 import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
 import { DOC_CATALOGOS, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
 import { guardarLogoBlob } from "@/server/blob-media";
+import { sessionSecret } from "@/server/session-secret";
 
 export type CatalogosPersistidos = {
   catalogos: Catalogos;
@@ -28,12 +29,8 @@ const GITHUB_FILE = "data/catalogos.json";
 const GITHUB_BRANCH = "catalogos-data";
 const KV_KEY = "almacen-brinquitos:catalogos";
 
-function secret() {
-  return process.env.SESSION_SECRET?.trim() || "almacen-brinquitos-demo";
-}
-
 function hmac(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", sessionSecret()).update(payload).digest("hex");
 }
 
 function firmasIguales(a: string, b: string) {

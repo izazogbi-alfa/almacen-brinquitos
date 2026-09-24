@@ -4,6 +4,7 @@ import { exigirUsuario, jsonUsuario } from "@/server/auth";
 import { hidratarCatalogos, withStore } from "@/server/store";
 import { aplicarCierresPorInactividad } from "@/lib/sesion-store";
 import { sesionesParaCliente } from "@/lib/sesion-captura";
+import { filtrarSesionesVisibles } from "@/server/registro-access";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,9 @@ export async function GET() {
     pedidos: store.pedidos,
     recepciones: store.recepciones,
     movimientos: store.movimientos.slice(0, 80),
-    sesiones: sesionesParaCliente(store.sesiones),
+    sesiones: sesionesParaCliente(
+      filtrarSesionesVisibles(user, store.sesiones),
+    ),
     ultimoGuardado: store.ultimoGuardado,
     catalogos: store.catalogos,
     catalogosGuardadosEn: store.catalogosGuardadosEn ?? null,

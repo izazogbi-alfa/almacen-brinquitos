@@ -73,3 +73,5 @@ npm run dev
 Abre [http://localhost:4317](http://localhost:4317).
 
 En producción (Vercel) las personas, existencias, registros y listas viven en la base; los respaldos del día, el logo y los PDF se guardan en archivos. Sin esas conexiones en local, la app sigue con archivos en `data/` (no se pierden al recargar el navegador). No pegues claves ni cadenas de conexión en el chat ni en este README: solo en el panel del proyecto, si el almacenamiento no las pone solo.
+
+**Variable obligatoria en Vercel:** `SESSION_SECRET` — cadena larga y aleatoria para firmar sesiones y cookies firmadas. Sin ella la app no arranca en producción. Créala en el panel del proyecto (Settings → Environment Variables) y no la compartas.

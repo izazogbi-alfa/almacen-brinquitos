@@ -7,7 +7,7 @@ import {
   type UsuariosPersistidos,
 } from "@/lib/usuarios-persist";
 import type { ModulosUsuario, RolUsuario } from "@/lib/types";
-import { exigirAdmin } from "@/server/auth";
+import { exigirAdmin, exigirCsrf } from "@/server/auth";
 import { hashPassword } from "@/server/passwords";
 import { cookiesUsuarios } from "@/server/usuarios-persist";
 import {
@@ -109,11 +109,19 @@ async function persistirPersonas(
   return { error: null as string | null, data };
 }
 
+function respaldoUsuariosPublico(data: UsuariosPersistidos | null) {
+  if (!data) return null;
+  return {
+    savedAt: data.savedAt,
+    users: data.users.map((u) => publicoDe(u)),
+  };
+}
+
 function jsonPersonas(data: UsuariosPersistidos | null, extra?: object) {
   return NextResponse.json({
     usuarios: usuarioPublicoRespuesta(),
     usuariosGuardadosEn: data?.savedAt ?? readStore().usuariosGuardadosEn ?? null,
-    respaldoUsuarios: data,
+    respaldoUsuarios: respaldoUsuariosPublico(data),
     ...extra,
   });
 }
@@ -153,6 +161,8 @@ export async function POST(request: Request) {
       NextResponse.json({ error: "Solo quien administra." }, { status: 403 })
     );
   }
+  const csrf = exigirCsrf(request);
+  if (csrf.error) return csrf.error;
 
   const jar = await cookies();
   await hidratarUsuarios((name) => jar.get(name)?.value);

@@ -6,7 +6,7 @@ import {
   type FilaCatalogo,
 } from "@/lib/actualizar-catalogo";
 import { sanitizarArticuloSinFabrica } from "@/lib/catalogos";
-import { exigirAdmin } from "@/server/auth";
+import { exigirAdmin, exigirCsrf } from "@/server/auth";
 import { contrasenaCoincide, withStore } from "@/server/store";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +44,8 @@ export async function POST(request: Request) {
       )
     );
   }
+  const csrf = exigirCsrf(request);
+  if (csrf.error) return csrf.error;
 
   const body = (await request.json().catch(() => null)) as {
     filas?: unknown;

@@ -5,7 +5,7 @@ import { normalizarCatalogos } from "@/lib/catalogos";
 import { parseLista } from "@/lib/listas";
 import { elegirEstiloPdf, MENSAJE_ESTILO_PDF_OBLIGATORIO } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
-import { exigirModulo } from "@/server/auth";
+import { exigirCsrf, exigirModulo } from "@/server/auth";
 import { guardarCatalogosEnStore, hidratarCatalogos } from "@/server/store";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,8 @@ export async function POST(request: Request) {
       NextResponse.json({ error: "No tienes módulo de configuración." }, { status: 403 })
     );
   }
+  const csrf = exigirCsrf(request);
+  if (csrf.error) return csrf.error;
 
   const body = (await request.json().catch(() => null)) as Partial<Catalogos> | null;
   if (!body) {

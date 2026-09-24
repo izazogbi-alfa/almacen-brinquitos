@@ -6,10 +6,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { rutaSeguraTrasLogin } from "@/lib/safe-redirect";
 
 export default function LoginPage() {
   const router = useRouter();
-  const next = useSearchParams().get("next") || "/";
+  const next = rutaSeguraTrasLogin(useSearchParams().get("next"));
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -29,7 +30,7 @@ export default function LoginPage() {
         toast.error(data.error ?? "No se pudo entrar.");
         return;
       }
-      router.replace(next.startsWith("/") ? next : "/");
+      router.replace(next);
       router.refresh();
     } finally {
       setEnviando(false);

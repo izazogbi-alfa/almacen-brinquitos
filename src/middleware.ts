@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { COOKIE_SESION, COOKIE_SESION_ANTIGUA } from "@/lib/session-cookie";
+import { verificarTokenSesionAsync } from "@/lib/session-token-verify";
+import { rutaSeguraTrasLogin } from "@/lib/safe-redirect";
+import { sessionSecretSeguro } from "@/server/session-secret";
 
 function respuestaConLimpieza(request: NextRequest, response: NextResponse) {
   const https = request.nextUrl.protocol === "https:";
@@ -18,9 +21,13 @@ function respuestaConLimpieza(request: NextRequest, response: NextResponse) {
   return response;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sesion = request.cookies.get(COOKIE_SESION)?.value?.trim();
+  const token = request.cookies.get(COOKIE_SESION)?.value?.trim();
+  const secret = sessionSecretSeguro();
+  const userId =
+    token && secret ? await verificarTokenSesionAsync(token, secret) : null;
+  const sesionValida = Boolean(userId);
 
   if (
     pathname.startsWith("/_next") ||
@@ -35,7 +42,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === "/login") {
-    if (sesion) {
+    if (sesionValida) {
       return respuestaConLimpieza(
         request,
         NextResponse.redirect(new URL("/", request.url)),
@@ -46,7 +53,7 @@ export function middleware(request: NextRequest) {
     return respuestaConLimpieza(request, login);
   }
 
-  if (!sesion) {
+  if (!sesionValida) {
     if (pathname.startsWith("/api/")) {
       return respuestaConLimpieza(
         request,
@@ -57,7 +64,7 @@ export function middleware(request: NextRequest) {
       );
     }
     const url = new URL("/login", request.url);
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", rutaSeguraTrasLogin(pathname));
     const redirect = NextResponse.redirect(url);
     redirect.headers.set("Cache-Control", "no-store");
     return respuestaConLimpieza(request, redirect);

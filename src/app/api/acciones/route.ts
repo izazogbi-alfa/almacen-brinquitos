@@ -8,6 +8,8 @@ import {
   sucursalPorId,
 } from "@/lib/sucursales";
 import { exigirUsuario } from "@/server/auth";
+import { csrfValido, rechazarCsrf } from "@/server/csrf";
+import { puedeAccederRegistro } from "@/server/registro-access";
 import { modulosDe } from "@/lib/modulos";
 import {
   agregarMovimiento,
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
       NextResponse.json({ error: "Inicia sesión para continuar." }, { status: 401 })
     );
   }
+  if (!csrfValido(request)) return rechazarCsrf();
 
   const body = (await request.json().catch(() => null)) as {
     accion?: string;
@@ -186,15 +189,26 @@ export async function POST(request: Request) {
         if (body.modulo === "pedidos" && !mods.pedidos) {
           throw new Error("No tienes módulo de pedidos.");
         }
+        const sesionIdReanudar =
+          typeof body.sesionId === "string" ? body.sesionId : undefined;
+        if (sesionIdReanudar) {
+          const objetivo = store.sesiones.find((s) => s.id === sesionIdReanudar);
+          if (objetivo && !puedeAccederRegistro(user, objetivo)) {
+            throw new Error("No tienes acceso a esa captura.");
+          }
+        }
         const sesion = reanudarSesionPendiente(
           store,
           user,
           body.modulo,
           new Date(),
-          typeof body.sesionId === "string" ? body.sesionId : undefined,
+          sesionIdReanudar,
         );
         if (!sesion) {
           throw new Error("No hay una captura pendiente en este módulo.");
+        }
+        if (!puedeAccederRegistro(user, sesion)) {
+          throw new Error("No tienes acceso a esa captura.");
         }
         marcarGuardado(store, user);
         return { sesion };
@@ -221,6 +235,9 @@ export async function POST(request: Request) {
           !esModuloSesion(objetivo.modulo)
         ) {
           throw new Error("Esa captura pendiente ya no está.");
+        }
+        if (!puedeAccederRegistro(user, objetivo)) {
+          throw new Error("No tienes acceso a esa captura.");
         }
         if (objetivo.modulo === "existencias" && !mods.existencias) {
           throw new Error("No tienes módulo de existencias.");
@@ -286,6 +303,9 @@ export async function POST(request: Request) {
         if (!objetivo || !esSesionTerminada(objetivo)) {
           throw new Error("Ese registro terminado ya no está.");
         }
+        if (!puedeAccederRegistro(user, objetivo)) {
+          throw new Error("No tienes acceso a ese registro.");
+        }
         if (objetivo.modulo === "existencias" && !mods.existencias) {
           throw new Error("No tienes módulo de existencias.");
         }
@@ -319,6 +339,9 @@ export async function POST(request: Request) {
         const objetivo = store.sesiones.find((s) => s.id === sesionId);
         if (!objetivo || !objetivo.cerradaEn || objetivo.pendiente) {
           throw new Error("Esa captura terminada ya no está.");
+        }
+        if (!puedeAccederRegistro(user, objetivo)) {
+          throw new Error("No tienes acceso a esa captura.");
         }
         if (objetivo.modulo === "existencias" && !mods.existencias) {
           throw new Error("No tienes módulo de existencias.");

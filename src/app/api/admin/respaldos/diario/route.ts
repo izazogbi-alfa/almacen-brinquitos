@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { exigirAdmin } from "@/server/auth";
+import { exigirAdmin, exigirCsrf } from "@/server/auth";
 import {
   agregarRespaldo,
   cookiesListaRespaldos,
@@ -9,7 +9,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: Request) {
   const { user, error } = await exigirAdmin();
   if (!user) {
     return (
@@ -20,6 +20,8 @@ export async function POST() {
       )
     );
   }
+  const csrf = exigirCsrf(request);
+  if (csrf.error) return csrf.error;
   try {
     const jar = await cookies();
     const resultado = await agregarRespaldo({
