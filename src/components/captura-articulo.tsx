@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Check, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,10 @@ import {
 import { HojaCaptura } from "@/components/hoja-captura";
 import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  APP_CAPTURA_ACTION_BOTTOM,
+  APP_SCROLL_PAD_CON_CAPTURA,
+} from "@/lib/app-chrome";
 import {
   tituloEtiqueta,
   tituloNombreArticulo,
@@ -820,7 +824,21 @@ export function CapturaArticulo({
       {!sucursalId ? (
         extraAfter
       ) : (
-        <>
+        <div
+          className={cn(
+            elegidos.length > 0 &&
+              !enModoCaptura &&
+              "pb-[var(--captura-action-scroll-pad)]",
+          )}
+          style={
+            elegidos.length > 0 && !enModoCaptura
+              ? ({
+                  ["--captura-action-scroll-pad" as string]:
+                    APP_SCROLL_PAD_CON_CAPTURA,
+                } as CSSProperties)
+              : undefined
+          }
+        >
           <form onSubmit={buscar} className="flex gap-2">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -1107,17 +1125,24 @@ export function CapturaArticulo({
           ) : null}
 
           {elegidos.length > 0 && !enModoCaptura ? (
-            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:max-w-5xl">
-              <Button
-                type="button"
-                className={cn(
-                  "pointer-events-auto h-14 w-full text-lg font-semibold shadow-lg",
-                  btn,
-                )}
-                onClick={entrarCaptura}
-              >
-                Capturar ({elegidos.length})
-              </Button>
+            <div
+              role="region"
+              aria-label="Capturar artículos marcados"
+              className="pointer-events-none fixed inset-x-0 z-[35] border-t bg-background/95 px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur-md"
+              style={{ bottom: APP_CAPTURA_ACTION_BOTTOM }}
+            >
+              <div className="pointer-events-auto mx-auto w-full max-w-3xl md:max-w-5xl">
+                <Button
+                  type="button"
+                  className={cn(
+                    "h-14 w-full text-lg font-semibold shadow-md",
+                    btn,
+                  )}
+                  onClick={entrarCaptura}
+                >
+                  Capturar ({elegidos.length})
+                </Button>
+              </div>
             </div>
           ) : null}
 
@@ -1158,12 +1183,7 @@ export function CapturaArticulo({
             />
           ) : null}
 
-          <div
-            className={cn(
-              mostrandoCaptura ? "pb-80" : undefined,
-              elegidos.length > 0 && !enModoCaptura ? "pb-24" : undefined,
-            )}
-          >
+          <div className={mostrandoCaptura ? "pb-80" : undefined}>
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
             <p className="mb-2 text-xs text-muted-foreground">
               Cada prenda es un bloque (clave y nombre arriba). Colores de
@@ -1205,7 +1225,7 @@ export function CapturaArticulo({
             />
           </div>
           {extraAfter}
-        </>
+        </div>
       )}
     </div>
   );
