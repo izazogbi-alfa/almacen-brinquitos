@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { COOKIE_SESION } from "@/lib/session-cookie";
 import { puede } from "@/lib/modulos";
+import { csrfValido, rechazarCsrf } from "@/server/csrf";
 import type { ClaveModulo } from "@/lib/types";
 import {
   hidratarUsuarios,
@@ -99,4 +100,11 @@ export async function exigirModulo(modulo: ClaveModulo) {
 
 export function jsonUsuario(user: UsuarioInterno) {
   return publicoDe(user);
+}
+
+export function exigirCsrf(request: Request) {
+  if (!csrfValido(request)) {
+    return { error: rechazarCsrf() };
+  }
+  return { error: null };
 }

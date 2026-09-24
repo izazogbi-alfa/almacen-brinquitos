@@ -24,6 +24,7 @@ import {
   type RespaldoCompleto,
 } from "@/lib/respaldos";
 import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
+import { sessionSecret } from "@/server/session-secret";
 
 const BLOB_LEGACY = "almacen-brinquitos/respaldos.json";
 const BLOB_INDICE = "almacen-brinquitos/respaldos-indice.json";
@@ -52,12 +53,8 @@ export type CookieAttr = {
   maxAge: number;
 };
 
-function secret() {
-  return process.env.SESSION_SECRET?.trim() || "almacen-brinquitos-demo";
-}
-
 function hmac(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", sessionSecret()).update(payload).digest("hex");
 }
 
 function firmasIguales(a: string, b: string) {

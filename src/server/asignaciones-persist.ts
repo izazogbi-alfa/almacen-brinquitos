@@ -12,6 +12,7 @@ import {
   type AsignacionesPersistidas,
 } from "@/lib/asignaciones-articulos";
 import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
+import { sessionSecret } from "@/server/session-secret";
 import { DOC_ASIGNACIONES, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
 
 const COOKIE_COUNT = "brq_an";
@@ -24,12 +25,8 @@ const GITHUB_FILE = "data/asignaciones-articulos.json";
 const GITHUB_BRANCH = "catalogos-data";
 const KV_KEY = "almacen-brinquitos:asignaciones";
 
-function secret() {
-  return process.env.SESSION_SECRET?.trim() || "almacen-brinquitos-demo";
-}
-
 function hmac(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", sessionSecret()).update(payload).digest("hex");
 }
 
 function firmasIguales(a: string, b: string) {

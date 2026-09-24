@@ -13,6 +13,7 @@ import {
 } from "@/lib/usuarios-persist";
 import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
 import { DOC_USUARIOS, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
+import { sessionSecret } from "@/server/session-secret";
 
 const COOKIE_COUNT = "brq_un";
 const COOKIE_PART = "brq_u";
@@ -24,12 +25,8 @@ const GITHUB_FILE = "data/usuarios.json";
 const GITHUB_BRANCH = "catalogos-data";
 const KV_KEY = "almacen-brinquitos:usuarios";
 
-function secret() {
-  return process.env.SESSION_SECRET?.trim() || "almacen-brinquitos-demo";
-}
-
 function hmac(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", sessionSecret()).update(payload).digest("hex");
 }
 
 function firmasIguales(a: string, b: string) {

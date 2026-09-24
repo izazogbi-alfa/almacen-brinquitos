@@ -6,7 +6,7 @@ import {
 } from "@/lib/asignacion-articulo";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { cookiesAsignaciones } from "@/server/asignaciones-persist";
-import { exigirModulo } from "@/server/auth";
+import { exigirCsrf, exigirModulo } from "@/server/auth";
 import {
   ERROR_ESQUEMA_NO_PERSISTIO,
   contrasenaCoincide,
@@ -51,6 +51,8 @@ export async function POST(request: Request) {
       NextResponse.json({ error: "No tienes módulo de artículos." }, { status: 403 })
     );
   }
+  const csrf = exigirCsrf(request);
+  if (csrf.error) return csrf.error;
 
   const body = (await request.json().catch(() => null)) as {
     id?: string;

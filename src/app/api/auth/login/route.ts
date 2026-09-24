@@ -1,8 +1,17 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { cookieSesion, jsonUsuario } from "@/server/auth";
+import { loginPermitido } from "@/server/login-rate-limit";
 import { hidratarUsuarios, login, withStore } from "@/server/store";
 import { abandonarSesionesAbiertas } from "@/lib/sesion-store";
+
+const ERROR_LOGIN = "Usuario o contraseña incorrectos.";
+
+function ipCliente(request: Request) {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || "desconocido";
+  return request.headers.get("x-real-ip")?.trim() || "desconocido";
+}
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -17,15 +26,15 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (!loginPermitido(ipCliente(request), username)) {
+    return NextResponse.json({ error: ERROR_LOGIN }, { status: 401 });
+  }
   try {
     const jar = await cookies();
     await hidratarUsuarios((name) => jar.get(name)?.value);
     const result = await login(username, password);
     if (!result) {
-      return NextResponse.json(
-        { error: "Usuario o contraseña incorrectos." },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: ERROR_LOGIN }, { status: 401 });
     }
     await withStore((store) => {
       abandonarSesionesAbiertas(store, result.user);

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exigirUsuario } from "@/server/auth";
+import { puedeAccederRegistro } from "@/server/registro-access";
 import { hidratarCatalogos } from "@/server/store";
 import { urlPdfRegistro } from "@/server/blob-media";
 import { logoParaPdf } from "@/server/blob-media";
@@ -26,6 +27,9 @@ export async function GET(
   const sesion = store.sesiones.find((s) => s.id === id);
   if (!sesion) {
     return NextResponse.json({ error: "Ese registro ya no está." }, { status: 404 });
+  }
+  if (!puedeAccederRegistro(user, sesion)) {
+    return NextResponse.json({ error: "No tienes acceso a ese registro." }, { status: 403 });
   }
   const remoto = await urlPdfRegistro(id);
   if (remoto) {

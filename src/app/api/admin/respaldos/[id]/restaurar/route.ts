@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { exigirAdmin } from "@/server/auth";
+import { exigirAdmin, exigirCsrf } from "@/server/auth";
 import { restaurarRespaldo } from "@/server/respaldos";
 import { contrasenaCoincide } from "@/server/store";
 
@@ -20,6 +20,8 @@ export async function POST(
       )
     );
   }
+  const csrf = exigirCsrf(request);
+  if (csrf.error) return csrf.error;
 
   const body = (await request.json().catch(() => null)) as {
     password?: unknown;
