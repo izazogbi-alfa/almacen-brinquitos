@@ -163,26 +163,36 @@ function claveTalla(talla: string) {
   return (talla === "Cant." ? "" : talla).toLocaleLowerCase("es");
 }
 
-/** Todas las tallas del esquema en orden de captura (1, 1X, 2… sin ordenar numéricamente). */
+function tallaTieneCaptura(filas: FilaColorBloque[], talla: string) {
+  return filas.some((f) => typeof f.porTalla[talla] === "number");
+}
+
+function filaTieneCaptura(fila: FilaColorBloque) {
+  return Object.values(fila.porTalla).some((v) => typeof v === "number");
+}
+
+/** Tallas con al menos un valor capturado, en orden del esquema de captura. */
 export function tallasParaPdf(
   ordenEsquema: string[] | undefined,
+  filas: FilaColorBloque[],
   capturadas: string[] = [],
 ): string[] {
   if (ordenEsquema?.length) {
     const vistas = ordenEsquema
       .map((t) => etiquetaTalla(t))
-      .filter((t) => t !== "");
+      .filter((t) => t !== "" && tallaTieneCaptura(filas, t));
     if (vistas.length) return vistas;
   }
   const vistas: string[] = [];
   const seen = new Set<string>();
   for (const t of capturadas) {
     const k = etiquetaTalla(t);
-    if (!k || seen.has(k)) continue;
+    if (!k || seen.has(k) || !tallaTieneCaptura(filas, k)) continue;
     seen.add(k);
     vistas.push(k);
   }
-  return vistas.length ? vistas : ["Cant."];
+  if (vistas.length) return vistas;
+  return filas.some(filaTieneCaptura) ? [] : ["Cant."];
 }
 
 /** @deprecated Usar tallasParaPdf. Conservado para llamadas que solo ordenan capturadas. */
@@ -214,30 +224,27 @@ export function ordenarTallasPorEsquema(
   });
 }
 
-/** Filas = todos los colores del esquema en orden, aunque no se hayan capturado. */
+/** Colores con al menos una talla capturada, en orden del esquema de captura. */
 export function filasCompletasEsquema(
   filas: FilaColorBloque[],
   ordenColores: string[] | undefined,
 ): FilaColorBloque[] {
-  if (!ordenColores?.length) return filas;
+  const conCaptura = filas.filter(filaTieneCaptura);
+  if (!ordenColores?.length) return conCaptura;
   const resultado: FilaColorBloque[] = [];
   const usadas = new Set<string>();
   for (const color of ordenColores) {
-    const matches = filas.filter(
+    const matches = conCaptura.filter(
       (f) => claveColor(f.color) === claveColor(color),
     );
-    if (matches.length) {
-      for (const fila of matches) {
-        const k = `${fila.color}::${fila.especificacion ?? ""}`;
-        if (usadas.has(k)) continue;
-        usadas.add(k);
-        resultado.push(fila);
-      }
-    } else {
-      resultado.push({ keys: [], color, porTalla: {} });
+    for (const fila of matches) {
+      const k = `${fila.color}::${fila.especificacion ?? ""}`;
+      if (usadas.has(k)) continue;
+      usadas.add(k);
+      resultado.push(fila);
     }
   }
-  for (const fila of filas) {
+  for (const fila of conCaptura) {
     const k = `${fila.color}::${fila.especificacion ?? ""}`;
     if (!usadas.has(k)) resultado.push(fila);
   }
@@ -321,10 +328,11 @@ export function bloquesDesdeCeldas(
 
   return orden.map((k) => {
     const g = mapa.get(k)!;
+    const filas = filasCompletasEsquema([...g.filas.values()], g.ordenColores);
     return {
       ...g.bloque,
-      tallas: tallasParaPdf(g.ordenEsquema, g.tallas),
-      filas: filasCompletasEsquema([...g.filas.values()], g.ordenColores),
+      tallas: tallasParaPdf(g.ordenEsquema, filas, g.tallas),
+      filas,
     };
   });
 }

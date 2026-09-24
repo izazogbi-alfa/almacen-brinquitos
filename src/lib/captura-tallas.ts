@@ -59,9 +59,9 @@ export function tituloEncabezadoTallas(tallas: string[]): string {
   return esListaMedidas(tallas) ? "Medidas" : "Tallas";
 }
 
-/** Cantidad en celda del PDF: vacío o sin captura → 0. */
+/** Cantidad en celda: sin captura → vacío; 0 explícito → "0". */
 export function cantidadPdf(valor: number | null | undefined): string {
-  return valor == null ? "0" : String(valor);
+  return valor == null ? "" : String(valor);
 }
 
 /**
