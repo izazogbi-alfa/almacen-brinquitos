@@ -11,6 +11,7 @@ import {
   Truck,
   Users,
 } from "lucide-react";
+import { APP_TAB_BAR_H } from "@/lib/app-chrome";
 import { cn } from "@/lib/utils";
 import { useInventory } from "@/lib/inventory-context";
 import { etiquetaRol, puede } from "@/lib/modulos";
@@ -66,7 +67,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   : "grid-cols-3";
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col bg-background md:max-w-5xl">
+    <div
+      className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col bg-background md:max-w-5xl"
+      style={{ ["--app-tab-bar-h" as string]: APP_TAB_BAR_H }}
+    >
       <header className="sticky top-0 z-40 border-b bg-background/90 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
