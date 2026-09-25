@@ -124,18 +124,40 @@ export function esquemaPorId(
   return catalogos.esquemas.find((e) => e.id === id);
 }
 
+export function claveNombreEsquema(nombre: string): string {
+  return tituloEtiqueta(nombre).toLocaleLowerCase("es");
+}
+
+/** Otro esquema con el mismo nombre (recortes, mayúsculas). No compara el propio id. */
+export function esquemaConNombreRepetido(
+  esquemas: EsquemaCatalogo[],
+  nombre: string,
+  exceptoId?: string,
+): EsquemaCatalogo | undefined {
+  const clave = claveNombreEsquema(nombre);
+  if (!clave) return undefined;
+  return esquemas.find(
+    (e) =>
+      e.id !== exceptoId && claveNombreEsquema(e.nombre) === clave,
+  );
+}
+
 export function nombreEsquemaDuplicado(
   esquemas: EsquemaCatalogo[],
   nombre: string,
   exceptoId?: string,
 ): boolean {
-  const clave = tituloEtiqueta(nombre).toLocaleLowerCase("es");
-  if (!clave) return false;
-  return esquemas.some(
-    (e) =>
-      e.id !== exceptoId &&
-      tituloEtiqueta(e.nombre).toLocaleLowerCase("es") === clave,
-  );
+  return Boolean(esquemaConNombreRepetido(esquemas, nombre, exceptoId));
+}
+
+export function mensajeNombreEsquemaDuplicado(
+  esquemas: EsquemaCatalogo[],
+  nombre: string,
+  exceptoId?: string,
+): string | null {
+  const otro = esquemaConNombreRepetido(esquemas, nombre, exceptoId);
+  if (!otro) return null;
+  return `Ya hay un esquema llamado «${otro.nombre}». Ábrelo en la lista o elige otro nombre.`;
 }
 
 export function clonarEsquemaCatalogo(

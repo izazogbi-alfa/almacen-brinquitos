@@ -15,7 +15,7 @@ import {
 } from "@/components/use-editor-catalogos";
 import {
   clonarEsquemaCatalogo,
-  nombreEsquemaDuplicado,
+  mensajeNombreEsquemaDuplicado,
 } from "@/lib/catalogos";
 import { useInventory } from "@/lib/inventory-context";
 import type { EsquemaCatalogo } from "@/lib/types";
@@ -92,8 +92,13 @@ function PaginaEsquemas() {
       toast.error("El nombre del esquema no puede quedar vacío.");
       return null;
     }
-    if (nombreEsquemaDuplicado(draft.esquemas, nombre, exceptoId)) {
-      toast.error("Ya hay un esquema con ese nombre. Elige otro.");
+    const duplicado = mensajeNombreEsquemaDuplicado(
+      draft.esquemas,
+      nombre,
+      exceptoId,
+    );
+    if (duplicado) {
+      toast.error(duplicado);
       return null;
     }
     if (!elegirEstiloPdf(siguiente.estiloPdf)) {
@@ -117,10 +122,7 @@ function PaginaEsquemas() {
   }
 
   function pedirGuardar(siguiente: EsquemaCatalogo) {
-    const validado = validarEsquema(
-      siguiente,
-      modoEditor?.tipo === "editar" ? siguiente.id : undefined,
-    );
+    const validado = validarEsquema(siguiente, siguiente.id);
     if (!validado) return Promise.resolve();
 
     if (modoEditor?.tipo === "nuevo") {

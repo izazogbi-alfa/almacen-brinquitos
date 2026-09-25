@@ -12,6 +12,7 @@
     "test:sesion": "node --experimental-strip-types scripts/test-sesion-inactividad.ts && node --experimental-strip-types scripts/test-sesion-pendiente.ts",
     "test:pdf-colores": "node --experimental-strip-types scripts/test-pdf-colores.ts",
     "test:titulo": "node --experimental-strip-types scripts/test-titulo-etiqueta.ts",
+    "test:esquemas": "npx --yes tsx scripts/test-nombre-esquema.ts",
     "test:captura-tallas": "node --experimental-strip-types scripts/test-captura-tallas.ts",
     "test:persist": "npx --yes tsx scripts/test-catalogos-persist.ts && npx --yes tsx scripts/test-asignaciones-persist.ts && npx --yes tsx scripts/test-respaldos.ts && npx --yes tsx scripts/test-respaldos-persist.ts && npx --yes tsx scripts/test-usuarios-persist.ts && npx --yes tsx scripts/test-store-duradero.ts",
     "test:catalogo": "npx --yes tsx scripts/test-actualizar-catalogo.ts"
