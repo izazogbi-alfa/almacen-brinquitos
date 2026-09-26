@@ -115,6 +115,75 @@ aplicarRegistrosAlStore(destino, docs.registros!);
 assert.equal(destino.productos[0].existencia, 3);
 assert.equal(destino.sesiones[0].id, "ses-1");
 
+const conEsquema: StoreDuradero = {
+  ...store,
+  catalogos: {
+    esquemas: [
+      { id: "esq-camisa", nombre: "Camisa", tallas: ["1", "1X", "2"] },
+    ],
+    colores: ["Blanco"],
+    tallas: ["1", "1X", "2"],
+    especificaciones: [],
+  },
+  catalogosGuardadosEn: "2026-09-20T00:00:00.000Z",
+  asignacionesGuardadosEn: "2026-09-20T00:00:00.000Z",
+  productos: [
+    {
+      ...store.productos[0],
+      esquemaConteo: "esq-camisa",
+      colores: ["Blanco"],
+      tallas: ["1", "1X"],
+    },
+  ],
+};
+await persistirStoreEnPostgres(conEsquema);
+
+const frioSinEsquema: StoreDuradero = {
+  ...store,
+  catalogos: {
+    esquemas: [],
+    colores: ["rosa"],
+    tallas: ["4"],
+    especificaciones: [],
+  },
+  catalogosGuardadosEn: "2026-09-26T00:00:00.000Z",
+  asignacionesGuardadosEn: "2026-09-26T00:00:00.000Z",
+  productos: [{ ...store.productos[0], esquemaConteo: undefined }],
+};
+await persistirStoreEnPostgres(frioSinEsquema);
+const docsTrasFrio = await leerDocsPostgres();
+assert.equal(
+  docsTrasFrio.asignaciones?.asignaciones.XC1.esquemaConteo,
+  "esq-camisa",
+  "login o alta de usuario en frío no pisa asignaciones",
+);
+assert.equal(docsTrasFrio.catalogos?.catalogos.esquemas[0]?.id, "esq-camisa");
+
+const destinoAsignado: StoreDuradero = {
+  ...conEsquema,
+  productos: [
+    {
+      ...conEsquema.productos[0],
+      existenciasSucursal: [],
+      existencia: 0,
+    },
+  ],
+};
+aplicarStockAlStore(destinoAsignado, {
+  savedAt: "2026-09-26T00:00:00.000Z",
+  productos: [
+    {
+      ...store.productos[0],
+      esquemaConteo: undefined,
+    },
+  ],
+});
+assert.equal(
+  destinoAsignado.productos[0].esquemaConteo,
+  "esq-camisa",
+  "el stock no quita el esquema del artículo",
+);
+
 await escribirDoc("usuarios", {
   savedAt: "2026-09-22T00:00:00.000Z",
   users: docs.usuarios?.users,

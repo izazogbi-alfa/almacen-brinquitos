@@ -407,8 +407,9 @@ async function hidratarPostgres(store: AppStore) {
         return;
       }
       if (docs.usuarios) aplicarUsuariosAlStore(store, docs.usuarios);
-      if (docs.asignaciones) aplicarAsignacionesAlStore(store, docs.asignaciones);
+      if (docs.catalogos) aplicarCatalogosAlStore(store, docs.catalogos);
       if (docs.stock) aplicarStockAlStore(store, docs.stock);
+      if (docs.asignaciones) aplicarAsignacionesAlStore(store, docs.asignaciones);
       if (docs.registros) aplicarRegistrosAlStore(store, docs.registros);
       if (docs.meta) aplicarMetaAlStore(store, docs.meta);
       persistStore(store);
@@ -426,6 +427,7 @@ export async function hidratarCatalogos(
 ) {
   const store = loadRaw();
   await hidratarPostgres(store);
+  const duraderosCatalogos = await leerCatalogosDuraderos();
   const mejorCatalogo = mejorCatalogos(
     store.catalogosGuardadosEn
       ? {
@@ -434,23 +436,43 @@ export async function hidratarCatalogos(
         }
       : null,
     catalogosDesdeCookies(leerCookie),
-    await leerCatalogosDuraderos(),
+    duraderosCatalogos,
   );
   if (mejorCatalogo) aplicarCatalogosAlStore(store, mejorCatalogo);
   store.catalogos = normalizarCatalogos(store.catalogos);
+  if (
+    mejorCatalogo &&
+    mejorCatalogo.catalogos.esquemas.length > 0 &&
+    (!duraderosCatalogos ||
+      duraderosCatalogos.catalogos.esquemas.length === 0 ||
+      Date.parse(mejorCatalogo.savedAt) >
+        Date.parse(duraderosCatalogos.savedAt))
+  ) {
+    await guardarCatalogosDuraderos(mejorCatalogo);
+  }
 
+  const extraidas = extraerAsignaciones(store.productos);
+  const duraderasAsig = await leerAsignacionesDuraderas();
   const mejorAsig = mejorAsignaciones(
-    store.asignacionesGuardadosEn
+    store.asignacionesGuardadosEn && Object.keys(extraidas).length > 0
       ? {
           savedAt: store.asignacionesGuardadosEn,
-          asignaciones: extraerAsignaciones(store.productos),
+          asignaciones: extraidas,
         }
       : null,
     asignacionesDesdeCookies(leerCookie),
-    await leerAsignacionesDuraderas(),
+    duraderasAsig,
   );
   if (mejorAsig) {
     aplicarAsignacionesAlStore(store, mejorAsig);
+    if (
+      Object.keys(mejorAsig.asignaciones).length > 0 &&
+      (!duraderasAsig ||
+        Object.keys(duraderasAsig.asignaciones).length === 0 ||
+        Date.parse(mejorAsig.savedAt) > Date.parse(duraderasAsig.savedAt))
+    ) {
+      await guardarAsignacionesDuraderas(mejorAsig);
+    }
   } else {
     store.productos = store.productos.map((p) =>
       sanitizarArticuloSinFabrica(p, store.catalogos),
@@ -525,26 +547,7 @@ export const ERROR_CLON_NO_PERSISTIO =
 export async function hidratarUsuarios(
   leerCookie: (name: string) => string | undefined,
 ) {
-  const store = loadRaw();
-  await hidratarPostgres(store);
-  const mejor = mejorUsuarios(
-    store.usuariosGuardadosEn
-      ? { savedAt: store.usuariosGuardadosEn, users: store.users }
-      : null,
-    usuariosDesdeCookies(leerCookie),
-    await leerUsuariosDuraderos(),
-  );
-  if (mejor) {
-    aplicarUsuariosAlStore(store, mejor);
-    await saveStore(store);
-  } else {
-    memoryStore = store;
-    if (hayPostgres() && postgresEstabaVacio) {
-      await persistirStoreEnPostgres(store);
-      postgresEstabaVacio = false;
-    }
-  }
-  return store;
+  return hidratarCatalogos(leerCookie);
 }
 
 export async function withStore<T>(fn: (store: AppStore) => T): Promise<T> {

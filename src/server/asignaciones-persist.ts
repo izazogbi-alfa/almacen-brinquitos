@@ -9,6 +9,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
 import {
   parseAsignacionesPersistidas,
+  preferirAsignaciones,
   type AsignacionesPersistidas,
 } from "@/lib/asignaciones-articulos";
 import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
@@ -374,9 +375,7 @@ function masReciente(
   a: AsignacionesPersistidas | null,
   b: AsignacionesPersistidas | null,
 ): AsignacionesPersistidas | null {
-  if (!a) return b;
-  if (!b) return a;
-  return Date.parse(a.savedAt) >= Date.parse(b.savedAt) ? a : b;
+  return preferirAsignaciones(a, b);
 }
 
 export async function leerAsignacionesDuraderas(): Promise<AsignacionesPersistidas | null> {

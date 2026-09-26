@@ -1,7 +1,13 @@
 import {
   extraerAsignaciones,
   parseAsignacionesPersistidas,
+  preferirAsignaciones,
 } from "@/lib/asignaciones-articulos";
+import {
+  mejorCatalogos,
+  parseCatalogosPersistidos,
+  type CatalogosPersistidos,
+} from "@/server/catalogos-persist";
 import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
 import type {
   Catalogos,
@@ -132,11 +138,34 @@ function parseMeta(raw: unknown): MetaPersistida | null {
   };
 }
 
+async function catalogosParaPostgres(
+  store: StoreDuradero,
+  savedAt: string,
+): Promise<CatalogosPersistidos> {
+  const incoming: CatalogosPersistidos = {
+    savedAt: store.catalogosGuardadosEn ?? savedAt,
+    catalogos: store.catalogos,
+  };
+  const actual = parseCatalogosPersistidos(await leerDoc(DOC_CATALOGOS));
+  return mejorCatalogos(actual, incoming) ?? incoming;
+}
+
+async function asignacionesParaPostgres(store: StoreDuradero, savedAt: string) {
+  const incoming = {
+    savedAt: store.asignacionesGuardadosEn ?? savedAt,
+    asignaciones: extraerAsignaciones(store.productos),
+  };
+  const actual = parseAsignacionesPersistidas(await leerDoc(DOC_ASIGNACIONES));
+  return preferirAsignaciones(actual, incoming) ?? incoming;
+}
+
 export async function persistirStoreEnPostgres(
   store: StoreDuradero,
 ): Promise<{ vias: string[]; persistio: boolean }> {
   if (!hayPostgres()) return { vias: [], persistio: false };
   const savedAt = new Date().toISOString();
+  const catalogos = await catalogosParaPostgres(store, savedAt);
+  const asignaciones = await asignacionesParaPostgres(store, savedAt);
   const intentos: Array<[string, unknown]> = [
     [
       DOC_USUARIOS,
@@ -148,15 +177,15 @@ export async function persistirStoreEnPostgres(
     [
       DOC_CATALOGOS,
       {
-        savedAt: store.catalogosGuardadosEn ?? savedAt,
-        catalogos: store.catalogos,
+        savedAt: catalogos.savedAt,
+        catalogos: catalogos.catalogos,
       },
     ],
     [
       DOC_ASIGNACIONES,
       {
-        savedAt: store.asignacionesGuardadosEn ?? savedAt,
-        asignaciones: extraerAsignaciones(store.productos),
+        savedAt: asignaciones.savedAt,
+        asignaciones: asignaciones.asignaciones,
       },
     ],
     [DOC_STOCK, { savedAt, productos: store.productos } satisfies StockPersistido],
@@ -210,7 +239,7 @@ export async function leerDocsPostgres() {
     ]);
   return {
     usuarios: parseUsuariosPersistidos(usuarios),
-    catalogos,
+    catalogos: parseCatalogosPersistidos(catalogos),
     asignaciones: parseAsignacionesPersistidas(asignaciones),
     stock: parseStock(stock),
     registros: parseRegistros(registros),
@@ -238,7 +267,19 @@ export function aplicarStockAlStore(store: StoreDuradero, stock: StockPersistido
     const sku = p.sku.toUpperCase();
     const prev = porSku.get(sku);
     if (prev) {
+      const esquema = prev.esquemaConteo;
+      const colores = prev.colores;
+      const tallas = prev.tallas;
+      const especificaciones = prev.especificaciones;
       Object.assign(prev, p);
+      if (!prev.esquemaConteo?.trim() && esquema) {
+        prev.esquemaConteo = esquema;
+        if (!prev.colores?.length && colores?.length) prev.colores = colores;
+        if (!prev.tallas?.length && tallas?.length) prev.tallas = tallas;
+        if (!prev.especificaciones?.length && especificaciones?.length) {
+          prev.especificaciones = especificaciones;
+        }
+      }
     } else {
       store.productos.push(p);
       porSku.set(sku, p);

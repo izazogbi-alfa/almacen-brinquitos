@@ -55,6 +55,12 @@ export function archivoCatalogosEmpaquetado() {
   return join(process.cwd(), "data", "catalogos.json");
 }
 
+export function parseCatalogosPersistidos(
+  raw: unknown,
+): CatalogosPersistidos | null {
+  return parsePersistido(raw);
+}
+
 function parsePersistido(raw: unknown): CatalogosPersistidos | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as {
@@ -378,12 +384,20 @@ async function leerHttp(): Promise<CatalogosPersistidos | null> {
   }
 }
 
+function cuantosEsquemas(data: CatalogosPersistidos | null): number {
+  return data?.catalogos.esquemas.length ?? 0;
+}
+
 function masReciente(
   a: CatalogosPersistidos | null,
   b: CatalogosPersistidos | null,
 ): CatalogosPersistidos | null {
   if (!a) return b;
   if (!b) return a;
+  const aN = cuantosEsquemas(a);
+  const bN = cuantosEsquemas(b);
+  if (aN === 0 && bN > 0) return b;
+  if (bN === 0 && aN > 0) return a;
   return Date.parse(a.savedAt) >= Date.parse(b.savedAt) ? a : b;
 }
 

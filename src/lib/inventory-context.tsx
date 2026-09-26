@@ -269,10 +269,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         ? data.catalogosGuardadosEn
         : "";
     const local = leerCatalogosLocal();
+    const serverTieneEsquemas =
+      Array.isArray(data.catalogos?.esquemas) &&
+      data.catalogos.esquemas.length > 0;
     if (
       local &&
       puede(data.user, "configuracion") &&
-      (!serverAt || Date.parse(local.savedAt) > Date.parse(serverAt))
+      ((local.catalogos.esquemas?.length ?? 0) > 0 && !serverTieneEsquemas
+        ? true
+        : !serverAt || Date.parse(local.savedAt) > Date.parse(serverAt))
     ) {
       const push = await fetch("/api/admin/catalogos", {
         method: "POST",
@@ -305,10 +310,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         ? data.asignacionesGuardadosEn
         : "";
     const localAsig = leerAsignacionesLocal();
+    const serverTieneAsig = Array.isArray(data.productos)
+      ? (data.productos as Producto[]).some((p) =>
+          Boolean(p.esquemaConteo?.trim()),
+        )
+      : false;
     if (
       localAsig &&
       puede(data.user, "articulos") &&
-      (!serverAsigAt || Date.parse(localAsig.savedAt) > Date.parse(serverAsigAt))
+      Object.keys(localAsig.asignaciones).length > 0 &&
+      (!serverTieneAsig ||
+        !serverAsigAt ||
+        Date.parse(localAsig.savedAt) > Date.parse(serverAsigAt))
     ) {
       const push = await fetch("/api/admin/articulos/asignaciones", {
         method: "POST",

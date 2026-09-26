@@ -3,6 +3,7 @@ import {
   aplicarAsignaciones,
   extraerAsignaciones,
   parseAsignacionesPersistidas,
+  preferirAsignaciones,
 } from "../src/lib/asignaciones-articulos.ts";
 import {
   ESQUEMAS_INICIALES,
@@ -95,5 +96,20 @@ assert.ok(round, "cookie roundtrip asignaciones");
 assert.equal(round.asignaciones.XC1092.esquemaConteo, "esq-baccus");
 assert.deepEqual(round.asignaciones.XC1092.tallas, ["1", "1X"]);
 assert.deepEqual(round.asignaciones.XC1092.colores, ["Blanco"]);
+
+const llenas = {
+  savedAt: "2026-09-20T00:00:00.000Z",
+  asignaciones: overlay,
+};
+const vaciasNuevas = {
+  savedAt: "2026-09-26T00:00:00.000Z",
+  asignaciones: {},
+};
+const noPisa = preferirAsignaciones(llenas, vaciasNuevas);
+assert.equal(
+  noPisa?.asignaciones.XC1092.esquemaConteo,
+  "esq-baccus",
+  "un login o usuario nuevo no debe borrar esquemas ya asignados",
+);
 
 console.log("ok asignaciones", cookies.filter((c) => c.value).length, "cookies");

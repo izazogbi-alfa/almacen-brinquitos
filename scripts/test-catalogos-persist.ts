@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   catalogosDesdeCookies,
   cookiesCatalogos,
+  mejorCatalogos,
 } from "../src/server/catalogos-persist.ts";
 import { parseCatalogoCsv } from "../src/server/parse-catalogo.ts";
 import {
@@ -148,5 +149,20 @@ const conMarca = normalizarCatalogos({
 assert.equal(conMarca.empresaNombre, "Tienda Iza");
 assert.equal(conMarca.logoDataUrl?.startsWith("data:image/png"), true);
 assert.equal(normalizarCatalogos(null).empresaNombre, undefined);
+
+const deIza = {
+  savedAt: "2026-09-20T00:00:00.000Z",
+  catalogos,
+};
+const semillaNueva = {
+  savedAt: "2026-09-26T00:00:00.000Z",
+  catalogos: normalizarCatalogos(null),
+};
+const noPisaListas = mejorCatalogos(deIza, semillaNueva);
+assert.equal(
+  noPisaListas?.catalogos.esquemas[0]?.id,
+  "esq-iza",
+  "crear un usuario no debe borrar las listas de captura de Iza",
+);
 
 console.log("ok", cookies.filter((c) => c.value).length, "cookies");

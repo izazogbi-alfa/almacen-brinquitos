@@ -78,6 +78,26 @@ export function parseAsignacionesPersistidas(
   return { savedAt, asignaciones };
 }
 
+export function cuantasAsignaciones(
+  data: AsignacionesPersistidas | null | undefined,
+): number {
+  return data ? Object.keys(data.asignaciones).length : 0;
+}
+
+/** No deja que un snapshot vacío (p. ej. semilla o login en frío) pise esquemas ya asignados. */
+export function preferirAsignaciones(
+  a: AsignacionesPersistidas | null,
+  b: AsignacionesPersistidas | null,
+): AsignacionesPersistidas | null {
+  if (!a) return b;
+  if (!b) return a;
+  const aN = cuantasAsignaciones(a);
+  const bN = cuantasAsignaciones(b);
+  if (aN === 0 && bN > 0) return b;
+  if (bN === 0 && aN > 0) return a;
+  return Date.parse(a.savedAt) >= Date.parse(b.savedAt) ? a : b;
+}
+
 export function extraerAsignaciones(
   productos: Producto[],
 ): Record<string, AsignacionArticulo> {
