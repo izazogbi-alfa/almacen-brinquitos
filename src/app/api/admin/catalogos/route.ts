@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { cookiesCatalogos } from "@/server/catalogos-persist";
 import { normalizarCatalogos } from "@/lib/catalogos";
+import { esReplayCatalogoVacio, esquemasTrasReplay } from "@/lib/persist-merge";
 import { parseLista } from "@/lib/listas";
 import { elegirEstiloPdf, MENSAJE_ESTILO_PDF_OBLIGATORIO } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
@@ -30,19 +31,24 @@ export async function POST(request: Request) {
     const jar = await cookies();
     const store = await hidratarCatalogos((name) => jar.get(name)?.value);
     const base = normalizarCatalogos(store.catalogos);
-    const esquemas: EsquemaCatalogo[] = Array.isArray(body.esquemas)
-      ? body.esquemas.map((e, i) => {
-          const estiloPdf = elegirEstiloPdf(e.estiloPdf);
-          return {
-            id: (e.id || `esq-${i + 1}`).trim(),
-            nombre: (e.nombre || "Esquema").trim(),
-            tallas: Array.isArray(e.tallas)
-              ? e.tallas.map((t) => t.trim()).filter(Boolean)
-              : parseLista(String(e.tallas ?? "")),
-            ...(estiloPdf ? { estiloPdf } : {}),
-          };
-        })
-      : base.esquemas;
+    const replay = esquemasTrasReplay(body, base);
+    const replayVacio = esReplayCatalogoVacio(body, base);
+    const esquemas: EsquemaCatalogo[] =
+      replay === "usar-base"
+        ? base.esquemas
+        : Array.isArray(body.esquemas)
+          ? body.esquemas.map((e, i) => {
+              const estiloPdf = elegirEstiloPdf(e.estiloPdf);
+              return {
+                id: (e.id || `esq-${i + 1}`).trim(),
+                nombre: (e.nombre || "Esquema").trim(),
+                tallas: Array.isArray(e.tallas)
+                  ? e.tallas.map((t) => t.trim()).filter(Boolean)
+                  : parseLista(String(e.tallas ?? "")),
+                ...(estiloPdf ? { estiloPdf } : {}),
+              };
+            })
+          : base.esquemas;
     const ids = new Set<string>();
     for (const e of esquemas) {
       if (ids.has(e.id)) throw new Error("Hay esquemas con el mismo id.");
@@ -54,11 +60,14 @@ export async function POST(request: Request) {
     }
     const siguiente = normalizarCatalogos({
       esquemas,
-      colores: Array.isArray(body.colores) ? body.colores : base.colores,
-      tallas: Array.isArray(body.tallas) ? body.tallas : base.tallas,
-      especificaciones: Array.isArray(body.especificaciones)
-        ? body.especificaciones
-        : base.especificaciones,
+      colores:
+        replayVacio || !Array.isArray(body.colores) ? base.colores : body.colores,
+      tallas:
+        replayVacio || !Array.isArray(body.tallas) ? base.tallas : body.tallas,
+      especificaciones:
+        replayVacio || !Array.isArray(body.especificaciones)
+          ? base.especificaciones
+          : body.especificaciones,
       empresaNombre:
         typeof body.empresaNombre === "string"
           ? body.empresaNombre
@@ -75,28 +84,19 @@ export async function POST(request: Request) {
     }
 
     const { data, remoto } = await guardarCatalogosEnStore(siguiente);
-    let cookieOk = false;
     try {
       for (const c of cookiesCatalogos(data)) {
         jar.set(c);
       }
-      cookieOk = true;
     } catch (cookieError) {
       console.error("catalogos cookie failed", cookieError);
-      if (!remoto.persistio) {
-        const msg =
-          cookieError instanceof Error
-            ? cookieError.message
-            : "No se pudo guardar las listas.";
-        return NextResponse.json({ error: msg }, { status: 500 });
-      }
     }
 
-    if (!remoto.persistio && !cookieOk) {
+    if (!remoto.persistio) {
       return NextResponse.json(
         {
           error:
-            "No se pudo guardar las listas. El servidor no pudo persistir los cambios. Intenta de nuevo.",
+            "No se pudo guardar las listas en el servidor. Intenta de nuevo. No se finge el éxito.",
         },
         { status: 500 },
       );

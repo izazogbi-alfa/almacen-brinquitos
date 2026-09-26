@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { exigirUsuario } from "@/server/auth";
+import { exigirUsuario, jsonUsuario } from "@/server/auth";
+import { puedeModuloDeSesion } from "@/lib/estado-cliente";
 import { puedeAccederRegistro } from "@/server/registro-access";
 import { hidratarCatalogos } from "@/server/store";
 import { urlPdfRegistro } from "@/server/blob-media";
@@ -30,6 +31,9 @@ export async function GET(
   }
   if (!puedeAccederRegistro(user, sesion)) {
     return NextResponse.json({ error: "No tienes acceso a ese registro." }, { status: 403 });
+  }
+  if (!puedeModuloDeSesion(jsonUsuario(user), sesion.modulo)) {
+    return NextResponse.json({ error: "No tienes este módulo." }, { status: 403 });
   }
   const remoto = await urlPdfRegistro(id);
   if (remoto) {

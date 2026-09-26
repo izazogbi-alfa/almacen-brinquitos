@@ -26,6 +26,7 @@ import {
 } from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
+import { noPisarAsignacionesVacias } from "@/lib/persist-merge";
 import { completarModulos } from "@/lib/modulos";
 import {
   archivoAsignacionesEmpaquetado,
@@ -45,6 +46,7 @@ import {
   leerCatalogosArchivo,
   leerCatalogosDuraderos,
   mejorCatalogos,
+  parseCatalogosPersistidos,
   type CatalogosPersistidos,
 } from "@/server/catalogos-persist";
 import {
@@ -407,7 +409,8 @@ async function hidratarPostgres(store: AppStore) {
         return;
       }
       if (docs.usuarios) aplicarUsuariosAlStore(store, docs.usuarios);
-      if (docs.catalogos) aplicarCatalogosAlStore(store, docs.catalogos);
+      const catalogosPg = parseCatalogosPersistidos(docs.catalogos);
+      if (catalogosPg) aplicarCatalogosAlStore(store, catalogosPg);
       if (docs.stock) aplicarStockAlStore(store, docs.stock);
       if (docs.asignaciones) aplicarAsignacionesAlStore(store, docs.asignaciones);
       if (docs.registros) aplicarRegistrosAlStore(store, docs.registros);
@@ -515,10 +518,12 @@ export async function guardarAsignacionesEnStore(
 ) {
   const store = loadRaw();
   await hidratarPostgres(store);
-  const data: AsignacionesPersistidas = {
+  const incoming: AsignacionesPersistidas = {
     savedAt: new Date().toISOString(),
     asignaciones: asignaciones ?? extraerAsignaciones(store.productos),
   };
+  const existente = await leerAsignacionesDuraderas();
+  const data = noPisarAsignacionesVacias(existente, incoming);
   const remoto = await guardarAsignacionesDuraderas(data);
   aplicarAsignacionesAlStore(store, data);
   await saveStore(store);

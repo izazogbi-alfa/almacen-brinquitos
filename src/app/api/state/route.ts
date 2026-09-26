@@ -8,6 +8,11 @@ import { hidratarCatalogos, withStore } from "@/server/store";
 import { aplicarCierresPorInactividad } from "@/lib/sesion-store";
 import { sesionesParaCliente } from "@/lib/sesion-captura";
 import { filtrarSesionesVisibles } from "@/server/registro-access";
+import {
+  movimientosVisiblesPara,
+  pedidosVisiblesPara,
+  recepcionesVisiblesPara,
+} from "@/lib/estado-cliente";
 
 export const dynamic = "force-dynamic";
 
@@ -50,12 +55,16 @@ export async function GET() {
       console.error("asignaciones cookie sync failed", cookieError);
     }
   }
+  const publico = jsonUsuario(user);
   return NextResponse.json({
-    user: jsonUsuario(user),
+    user: publico,
     productos: store.productos,
-    pedidos: store.pedidos,
-    recepciones: store.recepciones,
-    movimientos: store.movimientos.slice(0, 80),
+    pedidos: pedidosVisiblesPara(publico, store.pedidos),
+    recepciones: recepcionesVisiblesPara(publico, store.recepciones),
+    movimientos: movimientosVisiblesPara(
+      publico,
+      store.movimientos.slice(0, 80),
+    ),
     sesiones: sesionesParaCliente(
       filtrarSesionesVisibles(user, store.sesiones),
     ),

@@ -83,26 +83,17 @@ async function persistirPersonas(
   jar: Awaited<ReturnType<typeof cookies>>,
 ) {
   const { data, remoto } = await guardarUsuariosEnStore();
-  let cookieOk = false;
   try {
     for (const c of cookiesUsuarios(data)) {
       jar.set(c);
     }
-    cookieOk = true;
   } catch (cookieError) {
     console.error("usuarios cookie failed", cookieError);
-    if (!remoto.persistio) {
-      const msg =
-        cookieError instanceof Error
-          ? cookieError.message
-          : "No se pudieron guardar las personas.";
-      return { error: msg, data: null as UsuariosPersistidos | null };
-    }
   }
-  if (!remoto.persistio && !cookieOk) {
+  if (!remoto.persistio) {
     return {
       error:
-        "No se pudieron guardar las personas. El servidor no pudo persistir los cambios.",
+        "No se pudieron guardar las personas en el servidor. Intenta de nuevo.",
       data: null as UsuariosPersistidos | null,
     };
   }

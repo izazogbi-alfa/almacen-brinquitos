@@ -21,23 +21,14 @@ export const dynamic = "force-dynamic";
 
 async function persistirEsquemas(jar: Awaited<ReturnType<typeof cookies>>) {
   const { data, remoto } = await guardarAsignacionesEnStore();
-  let cookieOk = false;
   try {
     for (const c of cookiesAsignaciones(data)) {
       jar.set(c);
     }
-    cookieOk = true;
   } catch (cookieError) {
     console.error("asignaciones cookie failed", cookieError);
-    if (!remoto.persistio) {
-      const msg =
-        cookieError instanceof Error
-          ? cookieError.message
-          : ERROR_ESQUEMA_NO_PERSISTIO;
-      return { error: msg, data };
-    }
   }
-  if (!remoto.persistio && !cookieOk) {
+  if (!remoto.persistio) {
     return { error: ERROR_ESQUEMA_NO_PERSISTIO, data };
   }
   return { data, error: null as string | null };

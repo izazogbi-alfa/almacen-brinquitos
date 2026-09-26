@@ -45,23 +45,14 @@ export async function POST(request: Request) {
   }
 
   const { data, remoto } = await guardarAsignacionesEnStore(parsed.asignaciones);
-  let cookieOk = false;
   try {
     for (const c of cookiesAsignaciones(data)) {
       jar.set(c);
     }
-    cookieOk = true;
   } catch (cookieError) {
     console.error("asignaciones cookie failed", cookieError);
-    if (!remoto.persistio) {
-      const msg =
-        cookieError instanceof Error
-          ? cookieError.message
-          : ERROR_ESQUEMA_NO_PERSISTIO;
-      return NextResponse.json({ error: msg }, { status: 500 });
-    }
   }
-  if (!remoto.persistio && !cookieOk) {
+  if (!remoto.persistio) {
     return NextResponse.json(
       { error: ERROR_ESQUEMA_NO_PERSISTIO },
       { status: 500 },

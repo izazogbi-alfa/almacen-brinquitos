@@ -67,6 +67,7 @@ Misma captura (Por talla o Por color) y misma tabla si el módulo está marcado.
 
 ```bash
 npm install
+npm run test:almacen
 npm run dev
 ```
 

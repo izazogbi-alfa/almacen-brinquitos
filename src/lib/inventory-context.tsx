@@ -27,6 +27,11 @@ import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
 import { enviarAbandonoPagina } from "@/lib/abandonar-pagina";
 import type { UsuariosPersistidos } from "@/lib/usuarios-persist";
 import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
+import {
+  contarAsignaciones,
+  localNoDebeEmpujarAsignaciones,
+  localNoDebeEmpujarCatalogos,
+} from "@/lib/persist-merge";
 
 type NuevaLinea = {
   productoId: string;
@@ -269,15 +274,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         ? data.catalogosGuardadosEn
         : "";
     const local = leerCatalogosLocal();
-    const serverTieneEsquemas =
-      Array.isArray(data.catalogos?.esquemas) &&
-      data.catalogos.esquemas.length > 0;
+    const serverEsquemas = Array.isArray(data.catalogos?.esquemas)
+      ? data.catalogos.esquemas.length
+      : 0;
     if (
       local &&
       puede(data.user, "configuracion") &&
-      ((local.catalogos.esquemas?.length ?? 0) > 0 && !serverTieneEsquemas
-        ? true
-        : !serverAt || Date.parse(local.savedAt) > Date.parse(serverAt))
+      localNoDebeEmpujarCatalogos({
+        localEsquemas: local.catalogos.esquemas?.length ?? 0,
+        serverEsquemas,
+        localSavedAt: local.savedAt,
+        serverSavedAt: serverAt,
+      })
     ) {
       const push = await fetch("/api/admin/catalogos", {
         method: "POST",
@@ -310,18 +318,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         ? data.asignacionesGuardadosEn
         : "";
     const localAsig = leerAsignacionesLocal();
-    const serverTieneAsig = Array.isArray(data.productos)
-      ? (data.productos as Producto[]).some((p) =>
-          Boolean(p.esquemaConteo?.trim()),
-        )
-      : false;
+    const serverAsigCount = Array.isArray(data.productos)
+      ? (data.productos as Producto[]).filter((p) => p.esquemaConteo?.trim())
+          .length
+      : 0;
     if (
       localAsig &&
       puede(data.user, "articulos") &&
-      Object.keys(localAsig.asignaciones).length > 0 &&
-      (!serverTieneAsig ||
-        !serverAsigAt ||
-        Date.parse(localAsig.savedAt) > Date.parse(serverAsigAt))
+      localNoDebeEmpujarAsignaciones({
+        localCount: contarAsignaciones(localAsig),
+        serverCount: serverAsigCount,
+        localSavedAt: localAsig.savedAt,
+        serverSavedAt: serverAsigAt,
+      })
     ) {
       const push = await fetch("/api/admin/articulos/asignaciones", {
         method: "POST",
