@@ -57,10 +57,17 @@ export async function POST(request: Request) {
     }
     const siguiente = normalizarCatalogos({
       esquemas,
-      colores: fuentes.colores === "base" ? base.colores : body.colores,
-      tallas: fuentes.tallas === "base" ? base.tallas : body.tallas,
+      colores:
+        fuentes.colores === "base" || !Array.isArray(body.colores)
+          ? base.colores
+          : body.colores,
+      tallas:
+        fuentes.tallas === "base" || !Array.isArray(body.tallas)
+          ? base.tallas
+          : body.tallas,
       especificaciones:
-        fuentes.especificaciones === "base"
+        fuentes.especificaciones === "base" ||
+        !Array.isArray(body.especificaciones)
           ? base.especificaciones
           : body.especificaciones,
       empresaNombre:
