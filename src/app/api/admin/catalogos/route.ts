@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { cookiesCatalogos } from "@/server/catalogos-persist";
 import { normalizarCatalogos } from "@/lib/catalogos";
-import { esReplayCatalogoVacio, esquemasTrasReplay } from "@/lib/persist-merge";
+import { fuentesAlGuardarCatalogos } from "@/lib/persist-merge";
 import { parseLista } from "@/lib/listas";
 import { elegirEstiloPdf, MENSAJE_ESTILO_PDF_OBLIGATORIO } from "@/lib/pdf-estilo";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
@@ -31,24 +31,21 @@ export async function POST(request: Request) {
     const jar = await cookies();
     const store = await hidratarCatalogos((name) => jar.get(name)?.value);
     const base = normalizarCatalogos(store.catalogos);
-    const replay = esquemasTrasReplay(body, base);
-    const replayVacio = esReplayCatalogoVacio(body, base);
+    const fuentes = fuentesAlGuardarCatalogos(body, base);
     const esquemas: EsquemaCatalogo[] =
-      replay === "usar-base"
+      fuentes.esquemas === "base" || !Array.isArray(body.esquemas)
         ? base.esquemas
-        : Array.isArray(body.esquemas)
-          ? body.esquemas.map((e, i) => {
-              const estiloPdf = elegirEstiloPdf(e.estiloPdf);
-              return {
-                id: (e.id || `esq-${i + 1}`).trim(),
-                nombre: (e.nombre || "Esquema").trim(),
-                tallas: Array.isArray(e.tallas)
-                  ? e.tallas.map((t) => t.trim()).filter(Boolean)
-                  : parseLista(String(e.tallas ?? "")),
-                ...(estiloPdf ? { estiloPdf } : {}),
-              };
-            })
-          : base.esquemas;
+        : body.esquemas.map((e, i) => {
+            const estiloPdf = elegirEstiloPdf(e.estiloPdf);
+            return {
+              id: (e.id || `esq-${i + 1}`).trim(),
+              nombre: (e.nombre || "Esquema").trim(),
+              tallas: Array.isArray(e.tallas)
+                ? e.tallas.map((t) => t.trim()).filter(Boolean)
+                : parseLista(String(e.tallas ?? "")),
+              ...(estiloPdf ? { estiloPdf } : {}),
+            };
+          });
     const ids = new Set<string>();
     for (const e of esquemas) {
       if (ids.has(e.id)) throw new Error("Hay esquemas con el mismo id.");
@@ -60,12 +57,10 @@ export async function POST(request: Request) {
     }
     const siguiente = normalizarCatalogos({
       esquemas,
-      colores:
-        replayVacio || !Array.isArray(body.colores) ? base.colores : body.colores,
-      tallas:
-        replayVacio || !Array.isArray(body.tallas) ? base.tallas : body.tallas,
+      colores: fuentes.colores === "base" ? base.colores : body.colores,
+      tallas: fuentes.tallas === "base" ? base.tallas : body.tallas,
       especificaciones:
-        replayVacio || !Array.isArray(body.especificaciones)
+        fuentes.especificaciones === "base"
           ? base.especificaciones
           : body.especificaciones,
       empresaNombre:

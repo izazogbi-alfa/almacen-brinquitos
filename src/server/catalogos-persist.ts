@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { normalizarCatalogos } from "@/lib/catalogos";
+import { preferirCatalogos } from "@/lib/persist-merge";
 import type { Catalogos } from "@/lib/types";
 import { blobDisponible, esViaDuradera } from "@/server/env-remoto";
 import { DOC_CATALOGOS, hayPostgres, leerDoc, escribirDoc } from "@/server/postgres";
@@ -384,21 +385,11 @@ async function leerHttp(): Promise<CatalogosPersistidos | null> {
   }
 }
 
-function cuantosEsquemas(data: CatalogosPersistidos | null): number {
-  return data?.catalogos.esquemas.length ?? 0;
-}
-
 function masReciente(
   a: CatalogosPersistidos | null,
   b: CatalogosPersistidos | null,
 ): CatalogosPersistidos | null {
-  if (!a) return b;
-  if (!b) return a;
-  const aN = cuantosEsquemas(a);
-  const bN = cuantosEsquemas(b);
-  if (aN === 0 && bN > 0) return b;
-  if (bN === 0 && aN > 0) return a;
-  return Date.parse(a.savedAt) >= Date.parse(b.savedAt) ? a : b;
+  return preferirCatalogos(a, b);
 }
 
 export async function leerCatalogosDuraderos(): Promise<CatalogosPersistidos | null> {

@@ -159,6 +159,26 @@ assert.equal(
 );
 assert.equal(docsTrasFrio.catalogos?.catalogos.esquemas[0]?.id, "esq-camisa");
 
+const { catalogosVacios } = await import("../src/lib/catalogos.ts");
+const fabrica = catalogosVacios();
+const frioFabrica: StoreDuradero = {
+  ...store,
+  catalogos: fabrica,
+  catalogosGuardadosEn: "2026-09-27T00:00:00.000Z",
+};
+await persistirStoreEnPostgres(frioFabrica);
+const docsTrasFabrica = await leerDocsPostgres();
+assert.equal(
+  docsTrasFabrica.catalogos?.catalogos.esquemas[0]?.id,
+  "esq-camisa",
+  "semilla de fábrica no borra esquemas en Postgres",
+);
+assert.equal(
+  docsTrasFabrica.catalogos?.catalogos.colores[0],
+  "Rosa",
+  "semilla de fábrica no pisa colores ya guardados",
+);
+
 const destinoAsignado: StoreDuradero = {
   ...conEsquema,
   productos: [

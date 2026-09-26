@@ -1,12 +1,60 @@
+import {
+  esColoresDeFabrica,
+  esTallasDeFabrica,
+} from "@/lib/catalogos";
 import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
-import type { Catalogos } from "@/lib/types";
+import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
 
 export type CatalogosConFecha = {
   catalogos: Catalogos;
   savedAt: string;
 };
 
-/** Un catálogo vacío no gana a uno que ya tiene esquemas, aunque la fecha sea más nueva. */
+export type FuentesListasCatalogo = {
+  esquemas: "body" | "base";
+  colores: "body" | "base";
+  tallas: "body" | "base";
+  especificaciones: "body" | "base";
+};
+
+export function esDocumentoCatalogoCompleto(body: Partial<Catalogos>): boolean {
+  return (
+    Array.isArray(body.esquemas) &&
+    Array.isArray(body.colores) &&
+    Array.isArray(body.tallas)
+  );
+}
+
+export function esCatalogoSemilla(catalogos: Catalogos): boolean {
+  return (
+    (catalogos.esquemas?.length ?? 0) === 0 &&
+    esColoresDeFabrica(catalogos.colores ?? []) &&
+    esTallasDeFabrica(catalogos.tallas ?? [])
+  );
+}
+
+function pobreEsquemas(
+  incoming: EsquemaCatalogo[],
+  base: EsquemaCatalogo[],
+): boolean {
+  return incoming.length === 0 && base.length > 0;
+}
+
+function pobreColores(incoming: string[], base: string[]): boolean {
+  if (incoming.length === 0 && base.length > 0) return true;
+  return esColoresDeFabrica(incoming) && !esColoresDeFabrica(base);
+}
+
+function pobreTallas(incoming: string[], base: string[]): boolean {
+  if (incoming.length === 0 && base.length > 0) return true;
+  return esTallasDeFabrica(incoming) && !esTallasDeFabrica(base);
+}
+
+function pobreEspecificaciones(incoming: string[], base: string[]): boolean {
+  return incoming.length === 0 && base.length > 0;
+}
+
+/** Un documento semilla o con listas vacías no gana a uno más rico, aunque la fecha sea más nueva. */
 export function mejorCatalogosSinVaciar(
   ...cands: Array<CatalogosConFecha | null | undefined>
 ): CatalogosConFecha | null {
@@ -24,11 +72,79 @@ export function preferirCatalogos(
 ): CatalogosConFecha | null {
   if (!a) return b;
   if (!b) return a;
-  const aN = a.catalogos.esquemas?.length ?? 0;
-  const bN = b.catalogos.esquemas?.length ?? 0;
-  if (aN === 0 && bN > 0) return b;
-  if (bN === 0 && aN > 0) return a;
-  return Date.parse(a.savedAt) >= Date.parse(b.savedAt) ? a : b;
+  const aNuevo = Date.parse(a.savedAt) >= Date.parse(b.savedAt);
+  const newer = aNuevo ? a : b;
+  const older = aNuevo ? b : a;
+  if (esCatalogoSemilla(newer.catalogos) && !esCatalogoSemilla(older.catalogos)) {
+    return older;
+  }
+  const fusion = fusionarListasCatalogo(newer.catalogos, older.catalogos);
+  const usoOlder =
+    fusion.esquemas === older.catalogos.esquemas ||
+    fusion.colores === older.catalogos.colores ||
+    fusion.tallas === older.catalogos.tallas;
+  return {
+    catalogos: {
+      ...newer.catalogos,
+      ...fusion,
+      empresaNombre: newer.catalogos.empresaNombre ?? older.catalogos.empresaNombre,
+      logoDataUrl: newer.catalogos.logoDataUrl ?? older.catalogos.logoDataUrl,
+    },
+    savedAt: usoOlder && esCatalogoSemilla(newer.catalogos)
+      ? older.savedAt
+      : newer.savedAt,
+  };
+}
+
+function fusionarListasCatalogo(newer: Catalogos, older: Catalogos) {
+  return {
+    esquemas: pobreEsquemas(newer.esquemas ?? [], older.esquemas ?? [])
+      ? older.esquemas
+      : newer.esquemas,
+    colores: pobreColores(newer.colores ?? [], older.colores ?? [])
+      ? older.colores
+      : newer.colores,
+    tallas: pobreTallas(newer.tallas ?? [], older.tallas ?? [])
+      ? older.tallas
+      : newer.tallas,
+    especificaciones: pobreEspecificaciones(
+      newer.especificaciones ?? [],
+      older.especificaciones ?? [],
+    )
+      ? older.especificaciones
+      : newer.especificaciones,
+  };
+}
+
+export function fuentesAlGuardarCatalogos(
+  body: Partial<Catalogos>,
+  base: Catalogos,
+): FuentesListasCatalogo {
+  const completo = esDocumentoCatalogoCompleto(body);
+  const esquemas: "body" | "base" = !Array.isArray(body.esquemas)
+    ? "base"
+    : completo && pobreEsquemas(body.esquemas, base.esquemas)
+      ? "base"
+      : "body";
+  const colores: "body" | "base" = !Array.isArray(body.colores)
+    ? "base"
+    : completo && pobreColores(body.colores, base.colores)
+      ? "base"
+      : "body";
+  const tallas: "body" | "base" = !Array.isArray(body.tallas)
+    ? "base"
+    : completo && pobreTallas(body.tallas, base.tallas)
+      ? "base"
+      : "body";
+  const especificaciones: "body" | "base" = !Array.isArray(
+    body.especificaciones,
+  )
+    ? "base"
+    : completo &&
+        pobreEspecificaciones(body.especificaciones, base.especificaciones ?? [])
+      ? "base"
+      : "body";
+  return { esquemas, colores, tallas, especificaciones };
 }
 
 /** Replay del celular (objeto completo) con esquemas [] no debe borrar los del servidor. */
@@ -36,27 +152,23 @@ export function esquemasTrasReplay(
   body: Partial<Catalogos>,
   base: Catalogos,
 ): Catalogos["esquemas"] | "usar-body" | "usar-base" {
-  if (!Array.isArray(body.esquemas)) return "usar-base";
-  const replayCompleto =
-    Array.isArray(body.colores) && Array.isArray(body.tallas);
-  if (
-    replayCompleto &&
-    body.esquemas.length === 0 &&
-    (base.esquemas?.length ?? 0) > 0
-  ) {
-    return "usar-base";
-  }
-  return "usar-body";
+  return fuentesAlGuardarCatalogos(body, base).esquemas === "base"
+    ? "usar-base"
+    : Array.isArray(body.esquemas)
+      ? "usar-body"
+      : "usar-base";
 }
 
 export function esReplayCatalogoVacio(
   body: Partial<Catalogos>,
   base: Catalogos,
 ): boolean {
-  return esquemasTrasReplay(body, base) === "usar-base" &&
+  return (
+    esDocumentoCatalogoCompleto(body) &&
+    fuentesAlGuardarCatalogos(body, base).esquemas === "base" &&
     Array.isArray(body.esquemas) &&
-    Array.isArray(body.colores) &&
-    Array.isArray(body.tallas);
+    body.esquemas.length === 0
+  );
 }
 
 export function contarAsignaciones(
@@ -96,15 +208,40 @@ export function mejorAsignacionesSinVaciar(
   return mejor;
 }
 
+/**
+ * true = el cliente puede POST (local más rico y no es semilla/vacío).
+ * Un celular con esquemas viejos no rellena un servidor en fábrica (0 esquemas).
+ */
 export function localNoDebeEmpujarCatalogos(opts: {
   localEsquemas: number;
   serverEsquemas: number;
   localSavedAt: string;
   serverSavedAt: string;
+  localColores?: number;
+  serverColores?: number;
+  localTallas?: number;
+  serverTallas?: number;
+  localEsSemilla?: boolean;
+  serverEsSemilla?: boolean;
 }): boolean {
-  if (opts.localEsquemas > 0 && opts.serverEsquemas === 0) return true;
+  if (opts.localEsSemilla && !opts.serverEsSemilla) return false;
   if (opts.localEsquemas === 0 && opts.serverEsquemas > 0) return false;
+  if (
+    opts.serverEsquemas === 0 &&
+    opts.localEsquemas > 0 &&
+    Date.parse(opts.serverSavedAt) > 0
+  ) {
+    return false;
+  }
+  if (
+    opts.localEsquemas > 0 &&
+    opts.serverEsquemas === 0 &&
+    !(Date.parse(opts.serverSavedAt) > 0)
+  ) {
+    return true;
+  }
   if (!opts.serverSavedAt) return true;
+  if (opts.localEsSemilla && opts.serverEsSemilla) return false;
   return Date.parse(opts.localSavedAt) > Date.parse(opts.serverSavedAt);
 }
 
@@ -118,4 +255,24 @@ export function localNoDebeEmpujarAsignaciones(opts: {
   if (opts.localCount === 0 && opts.serverCount > 0) return false;
   if (!opts.serverSavedAt) return true;
   return Date.parse(opts.localSavedAt) > Date.parse(opts.serverSavedAt);
+}
+
+export function debeReescribirCatalogosDuraderos(
+  mejor: CatalogosConFecha,
+  actual: CatalogosConFecha | null,
+): boolean {
+  if (!actual) return !esCatalogoSemilla(mejor.catalogos) || Date.parse(mejor.savedAt) > 0;
+  if (esCatalogoSemilla(mejor.catalogos) && !esCatalogoSemilla(actual.catalogos)) {
+    return false;
+  }
+  if (
+    (mejor.catalogos.esquemas?.length ?? 0) >
+    (actual.catalogos.esquemas?.length ?? 0)
+  ) {
+    return true;
+  }
+  if (esCatalogoSemilla(mejor.catalogos) && esCatalogoSemilla(actual.catalogos)) {
+    return Date.parse(mejor.savedAt) > Date.parse(actual.savedAt);
+  }
+  return Date.parse(mejor.savedAt) > Date.parse(actual.savedAt);
 }

@@ -74,11 +74,32 @@ export function nombreEmpresa(
   return n || NOMBRE_EMPRESA_DEFAULT;
 }
 
+function listasTextoIguales(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  return a.every((x, i) => x === b[i]);
+}
+
+export function coloresDeFabrica(): string[] {
+  return listaTitulo(COLORES_INICIALES);
+}
+
+export function tallasDeFabrica(): string[] {
+  return listaTallas(agregarUnicos([...TALLAS_XC1092], [...TALLAS_LETRA]));
+}
+
+export function esColoresDeFabrica(colores: string[]): boolean {
+  return listasTextoIguales(listaTitulo(colores), coloresDeFabrica());
+}
+
+export function esTallasDeFabrica(tallas: string[]): boolean {
+  return listasTextoIguales(listaTallas(tallas), tallasDeFabrica());
+}
+
 export function catalogosVacios(): Catalogos {
   return {
     esquemas: [],
-    colores: listaTitulo(COLORES_INICIALES),
-    tallas: listaTallas(agregarUnicos([...TALLAS_XC1092], [...TALLAS_LETRA])),
+    colores: coloresDeFabrica(),
+    tallas: tallasDeFabrica(),
     especificaciones: [],
   };
 }

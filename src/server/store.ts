@@ -26,7 +26,10 @@ import {
 } from "@/lib/catalogos";
 import { hashPassword, verifyPassword } from "@/server/passwords";
 import { firmarTokenSesion, verificarTokenSesion } from "@/server/session-token";
-import { noPisarAsignacionesVacias } from "@/lib/persist-merge";
+import {
+  debeReescribirCatalogosDuraderos,
+  noPisarAsignacionesVacias,
+} from "@/lib/persist-merge";
 import { completarModulos } from "@/lib/modulos";
 import {
   archivoAsignacionesEmpaquetado,
@@ -445,11 +448,7 @@ export async function hidratarCatalogos(
   store.catalogos = normalizarCatalogos(store.catalogos);
   if (
     mejorCatalogo &&
-    mejorCatalogo.catalogos.esquemas.length > 0 &&
-    (!duraderosCatalogos ||
-      duraderosCatalogos.catalogos.esquemas.length === 0 ||
-      Date.parse(mejorCatalogo.savedAt) >
-        Date.parse(duraderosCatalogos.savedAt))
+    debeReescribirCatalogosDuraderos(mejorCatalogo, duraderosCatalogos)
   ) {
     await guardarCatalogosDuraderos(mejorCatalogo);
   }

@@ -29,6 +29,7 @@ import type { UsuariosPersistidos } from "@/lib/usuarios-persist";
 import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
 import {
   contarAsignaciones,
+  esCatalogoSemilla,
   localNoDebeEmpujarAsignaciones,
   localNoDebeEmpujarCatalogos,
 } from "@/lib/persist-merge";
@@ -285,6 +286,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         serverEsquemas,
         localSavedAt: local.savedAt,
         serverSavedAt: serverAt,
+        localEsSemilla: esCatalogoSemilla(local.catalogos),
+        serverEsSemilla: esCatalogoSemilla(
+          data.catalogos ?? catalogosVacios(),
+        ),
       })
     ) {
       const push = await fetch("/api/admin/catalogos", {

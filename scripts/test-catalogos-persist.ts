@@ -165,4 +165,23 @@ assert.equal(
   "crear un usuario no debe borrar las listas de captura de Iza",
 );
 
+const paletaIza = {
+  savedAt: "2026-09-20T00:00:00.000Z",
+  catalogos: normalizarCatalogos({
+    esquemas: [],
+    colores: ["Único", "blanco", "rosa", "azul", "rojo", "negro", "beige", "verde", "amarillo", "gris", "lila"],
+    tallas: ["1", "1X", "2", "70"],
+    especificaciones: [],
+  }),
+};
+const noPisaPaleta = mejorCatalogos(paletaIza, semillaNueva);
+assert.ok(
+  noPisaPaleta?.catalogos.colores.includes("Lila"),
+  "semilla de fábrica no borra colores extra",
+);
+assert.ok(
+  noPisaPaleta?.catalogos.tallas.includes("70"),
+  "semilla de fábrica no borra tallas extra",
+);
+
 console.log("ok", cookies.filter((c) => c.value).length, "cookies");
