@@ -19,7 +19,6 @@ import {
 } from "@/lib/secciones-pendientes";
 import {
   coincideBusquedaPendiente,
-  resumenCantidadesRegistro,
   resumenClavesRegistro,
   rutaDeModuloSesion,
   sesionesPendientes,
@@ -153,7 +152,6 @@ function ListaPendientesModulo({
                     const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
                     const estado = archivo ? "Terminado" : "En curso";
                     const resumenArticulos = resumenClavesRegistro(sesion);
-                    const resumenCantidad = resumenCantidadesRegistro(sesion);
                     const meta = (
                       <>
                         <span className="block w-full min-w-0 text-xs text-teal-800">
@@ -169,11 +167,6 @@ function ListaPendientesModulo({
                             </>
                           ) : null}
                         </span>
-                        {resumenCantidad ? (
-                          <span className="mt-1 block w-full text-sm font-medium leading-snug text-foreground">
-                            {resumenCantidad}
-                          </span>
-                        ) : null}
                         <span className="mt-1 text-sm font-medium">
                           {cuando ? formatoFechaHora(cuando) : "Sin fecha"}
                           {sucursal ? ` · ${sucursal}` : ""}
