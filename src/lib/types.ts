@@ -1,3 +1,4 @@
+import type { FormaCaptura } from "./forma-captura";
 import type { EstiloPdf } from "./pdf-estilo";
 
 export type EstadoPedido =
@@ -63,6 +64,8 @@ export type Producto = {
   foto?: string;
   variantes?: Variante[];
   esquemaConteo?: EsquemaConteo;
+  /** Cómo se recorre la hoja. Vacío en datos viejos = por talla. */
+  formaCaptura?: FormaCaptura;
   tallas?: string[];
   colores?: string[];
   especificaciones?: string[];

@@ -4,6 +4,7 @@ import {
   filtrarEnCatalogo,
   opcionesTallaArticulo,
 } from "@/lib/asignacion-articulo";
+import { errorFormaCaptura, parseFormaCaptura } from "@/lib/forma-captura";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { cookiesAsignaciones } from "@/server/asignaciones-persist";
 import { exigirCsrf, exigirModulo } from "@/server/auth";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     colores?: unknown;
     tallas?: unknown;
     especificaciones?: unknown;
+    formaCaptura?: unknown;
     soloIdentidad?: unknown;
     password?: unknown;
   } | null;
@@ -110,6 +112,16 @@ export async function POST(request: Request) {
         catalogos.especificaciones,
         body?.especificaciones,
       );
+      const formaCaptura = parseFormaCaptura(body?.formaCaptura);
+      if (!soloIdentidad) {
+        const errorForma = errorFormaCaptura(
+          formaCaptura,
+          colores,
+          tallas,
+          especificaciones,
+        );
+        if (errorForma) throw new Error(errorForma);
+      }
 
       const duplicada = store.productos.find(
         (p) =>
@@ -137,6 +149,7 @@ export async function POST(request: Request) {
           minimo: 0,
           ubicacion: "",
           esquemaConteo: soloIdentidad ? undefined : esquemaId,
+          formaCaptura: soloIdentidad ? undefined : formaCaptura,
           colores: soloIdentidad ? [] : colores,
           tallas: soloIdentidad ? [] : tallas,
           especificaciones: soloIdentidad ? [] : especificaciones,
@@ -154,6 +167,7 @@ export async function POST(request: Request) {
           throw new Error("Elige el esquema que mejor le queda a este artículo.");
         }
         prev.esquemaConteo = esquemaId;
+        prev.formaCaptura = formaCaptura;
         prev.colores = colores;
         prev.tallas = tallas;
         prev.especificaciones = especificaciones;

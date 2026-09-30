@@ -21,6 +21,14 @@ import {
   textoLista,
 } from "@/lib/asignacion-articulo";
 import {
+  FORMAS_CAPTURA,
+  ayudaFormaCaptura,
+  errorFormaCaptura,
+  etiquetaFormaCaptura,
+  parseFormaCaptura,
+  type FormaCaptura,
+} from "@/lib/forma-captura";
+import {
   tituloEtiqueta,
   tituloTalla,
 } from "@/lib/titulo-etiqueta";
@@ -70,6 +78,7 @@ function ChipCatalogo({
 
 export type AsignacionEsquema = {
   esquemaConteo: string;
+  formaCaptura: FormaCaptura;
   colores: string[];
   tallas: string[];
   especificaciones: string[];
@@ -93,6 +102,9 @@ export function DialogAgregarEsquemas({
   const [tallas, setTallas] = useState(inicial.tallas);
   const [especificaciones, setEspecificaciones] = useState(
     inicial.especificaciones,
+  );
+  const [formaCaptura, setFormaCaptura] = useState<FormaCaptura>(
+    parseFormaCaptura(inicial.formaCaptura),
   );
   const [paso, setPaso] = useState<"elegir" | "clave">("elegir");
   const [password, setPassword] = useState("");
@@ -136,6 +148,16 @@ export function DialogAgregarEsquemas({
       setError("Elige el esquema que mejor le queda a este artículo.");
       return;
     }
+    const errorForma = errorFormaCaptura(
+      formaCaptura,
+      colores,
+      tallas,
+      especificaciones,
+    );
+    if (errorForma) {
+      setError(errorForma);
+      return;
+    }
     setError("");
     setPassword("");
     setPaso("clave");
@@ -153,6 +175,7 @@ export function DialogAgregarEsquemas({
       await onGuardar(
         {
           esquemaConteo: esquemaId,
+          formaCaptura,
           colores,
           tallas,
           especificaciones,
@@ -181,8 +204,9 @@ export function DialogAgregarEsquemas({
               <DialogTitle>Agregar esquemas</DialogTitle>
               <DialogDescription>
                 Elige el esquema ya armado en Configuración que mejor le queda a
-                este artículo. Es el mismo para existencias, pedidos y
-                recepción. Clave y nombre no se tocan aquí.
+                este artículo, y cómo se captura. Es el mismo para existencias,
+                pedidos y recepción. Quien cuenta no lo cambia. Clave y nombre
+                no se tocan aquí.
               </DialogDescription>
             </DialogHeader>
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3">
@@ -213,6 +237,26 @@ export function DialogAgregarEsquemas({
 
               {esquemaId ? (
                 <>
+                  <section className="space-y-2">
+                    <Label>Cómo se captura</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {ayudaFormaCaptura(formaCaptura)}
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {FORMAS_CAPTURA.map((forma) => (
+                        <Button
+                          key={forma}
+                          type="button"
+                          variant={forma === formaCaptura ? "default" : "outline"}
+                          className="h-11 w-full justify-start"
+                          aria-pressed={forma === formaCaptura}
+                          onClick={() => setFormaCaptura(forma)}
+                        >
+                          {etiquetaFormaCaptura(forma)}
+                        </Button>
+                      ))}
+                    </div>
+                  </section>
                   <section className="space-y-2">
                     <Label>Colores de este artículo</Label>
                     <ChipCatalogo
@@ -260,6 +304,7 @@ export function DialogAgregarEsquemas({
                   <aside className="space-y-1 rounded-xl bg-teal-50 p-3 text-sm text-teal-950 ring-1 ring-teal-200">
                     <p className="font-semibold">Así se cuenta</p>
                     <p>{resumen.esquemaNombre}</p>
+                    <p>Captura: {etiquetaFormaCaptura(formaCaptura)}</p>
                     <p>
                       Colores: {textoLista(resumen.colores, "ninguno aún")}
                     </p>

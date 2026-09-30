@@ -4,6 +4,7 @@ import {
   filtrarEnCatalogo,
   opcionesTallaArticulo,
 } from "@/lib/asignacion-articulo";
+import { parseFormaCaptura } from "@/lib/forma-captura";
 import { normalizarCatalogos } from "@/lib/catalogos";
 import { cookiesAsignaciones } from "@/server/asignaciones-persist";
 import { exigirCsrf, exigirModulo } from "@/server/auth";
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     colores?: unknown;
     tallas?: unknown;
     especificaciones?: unknown;
+    formaCaptura?: unknown;
     password?: unknown;
   } | null;
 
@@ -103,6 +105,7 @@ export async function POST(request: Request) {
         catalogos.especificaciones,
         body?.especificaciones,
       );
+      const formaCaptura = parseFormaCaptura(body?.formaCaptura);
 
       const faltantes = ids.filter(
         (id) => !store.productos.some((p) => p.id === id),
@@ -116,6 +119,7 @@ export async function POST(request: Request) {
         const prev = store.productos.find((p) => p.id === id);
         if (!prev) continue;
         prev.esquemaConteo = esquemaId;
+        prev.formaCaptura = formaCaptura;
         prev.colores = [...colores];
         prev.tallas = [...tallas];
         prev.especificaciones = [...especificaciones];

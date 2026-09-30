@@ -85,7 +85,7 @@ function RecepcionContent() {
         <EstadoSesion modulo="recepcion" />
         <BotonTerminarSesion modulo="recepcion" />
         <p className="mt-1 text-sm text-emerald-800/80">
-          Misma hoja que existencias, en verde: Por talla o Por color. Marca
+          Misma hoja que existencias, en verde. La forma de contar ya viene del artículo. Marca
           varias prendas del mismo esquema. Si quedó a medias, retómalo en
           Registros → Recepción pendientes.
         </p>

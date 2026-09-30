@@ -55,11 +55,12 @@ export function archivoAsignacionesEmpaquetado() {
 function compactar(data: AsignacionesPersistidas) {
   const a: Record<
     string,
-    { e: string; c: string[]; t: string[]; s: string[] }
+    { e: string; f: string; c: string[]; t: string[]; s: string[] }
   > = {};
   for (const [clave, asignacion] of Object.entries(data.asignaciones)) {
     a[clave] = {
       e: asignacion.esquemaConteo,
+      f: asignacion.formaCaptura,
       c: asignacion.colores,
       t: asignacion.tallas,
       s: asignacion.especificaciones,

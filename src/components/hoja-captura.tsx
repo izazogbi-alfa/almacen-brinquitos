@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { FormaCaptura } from "@/lib/forma-captura";
 import { tituloEtiqueta, tituloTalla } from "@/lib/titulo-etiqueta";
 
 const TECLAS = [
@@ -12,21 +13,25 @@ const TECLAS = [
   ["borrar", "0", "enter"],
 ] as const;
 
+function nombreEje(eje: FormaCaptura) {
+  if (eje === "color") return "color";
+  if (eje === "especificacion") return "especificación";
+  return "talla";
+}
+
 export function HojaCaptura({
   color,
   talla,
+  especificacion = "",
   cantidad,
   verde,
   guardando,
-  eje = "color",
-  puedeRegresarColor,
-  puedeRegresarTalla,
+  eje = "talla",
+  puedeRegresar,
   onCantidad,
   onEnter,
-  onSaltarColor,
-  onRegresarColor,
-  onSaltarTalla,
-  onRegresarTalla,
+  onSaltar,
+  onRegresar,
   onCerrar,
   onPendiente,
   onTerminar,
@@ -34,18 +39,16 @@ export function HojaCaptura({
 }: {
   color: string;
   talla: string;
+  especificacion?: string;
   cantidad: string;
   verde?: boolean;
   guardando?: boolean;
-  eje?: "talla" | "color";
-  puedeRegresarColor: boolean;
-  puedeRegresarTalla?: boolean;
+  eje?: FormaCaptura;
+  puedeRegresar: boolean;
   onCantidad: (valor: string) => void;
   onEnter: () => void;
-  onSaltarColor: () => void;
-  onRegresarColor: () => void;
-  onSaltarTalla?: () => void;
-  onRegresarTalla?: () => void;
+  onSaltar: () => void;
+  onRegresar: () => void;
   onCerrar: () => void;
   onPendiente: () => void;
   onTerminar: () => void;
@@ -56,8 +59,7 @@ export function HojaCaptura({
   const acento = verde
     ? "bg-emerald-700 text-white hover:bg-emerald-800"
     : "bg-teal-800 text-white hover:bg-teal-900";
-  const porTalla = eje === "talla";
-  const celdaAhora = `${color}::${talla}`;
+  const celdaAhora = `${eje}::${color}::${talla}::${especificacion}`;
   if (celda !== celdaAhora) {
     setCelda(celdaAhora);
     setPisar(true);
@@ -86,10 +88,13 @@ export function HojaCaptura({
     "h-10 px-1.5 text-[11px] leading-tight font-medium sm:h-11 sm:text-xs";
   const tallaVista = talla ? tituloTalla(talla) : "";
   const colorVista = color ? tituloEtiqueta(color) : "";
+  const specVista = especificacion ? tituloEtiqueta(especificacion) : "";
+  const ejeVista = eje === "especificacion" ? specVista : colorVista;
   const titulo =
-    colorVista && tallaVista
-      ? `${colorVista} · ${tallaVista}`
-      : colorVista || tallaVista || "Captura";
+    ejeVista && tallaVista
+      ? `${ejeVista} · ${tallaVista}`
+      : ejeVista || tallaVista || "Captura";
+  const ejeNombre = nombreEje(eje);
 
   return (
     <>
@@ -123,43 +128,22 @@ export function HojaCaptura({
           </Button>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {porTalla ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                className={slim}
-                disabled={!puedeRegresarTalla}
-                onClick={onRegresarTalla}
-              >
-                Regresar talla
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className={slim}
-                onClick={onSaltarTalla}
-              >
-                Saltar talla
-              </Button>
-            </>
-          ) : null}
           <Button
             type="button"
             variant="outline"
             className={slim}
-            disabled={!puedeRegresarColor}
-            onClick={onRegresarColor}
+            disabled={!puedeRegresar}
+            onClick={onRegresar}
           >
-            Regresar color
+            Regresar {ejeNombre}
           </Button>
           <Button
             type="button"
             variant="outline"
             className={slim}
-            onClick={onSaltarColor}
+            onClick={onSaltar}
           >
-            Saltar color
+            Saltar {ejeNombre}
           </Button>
           <Button
             type="button"

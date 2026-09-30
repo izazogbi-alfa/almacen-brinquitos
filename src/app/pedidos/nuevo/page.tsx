@@ -99,8 +99,8 @@ function NuevoPedidoContent() {
           Nuevo pedido
         </h2>
         <p className="text-sm text-muted-foreground">
-          Marca varias prendas del mismo esquema. Por talla (viene primero) o
-          Por color. Un pedido y un PDF con todas. Iza autoriza. Si quedó a
+          Marca varias prendas del mismo esquema. La forma de contar ya viene
+          del artículo. Un pedido y un PDF con todas. Iza autoriza. Si quedó a
           medias, retómalo en Registros → Pedidos pendientes.
         </p>
         <EstadoSesion modulo="pedidos" />

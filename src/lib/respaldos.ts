@@ -1,4 +1,5 @@
 import { extraerAsignaciones } from "./asignaciones-articulos";
+import { parseFormaCaptura, type FormaCaptura } from "./forma-captura";
 import { normalizarCatalogos } from "./catalogos";
 import {
   esModuloSesion,
@@ -61,6 +62,7 @@ export type ContenidoRespaldo = {
     string,
     {
       esquemaConteo: string;
+      formaCaptura: FormaCaptura;
       colores: string[];
       tallas: string[];
       especificaciones: string[];
@@ -328,6 +330,7 @@ export function parseArchivoRespaldo(raw: unknown): ArchivoRespaldo | null {
         : [];
     asignaciones[clave.trim().toUpperCase()] = {
       esquemaConteo: esquema,
+      formaCaptura: parseFormaCaptura(v.formaCaptura ?? v.f),
       colores: lista(v.colores ?? v.c),
       tallas: lista(v.tallas ?? v.t),
       especificaciones: lista(v.especificaciones ?? v.s),

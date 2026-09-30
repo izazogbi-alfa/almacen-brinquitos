@@ -136,6 +136,7 @@ assert.ok(viejo);
 assert.equal(viejo.existencias, undefined);
 assert.equal(viejo.sesiones, undefined);
 assert.equal(viejo.asignaciones.XC1.esquemaConteo, "esq-iza");
+assert.equal(viejo.asignaciones.XC1.formaCaptura, "talla");
 
 const nuevo = parseArchivoRespaldo({
   ...viejo,

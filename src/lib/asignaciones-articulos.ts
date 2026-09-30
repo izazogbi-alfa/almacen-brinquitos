@@ -1,9 +1,11 @@
 import { sanitizarArticuloSinFabrica } from "@/lib/catalogos";
+import { parseFormaCaptura, type FormaCaptura } from "@/lib/forma-captura";
 import { listaTallas, listaTitulo } from "@/lib/titulo-etiqueta";
 import type { Catalogos, Producto } from "@/lib/types";
 
 export type AsignacionArticulo = {
   esquemaConteo: string;
+  formaCaptura: FormaCaptura;
   colores: string[];
   tallas: string[];
   especificaciones: string[];
@@ -40,6 +42,7 @@ export function parseAsignacion(raw: unknown): AsignacionArticulo | null {
   if (!esquemaConteo) return null;
   return {
     esquemaConteo,
+    formaCaptura: parseFormaCaptura(obj.f ?? obj.formaCaptura),
     colores: listaTitulo(lista(obj.c ?? obj.colores)),
     tallas: listaTallas(lista(obj.t ?? obj.tallas)),
     especificaciones: listaTitulo(lista(obj.s ?? obj.especificaciones)),
@@ -109,6 +112,7 @@ export function extraerAsignaciones(
     if (!clave) continue;
     asignaciones[clave] = {
       esquemaConteo: esquema,
+      formaCaptura: parseFormaCaptura(producto.formaCaptura),
       colores: [...(producto.colores ?? [])],
       tallas: [...(producto.tallas ?? [])],
       especificaciones: [...(producto.especificaciones ?? [])],
@@ -134,6 +138,7 @@ export function aplicarAsignaciones(
       {
         ...producto,
         esquemaConteo: asignada.esquemaConteo,
+        formaCaptura: asignada.formaCaptura,
         colores: asignada.colores.length ? asignada.colores : producto.colores,
         tallas: asignada.tallas,
         especificaciones: asignada.especificaciones.length

@@ -97,7 +97,7 @@ function ExistenciasContent() {
         <BotonTerminarSesion modulo="existencias" />
         <p className="mt-1 text-sm text-muted-foreground">
           Sucursal, busca, marca varias prendas del mismo esquema (un PDF).
-          Elige Por talla (viene primero) o Por color. Teclado y Enter.
+          La forma de contar ya viene del artículo. Teclado y Enter.
           Contar deja la cantidad en piso. Si quedó a medias, retómalo en
           Registros → Existencias pendientes.
         </p>

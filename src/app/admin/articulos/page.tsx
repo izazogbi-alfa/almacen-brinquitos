@@ -24,6 +24,11 @@ import {
   resumenConteo,
   textoLista,
 } from "@/lib/asignacion-articulo";
+import {
+  etiquetaFormaCaptura,
+  parseFormaCaptura,
+  type FormaCaptura,
+} from "@/lib/forma-captura";
 import { useInventory } from "@/lib/inventory-context";
 import { puede } from "@/lib/modulos";
 import {
@@ -50,6 +55,7 @@ function ArticulosAdmin() {
   const [colores, setColores] = useState<string[]>([]);
   const [tallas, setTallas] = useState<string[]>([]);
   const [especificaciones, setEspecificaciones] = useState<string[]>([]);
+  const [formaCaptura, setFormaCaptura] = useState<FormaCaptura>("talla");
   const [guardando, setGuardando] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [password, setPassword] = useState("");
@@ -93,6 +99,7 @@ function ArticulosAdmin() {
         estaElegido(catalogos.especificaciones, s),
       ),
     );
+    setFormaCaptura(parseFormaCaptura(p.formaCaptura));
   }
 
   function abrir(p: Producto) {
@@ -112,6 +119,7 @@ function ArticulosAdmin() {
     setTallas([]);
     setColores([]);
     setEspecificaciones([]);
+    setFormaCaptura("talla");
     setErrorClave("");
     setPassword("");
   }
@@ -361,6 +369,9 @@ function ArticulosAdmin() {
                     <span className="font-medium">{resumen.esquemaNombre}</span>
                   </p>
                   <p className="text-sm">
+                    Captura: {etiquetaFormaCaptura(formaCaptura)}
+                  </p>
+                  <p className="text-sm">
                     Colores:{" "}
                     {textoLista(resumen.colores, "ninguno aún")}
                   </p>
@@ -492,6 +503,7 @@ function ArticulosAdmin() {
         catalogos={catalogos}
         inicial={{
           esquemaConteo: esquemaId,
+          formaCaptura,
           colores,
           tallas,
           especificaciones,
@@ -506,6 +518,7 @@ function ArticulosAdmin() {
             colores: asignacion.colores,
             tallas: asignacion.tallas,
             especificaciones: asignacion.especificaciones,
+            formaCaptura: asignacion.formaCaptura,
             password: claveAdmin,
           });
           setFicha(guardado);
@@ -532,6 +545,7 @@ function ArticulosAdmin() {
             colores,
             tallas,
             especificaciones,
+            formaCaptura,
             password: claveAdmin,
           });
           toast.success(

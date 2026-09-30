@@ -19,6 +19,12 @@ import {
   coloresDeCaptura,
   tallasDeCaptura,
 } from "@/lib/asignacion-articulo";
+import {
+  ayudaFormaCaptura,
+  etiquetaFormaCaptura,
+  parseFormaCaptura,
+  type FormaCaptura,
+} from "@/lib/forma-captura";
 import { esquemaPorId } from "@/lib/catalogos";
 import { useInventory } from "@/lib/inventory-context";
 import {
@@ -29,6 +35,7 @@ import {
   notasPdfSeleccion,
 } from "@/lib/seleccion-mismo-esquema";
 import {
+  colorAnteriorEnLista,
   destinoRegresarColor,
   destinoSaltarColor,
   siguienteColorEnLista,
@@ -65,7 +72,12 @@ export type CapturaPayload = {
 
 type ParTalla = { talla: string; cantidad: number };
 type CeldaBorrador = { talla: string; color: string; cantidad: number };
-export type EjeCaptura = "talla" | "color";
+
+function especificacionesDelArticulo(producto: Producto) {
+  return (producto.especificaciones ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 export type LineaTabla = LineaColorTabla;
 
@@ -130,7 +142,6 @@ export function CapturaArticulo({
   const [especificacion, setEspecificacion] = useState("");
   const [cantidad, setCantidad] = useState("1");
   const [borrador, setBorrador] = useState<CeldaBorrador[]>([]);
-  const [eje, setEje] = useState<EjeCaptura>("talla");
   const [lineas, setLineas] = useState<LineaTabla[]>(lineasIniciales ?? []);
   const cantidadRef = useRef<HTMLInputElement>(null);
 
@@ -182,7 +193,12 @@ export function CapturaArticulo({
   const colorActivo = color || colores[0] || "Único";
   const tallaActiva = talla || encabezados[0] || "";
   const tallasDeRejilla = encabezados.filter((t) => t !== "");
-  const ejeActivo: EjeCaptura = eje;
+  const formaActiva: FormaCaptura = parseFormaCaptura(mostrado?.formaCaptura);
+  const especificaciones = mostrado ? especificacionesDelArticulo(mostrado) : [];
+  const especificacionActiva =
+    especificacion || especificaciones[0] || "";
+  const specLinea =
+    formaActiva === "especificacion" ? especificacionActiva.trim() : "";
 
   const indiceArticuloActivo = activoId
     ? elegidosIds.indexOf(activoId)
@@ -207,7 +223,8 @@ export function CapturaArticulo({
       ? tallasDeCaptura(producto, catalogos, esq.id)
       : [];
     const paleta = coloresDeCaptura(producto, catalogos);
-    return { esq, heads, paleta };
+    const specs = especificacionesDelArticulo(producto);
+    return { esq, heads, paleta, specs };
   }
 
   function indiceDeArticulo(productoId: string) {
@@ -215,24 +232,19 @@ export function CapturaArticulo({
   }
 
   async function abrirPrimerCeldaDe(producto: Producto) {
-    const { heads, paleta } = datosDeProducto(producto);
+    const { heads, paleta, specs } = datosDeProducto(producto);
     if (mostrandoCaptura) {
       await guardarEjeActual();
     }
     setActivoId(producto.id);
-    setEspecificacion("");
     setBorrador([]);
     const primeroColor = paleta[0] ?? "Único";
     const primeraTalla = heads.filter((x) => x !== "")[0] ?? "";
-    if (ejeActivo === "talla") {
-      setTalla(primeraTalla);
-      setColor(primeroColor);
-      setCantidad(cantidadInicialDe(producto, primeraTalla, primeroColor));
-    } else {
-      setColor(primeroColor);
-      setTalla(primeraTalla);
-      setCantidad(cantidadInicialDe(producto, primeraTalla, primeroColor));
-    }
+    const forma = parseFormaCaptura(producto.formaCaptura);
+    setEspecificacion(forma === "especificacion" ? (specs[0] ?? "") : "");
+    setTalla(primeraTalla);
+    setColor(primeroColor);
+    setCantidad(cantidadInicialDe(producto, primeraTalla, primeroColor));
     setMostrandoCaptura(true);
     onInicioRegistro?.();
     enfocarCantidad();
@@ -260,20 +272,27 @@ export function CapturaArticulo({
     }
     const prev = productos.find((p) => p.id === elegidosIds[idx - 1]);
     if (!prev) return;
-    const { heads, paleta } = datosDeProducto(prev);
+    const { heads, paleta, specs } = datosDeProducto(prev);
     setActivoId(prev.id);
     setBorrador([]);
-    if (ejeActivo === "talla") {
-      const tallas = heads.filter((x) => x !== "");
-      const ultimaTalla = tallas[tallas.length - 1] ?? "";
+    const forma = parseFormaCaptura(prev.formaCaptura);
+    const tallas = heads.filter((x) => x !== "");
+    const ultimaTalla = tallas[tallas.length - 1] ?? heads[0] ?? "";
+    if (forma === "talla") {
       const ultimoColor = paleta[paleta.length - 1] ?? "Único";
+      setEspecificacion("");
       setTalla(ultimaTalla);
       setColor(ultimoColor);
       setCantidad(cantidadInicialDe(prev, ultimaTalla, ultimoColor));
+    } else if (forma === "especificacion") {
+      const ultima = specs[specs.length - 1] ?? "";
+      setEspecificacion(ultima);
+      setTalla(ultimaTalla);
+      setColor(paleta[0] ?? "Único");
+      setCantidad(cantidadInicialDe(prev, ultimaTalla, paleta[0] ?? "Único"));
     } else {
       const ultimoColor = paleta[paleta.length - 1] ?? "Único";
-      const tallas = heads.filter((x) => x !== "");
-      const ultimaTalla = tallas[tallas.length - 1] ?? heads[0] ?? "";
+      setEspecificacion("");
       setColor(ultimoColor);
       setTalla(ultimaTalla);
       setCantidad(cantidadInicialDe(prev, ultimaTalla, ultimoColor));
@@ -295,11 +314,13 @@ export function CapturaArticulo({
       ? tallasDeCaptura(producto, catalogos, esq.id)
       : [];
     const paleta = coloresDeCaptura(producto, catalogos);
+    const specs = especificacionesDelArticulo(producto);
     const c0 = paleta[0] ?? "Único";
     const t0 = heads[0] ?? "";
+    const forma = parseFormaCaptura(producto.formaCaptura);
     setColor(c0);
     setTalla(t0);
-    setEspecificacion("");
+    setEspecificacion(forma === "especificacion" ? (specs[0] ?? "") : "");
     setBorrador([]);
     if (modo === "contar" && sucId) {
       setCantidad(String(cantidadEn(producto, sucId, t0, c0)));
@@ -450,7 +471,7 @@ export function CapturaArticulo({
   }
 
   async function abrirHojaColor(c: string) {
-    if (mostrandoCaptura && (c !== colorActivo || ejeActivo !== "color")) {
+    if (mostrandoCaptura && c !== colorActivo) {
       await guardarEjeActual();
     }
     aplicarColor(c);
@@ -459,7 +480,7 @@ export function CapturaArticulo({
   }
 
   async function abrirHojaTalla(t: string) {
-    if (mostrandoCaptura && (t !== tallaActiva || ejeActivo !== "talla")) {
+    if (mostrandoCaptura && t !== tallaActiva) {
       await guardarEjeActual();
     }
     aplicarTalla(t);
@@ -467,10 +488,24 @@ export function CapturaArticulo({
     onInicioRegistro?.();
   }
 
-  function elegirModoCaptura(siguiente: EjeCaptura) {
-    setEje(siguiente);
-    setMostrandoCaptura(false);
+  async function abrirHojaEspecificacion(s: string) {
+    if (mostrandoCaptura && s !== especificacionActiva) {
+      await guardarEjeActual();
+    }
+    aplicarEspecificacion(s);
+    setMostrandoCaptura(true);
+    onInicioRegistro?.();
+  }
+
+  function aplicarEspecificacion(s: string) {
+    const primera = encabezados[0] ?? "";
+    const c0 = colores[0] ?? "Único";
+    setEspecificacion(s);
+    setTalla(primera);
+    setColor(c0);
     setBorrador([]);
+    setCantidad(cantidadInicial(primera, c0));
+    enfocarCantidad();
   }
 
   function enfocarCantidad() {
@@ -574,7 +609,7 @@ export function CapturaArticulo({
         (x) =>
           x.productoId === mostrado.id &&
           x.color === celda.color &&
-          x.especificacion === especificacion &&
+          x.especificacion === specLinea &&
           x.sucursalId === sucursal.id,
       );
       const par: ParTalla = { talla: celda.talla, cantidad: celda.cantidad };
@@ -588,12 +623,12 @@ export function CapturaArticulo({
         next = [
           ...next,
           {
-            key: `ln-${mostrado.id}-${celda.color}-${especificacion || ""}-${sucursal.id}`,
+            key: `ln-${mostrado.id}-${celda.color}-${specLinea}-${sucursal.id}`,
             productoId: mostrado.id,
             sku: mostrado.sku,
             nombre: tituloNombreArticulo(mostrado.nombre),
             color: tituloEtiqueta(celda.color),
-            especificacion: especificacion || undefined,
+            especificacion: specLinea || undefined,
             sucursalId: sucursal.id,
             sucursalNombre: sucursal.nombre,
             pares: [par],
@@ -660,7 +695,7 @@ export function CapturaArticulo({
     const n = Number(cantidad);
     if (!Number.isFinite(n) || n < 0) return;
     if (modo !== "contar" && n <= 0) return;
-    if (ejeActivo === "talla") {
+    if (formaActiva === "talla") {
       const next = siguienteColorEnLista(colores, colorActivo);
       if (next) {
         cambiarColor(next);
@@ -669,12 +704,59 @@ export function CapturaArticulo({
       void irAlSiguienteTallaTrasGuardar();
       return;
     }
+    if (formaActiva === "especificacion") {
+      const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
+      if (next) {
+        cambiarTalla(next);
+        return;
+      }
+      void irAlSiguienteEspecificacionTrasGuardar();
+      return;
+    }
     const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
     if (next) {
       cambiarTalla(next);
       return;
     }
     void irAlSiguienteColorTrasGuardar();
+  }
+
+  async function irAlSiguienteEspecificacionTrasGuardar() {
+    await guardarEjeActual();
+    const next = siguienteColorEnLista(especificaciones, especificacionActiva);
+    if (next) {
+      aplicarEspecificacion(next);
+      return;
+    }
+    if (enModoCaptura && elegidosIds.length > 1) {
+      await avanzarAlSiguienteArticulo();
+      return;
+    }
+    setMostrandoCaptura(false);
+  }
+
+  function saltarEspecificacion() {
+    const next = siguienteColorEnLista(especificaciones, especificacionActiva);
+    if (!next) {
+      toast.message("Ya es la última especificación.");
+      return;
+    }
+    setBorrador([]);
+    aplicarEspecificacion(next);
+  }
+
+  function regresarEspecificacion() {
+    const prev = colorAnteriorEnLista(especificaciones, especificacionActiva);
+    if (!prev) {
+      if (enModoCaptura && indiceArticuloActivo > 0) {
+        void regresarAlArticuloAnterior();
+        return;
+      }
+      toast.message("Ya es la primera especificación.");
+      return;
+    }
+    setBorrador([]);
+    aplicarEspecificacion(prev);
   }
 
   function saltarTalla() {
@@ -705,7 +787,7 @@ export function CapturaArticulo({
 
   function saltarColor() {
     const dest = destinoSaltarColor({
-      eje: ejeActivo,
+      eje: "color",
       colores,
       color: colorActivo,
       tallas: encabezados,
@@ -715,24 +797,13 @@ export function CapturaArticulo({
       toast.message("Ya es el último color.");
       return;
     }
-    if (ejeActivo === "talla") {
-      setBorrador((prev) =>
-        prev.filter(
-          (p) => !(p.talla === tallaActiva && p.color === colorActivo),
-        ),
-      );
-      setColor(dest.color);
-      setCantidad(cantidadInicial(dest.talla, dest.color));
-      enfocarCantidad();
-      return;
-    }
     setBorrador([]);
     aplicarColor(dest.color);
   }
 
   function regresarColor() {
     const dest = destinoRegresarColor({
-      eje: ejeActivo,
+      eje: "color",
       colores,
       color: colorActivo,
       tallas: encabezados,
@@ -744,17 +815,6 @@ export function CapturaArticulo({
         return;
       }
       toast.message("Ya es el primer color.");
-      return;
-    }
-    if (ejeActivo === "talla") {
-      setBorrador((prev) =>
-        prev.filter(
-          (p) => !(p.talla === tallaActiva && p.color === colorActivo),
-        ),
-      );
-      setColor(dest.color);
-      setCantidad(cantidadInicial(dest.talla, dest.color));
-      enfocarCantidad();
       return;
     }
     setBorrador([]);
@@ -788,6 +848,40 @@ export function CapturaArticulo({
     await onTerminarRegistro(next);
     setMostrandoCaptura(false);
   }
+
+  const puedeRegresarEje =
+    formaActiva === "talla"
+      ? Boolean(
+          tallaAnteriorEnEsquema(encabezados, tallaActiva) ||
+            (enModoCaptura && indiceArticuloActivo > 0),
+        )
+      : formaActiva === "especificacion"
+        ? Boolean(
+            colorAnteriorEnLista(especificaciones, especificacionActiva) ||
+              (enModoCaptura && indiceArticuloActivo > 0),
+          )
+        : Boolean(
+            destinoRegresarColor({
+              eje: "color",
+              colores,
+              color: colorActivo,
+              tallas: encabezados,
+              talla: tallaActiva,
+            }) ||
+              (enModoCaptura && indiceArticuloActivo > 0),
+          );
+  const saltarEje =
+    formaActiva === "talla"
+      ? saltarTalla
+      : formaActiva === "especificacion"
+        ? saltarEspecificacion
+        : saltarColor;
+  const regresarEje =
+    formaActiva === "talla"
+      ? regresarTalla
+      : formaActiva === "especificacion"
+        ? regresarEspecificacion
+        : regresarColor;
 
   const notasPdfTabla = [
     ...(pdfNotas ?? []),
@@ -919,40 +1013,13 @@ export function CapturaArticulo({
               </Button>
               {esquemaActivo ? (
                 <div className="space-y-2">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Cómo capturar</p>
-                    <p className="text-xs text-muted-foreground">
-                      Por talla: eliges una talla y Enter recorre todos los
-                      colores. Si un color no llegó, Saltar color pasa al
-                      siguiente color en esa misma talla. Por color: eliges un
-                      color y Enter recorre las tallas.
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant={ejeActivo === "talla" ? "default" : "outline"}
-                        className={cn(
-                          "h-12 w-full",
-                          ejeActivo === "talla" && btn,
-                        )}
-                        onClick={() => elegirModoCaptura("talla")}
-                      >
-                        Por talla
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={ejeActivo === "color" ? "default" : "outline"}
-                        className={cn(
-                          "h-12 w-full",
-                          ejeActivo === "color" && btn,
-                        )}
-                        onClick={() => elegirModoCaptura("color")}
-                      >
-                        Por color
-                      </Button>
-                    </div>
-                  </div>
-                  {ejeActivo === "talla" ? (
+                  <p className="text-sm font-medium">
+                    {etiquetaFormaCaptura(formaActiva)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {ayudaFormaCaptura(formaActiva)}
+                  </p>
+                  {formaActiva === "talla" ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {(tallasDeRejilla.length > 0
                         ? tallasDeRejilla
@@ -983,6 +1050,37 @@ export function CapturaArticulo({
                         </Button>
                       ))}
                     </div>
+                  ) : formaActiva === "especificacion" ? (
+                    especificaciones.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {especificaciones.map((s) => (
+                          <Button
+                            key={s}
+                            type="button"
+                            variant={
+                              mostrandoCaptura && s === especificacionActiva
+                                ? "default"
+                                : "outline"
+                            }
+                            className={cn(
+                              "h-12 w-full",
+                              mostrandoCaptura &&
+                                s === especificacionActiva &&
+                                btn,
+                            )}
+                            onClick={() => void abrirHojaEspecificacion(s)}
+                          >
+                            {tituloEtiqueta(s)}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-destructive" role="alert">
+                        Este artículo se cuenta por especificación, pero no
+                        tiene ninguna. En Artículos abre la ficha y pulsa
+                        Agregar esquemas.
+                      </p>
+                    )
                   ) : colores.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {colores.map((c) => (
@@ -1019,7 +1117,7 @@ export function CapturaArticulo({
           {!enModoCaptura && !buscado ? (
             <EmptyView
               titulo="Busca el artículo"
-              detalle="Marca varias prendas del mismo esquema. Cuando termines de marcar, pulsa Capturar abajo. Por talla: toca una talla y Enter recorre los colores. Por color: toca un color y Enter recorre las tallas. Un PDF junta todas."
+              detalle="Marca varias prendas del mismo esquema. Cuando termines de marcar, pulsa Capturar abajo. La forma (por talla, por color o por especificación) ya viene del artículo. Un PDF junta todas."
             />
           ) : !enModoCaptura && coincidencias.length === 0 ? (
             <EmptyView
@@ -1150,33 +1248,17 @@ export function CapturaArticulo({
             <HojaCaptura
               color={colorActivo}
               talla={tallaActiva}
+              especificacion={specLinea}
               cantidad={cantidad}
               verde={verde}
               guardando={guardando}
-              eje={ejeActivo}
+              eje={formaActiva}
               progresoArticulo={progresoArticulo}
-              puedeRegresarColor={Boolean(
-                destinoRegresarColor({
-                  eje: ejeActivo,
-                  colores,
-                  color: colorActivo,
-                  tallas: encabezados,
-                  talla: tallaActiva,
-                }) ||
-                  (enModoCaptura && indiceArticuloActivo > 0),
-              )}
-              puedeRegresarTalla={Boolean(
-                tallaAnteriorEnEsquema(encabezados, tallaActiva) ||
-                  (enModoCaptura &&
-                    indiceArticuloActivo > 0 &&
-                    ejeActivo === "talla"),
-              )}
+              puedeRegresar={puedeRegresarEje}
               onCantidad={setCantidad}
               onEnter={avanzarEnter}
-              onSaltarColor={saltarColor}
-              onRegresarColor={regresarColor}
-              onSaltarTalla={saltarTalla}
-              onRegresarTalla={regresarTalla}
+              onSaltar={saltarEje}
+              onRegresar={regresarEje}
               onCerrar={() => setMostrandoCaptura(false)}
               onPendiente={() => void pendienteGuardar()}
               onTerminar={() => void terminarGuardar()}
@@ -1193,7 +1275,7 @@ export function CapturaArticulo({
             <TablaPrendas
               lineas={lineas}
               acento={acento}
-              vacioDetalle="Guarda con Enter (última talla o último color del eje) o Terminar guardar para que aparezca aquí, debajo de la clave."
+              vacioDetalle="Guarda con Enter (al terminar la talla, el color o la especificación) o Terminar guardar para que aparezca aquí, debajo de la clave."
               pdfArchivo={
                 pdfArchivo ??
                 (modo === "entrada"

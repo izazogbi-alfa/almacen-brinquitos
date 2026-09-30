@@ -24,6 +24,7 @@ import type { ModuloSesion, SesionCaptura, BorradorSesion } from "@/lib/sesion-c
 import { catalogosVacios } from "@/lib/catalogos";
 import { puede } from "@/lib/modulos";
 import type { AsignacionesPersistidas } from "@/lib/asignaciones-articulos";
+import { parseFormaCaptura, type FormaCaptura } from "@/lib/forma-captura";
 import { enviarAbandonoPagina } from "@/lib/abandonar-pagina";
 import type { UsuariosPersistidos } from "@/lib/usuarios-persist";
 import { parseUsuariosPersistidos } from "@/lib/usuarios-persist";
@@ -121,6 +122,7 @@ type InventoryValue = {
     colores?: string[];
     tallas?: string[];
     especificaciones?: string[];
+    formaCaptura?: FormaCaptura;
     soloIdentidad?: boolean;
     password: string;
   }) => Promise<Producto>;
@@ -130,6 +132,7 @@ type InventoryValue = {
     colores?: string[];
     tallas?: string[];
     especificaciones?: string[];
+    formaCaptura?: FormaCaptura;
     password: string;
   }) => Promise<void>;
   guardarCatalogos: (catalogos: Partial<Catalogos>) => Promise<void>;
@@ -372,6 +375,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         if (!esq || !p.sku) continue;
         asignaciones[p.sku.trim().toUpperCase()] = {
           esquemaConteo: esq,
+          formaCaptura: parseFormaCaptura(p.formaCaptura),
           colores: [...(p.colores ?? [])],
           tallas: [...(p.tallas ?? [])],
           especificaciones: [...(p.especificaciones ?? [])],
@@ -647,6 +651,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       colores?: string[];
       tallas?: string[];
       especificaciones?: string[];
+      formaCaptura?: FormaCaptura;
       soloIdentidad?: boolean;
       password: string;
     }) => {
@@ -681,6 +686,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       colores?: string[];
       tallas?: string[];
       especificaciones?: string[];
+      formaCaptura?: FormaCaptura;
       password: string;
     }) => {
       const res = await fetch("/api/admin/articulos/clonar", {

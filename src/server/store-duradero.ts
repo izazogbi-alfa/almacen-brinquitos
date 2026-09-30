@@ -271,6 +271,7 @@ export function aplicarStockAlStore(store: StoreDuradero, stock: StockPersistido
       const colores = prev.colores;
       const tallas = prev.tallas;
       const especificaciones = prev.especificaciones;
+      const formaCaptura = prev.formaCaptura;
       Object.assign(prev, p);
       if (!prev.esquemaConteo?.trim() && esquema) {
         prev.esquemaConteo = esquema;
@@ -279,6 +280,7 @@ export function aplicarStockAlStore(store: StoreDuradero, stock: StockPersistido
         if (!prev.especificaciones?.length && especificaciones?.length) {
           prev.especificaciones = especificaciones;
         }
+        if (!prev.formaCaptura && formaCaptura) prev.formaCaptura = formaCaptura;
       }
     } else {
       store.productos.push(p);

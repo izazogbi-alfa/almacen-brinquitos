@@ -84,7 +84,30 @@ const persistido = parseAsignacionesPersistidas({
 });
 assert.ok(persistido);
 assert.equal(persistido.asignaciones.XC1092.esquemaConteo, "esq-baccus");
+assert.equal(persistido.asignaciones.XC1092.formaCaptura, "talla");
 assert.deepEqual(persistido.asignaciones.XC1092.colores, ["Blanco"]);
+
+const porColor = parseAsignacionesPersistidas({
+  savedAt,
+  a: {
+    RN5907: {
+      e: "esq-baccus",
+      f: "color",
+      c: ["blanco"],
+      t: ["1"],
+      s: [],
+    },
+    HA9036: {
+      e: "esq-baccus",
+      f: "especificacion",
+      c: [],
+      t: ["1"],
+      s: ["Con bolsillo"],
+    },
+  },
+});
+assert.equal(porColor?.asignaciones.RN5907.formaCaptura, "color");
+assert.equal(porColor?.asignaciones.HA9036.formaCaptura, "especificacion");
 
 const cookies = cookiesAsignaciones({
   savedAt,
@@ -94,8 +117,24 @@ const map = new Map(cookies.map((c) => [c.name, c.value]));
 const round = asignacionesDesdeCookies((name) => map.get(name) || undefined);
 assert.ok(round, "cookie roundtrip asignaciones");
 assert.equal(round.asignaciones.XC1092.esquemaConteo, "esq-baccus");
+assert.equal(round.asignaciones.XC1092.formaCaptura, "talla");
 assert.deepEqual(round.asignaciones.XC1092.tallas, ["1", "1X"]);
 assert.deepEqual(round.asignaciones.XC1092.colores, ["Blanco"]);
+
+const conColor = extraerAsignaciones([
+  { ...deIza, formaCaptura: "color" },
+]);
+const cookiesColor = cookiesAsignaciones({
+  savedAt,
+  asignaciones: conColor,
+});
+const mapColor = new Map(cookiesColor.map((c) => [c.name, c.value]));
+const roundColor = asignacionesDesdeCookies(
+  (name) => mapColor.get(name) || undefined,
+);
+assert.equal(roundColor?.asignaciones.XC1092.formaCaptura, "color");
+const aplicado = aplicarAsignaciones(csvVacio, conColor, catalogos);
+assert.equal(aplicado[0].formaCaptura, "color");
 
 const llenas = {
   savedAt: "2026-09-20T00:00:00.000Z",
