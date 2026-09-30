@@ -1250,6 +1250,8 @@ export function CapturaArticulo({
               talla={tallaActiva}
               especificacion={specLinea}
               cantidad={cantidad}
+              foto={mostrado.foto}
+              nombreArticulo={tituloNombreArticulo(mostrado.nombre)}
               verde={verde}
               guardando={guardando}
               eje={formaActiva}
@@ -1265,7 +1267,7 @@ export function CapturaArticulo({
             />
           ) : null}
 
-          <div className={mostrandoCaptura ? "pb-80" : undefined}>
+          <div className={mostrandoCaptura ? "pb-[28rem]" : undefined}>
             <h3 className="mb-2 text-sm font-medium">Tabla</h3>
             <p className="mb-2 text-xs text-muted-foreground">
               Cada prenda es un bloque (clave y nombre arriba). Colores de

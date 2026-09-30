@@ -24,6 +24,8 @@ export function HojaCaptura({
   talla,
   especificacion = "",
   cantidad,
+  foto,
+  nombreArticulo,
   verde,
   guardando,
   eje = "talla",
@@ -41,6 +43,8 @@ export function HojaCaptura({
   talla: string;
   especificacion?: string;
   cantidad: string;
+  foto?: string;
+  nombreArticulo?: string;
   verde?: boolean;
   guardando?: boolean;
   eje?: FormaCaptura;
@@ -118,14 +122,21 @@ export function HojaCaptura({
               {titulo}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-8 shrink-0 px-2 text-xs"
-            onClick={onCerrar}
-          >
-            Cerrar
-          </Button>
+          {foto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={foto}
+              alt={nombreArticulo || titulo}
+              className="h-[min(20mm,18vw)] w-[min(20mm,18vw)] shrink-0 rounded-lg bg-muted object-contain"
+            />
+          ) : (
+            <div
+              className="flex h-[min(20mm,18vw)] w-[min(20mm,18vw)] shrink-0 items-center justify-center rounded-lg bg-muted px-1 text-center text-[10px] leading-tight text-muted-foreground"
+              aria-hidden
+            >
+              Sin foto
+            </div>
+          )}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <Button
@@ -181,6 +192,14 @@ export function HojaCaptura({
             </Button>
           ))}
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-1.5 h-11 w-full"
+          onClick={onCerrar}
+        >
+          Cerrar
+        </Button>
       </div>
     </>
   );
