@@ -38,6 +38,7 @@ import {
   colorAnteriorEnLista,
   destinoRegresarColor,
   destinoSaltarColor,
+  colorEnLista,
   siguienteColorEnLista,
   siguienteTallaEnEsquema,
   tallaAnteriorEnEsquema,
@@ -183,14 +184,12 @@ export function CapturaArticulo({
     : undefined;
   const colores = mostrado
     ? coloresDeCaptura(mostrado, catalogos)
-    : catalogos.colores.length
-      ? catalogos.colores
-      : ["Único"];
+    : ["Único"];
   const encabezados =
     mostrado && esquemaActivo
       ? tallasDeCaptura(mostrado, catalogos, mostrado.esquemaConteo)
       : [];
-  const colorActivo = color || colores[0] || "Único";
+  const colorActivo = colorEnLista(colores, color) ?? colores[0] ?? "Único";
   const tallaActiva = talla || encabezados[0] || "";
   const tallasDeRejilla = encabezados.filter((t) => t !== "");
   const formaActiva: FormaCaptura = parseFormaCaptura(mostrado?.formaCaptura);

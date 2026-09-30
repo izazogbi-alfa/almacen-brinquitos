@@ -42,9 +42,17 @@ export function alternarDeCatalogo(
   return filtrarEnCatalogo(catalogo, siguiente);
 }
 
+/**
+ * Solo los colores marcados en el artículo.
+ * Si no hay ninguno, la hoja usa «Único»: no abre el resto del catálogo.
+ */
 export function coloresDeCaptura(producto: Producto, catalogos: Catalogos) {
-  if (producto.colores?.length) return producto.colores;
-  return catalogos.colores.length ? catalogos.colores : ["Único"];
+  void catalogos;
+  const propios = (producto.colores ?? [])
+    .map((c) => c.trim())
+    .filter(Boolean);
+  if (propios.length) return propios;
+  return ["Único"];
 }
 
 export function tallasDeCaptura(

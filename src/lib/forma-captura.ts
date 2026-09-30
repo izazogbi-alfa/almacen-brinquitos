@@ -22,7 +22,7 @@ export function ayudaFormaCaptura(forma: FormaCaptura): string {
   if (forma === "especificacion") {
     return "Toca una especificación. Enter recorre las tallas. En la hoja: Regresar especificación, Saltar especificación, Pendiente guardar y Terminar guardar.";
   }
-  return "Toca una talla. Enter recorre los colores. En la hoja: Regresar talla, Saltar talla, Pendiente guardar y Terminar guardar.";
+  return "Toca una talla. Enter recorre solo los colores marcados en ese artículo. Si no hay otro color marcado, no cambia de color. En la hoja: Regresar talla, Saltar talla, Pendiente guardar y Terminar guardar.";
 }
 
 /** La lista que hay que marcar para que esa forma se pueda capturar. */

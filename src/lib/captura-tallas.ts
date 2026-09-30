@@ -11,15 +11,27 @@ export function siguienteTallaEnEsquema(
   return lista[i + 1];
 }
 
-/** Siguiente color de la lista, o null si ya es el último. */
+function indiceEnLista(lista: string[], actual: string) {
+  const clave = actual.trim().toLocaleLowerCase("es");
+  if (!clave) return -1;
+  return lista.findIndex((item) => item.toLocaleLowerCase("es") === clave);
+}
+
+/** El color de la lista que coincide con el texto, o null si no está. */
+export function colorEnLista(colores: string[], actual: string): string | null {
+  const i = indiceEnLista(colores, actual);
+  if (i < 0) return null;
+  return colores[i] ?? null;
+}
+
+/** Siguiente color de la lista, o null si ya es el último o no está en ella. */
 export function siguienteColorEnLista(
   colores: string[],
   actual: string,
 ): string | null {
   if (colores.length === 0) return null;
-  const i = colores.indexOf(actual);
-  if (i < 0) return colores[0] ?? null;
-  if (i + 1 >= colores.length) return null;
+  const i = indiceEnLista(colores, actual);
+  if (i < 0 || i + 1 >= colores.length) return null;
   return colores[i + 1];
 }
 
@@ -29,7 +41,7 @@ export function colorAnteriorEnLista(
   actual: string,
 ): string | null {
   if (colores.length === 0) return null;
-  const i = colores.indexOf(actual);
+  const i = indiceEnLista(colores, actual);
   if (i <= 0) return null;
   return colores[i - 1];
 }
