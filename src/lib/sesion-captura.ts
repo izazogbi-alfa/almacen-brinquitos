@@ -35,8 +35,7 @@ export function resumenCantidadesRegistro(sesion: SesionCaptura): string | null 
   const grupos = new Map<string, { titulo: string; partes: string[] }>();
   let total = 0;
   for (const ln of sesion.borrador?.lineas ?? []) {
-    const nombre = truncarNombreEnCurso(ln.nombre);
-    const titulo = [ln.sku.trim(), nombre].filter(Boolean).join(" ");
+    const titulo = ln.sku.trim() || "Sin clave";
     const key = ln.productoId || titulo || ln.key;
     for (const par of ln.pares ?? []) {
       const cant = Number(par.cantidad);
@@ -65,6 +64,26 @@ export function resumenCantidadesRegistro(sesion: SesionCaptura): string | null 
     (g) => `${g.titulo}: ${g.partes.join(", ")}`,
   );
   return `${total} piezas · ${detalle.join(" · ")}`;
+}
+
+/** Claves únicas del registro, sin el nombre del artículo. */
+export function resumenClavesRegistro(sesion: SesionCaptura): string | null {
+  const visto = new Set<string>();
+  const claves: string[] = [];
+  for (const ln of sesion.borrador?.lineas ?? []) {
+    const clave = ln.sku.trim();
+    if (!clave) continue;
+    const k = clave.toLocaleUpperCase("es");
+    if (visto.has(k)) continue;
+    visto.add(k);
+    claves.push(clave);
+  }
+  if (claves.length === 0) return null;
+  const visibles = claves.slice(0, 4);
+  const resto = claves.length - visibles.length;
+  let texto = visibles.join(", ");
+  if (resto > 0) texto += ` +${resto}`;
+  return texto;
 }
 
 /** Resumen corto para filas pendientes: dos nombres truncados y +N si hay más. */

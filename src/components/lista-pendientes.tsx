@@ -20,7 +20,7 @@ import {
 import {
   coincideBusquedaPendiente,
   resumenCantidadesRegistro,
-  resumenEnCursoArticulos,
+  resumenClavesRegistro,
   rutaDeModuloSesion,
   sesionesPendientes,
   sesionesTerminadas,
@@ -152,7 +152,7 @@ function ListaPendientesModulo({
                     const sucursal = nombreSucursal(sesion);
                     const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
                     const estado = archivo ? "Terminado" : "En curso";
-                    const resumenArticulos = resumenEnCursoArticulos(sesion);
+                    const resumenArticulos = resumenClavesRegistro(sesion);
                     const resumenCantidad = resumenCantidadesRegistro(sesion);
                     const meta = (
                       <>

@@ -407,7 +407,7 @@ conPiezas.borrador = {
 };
 assert.equal(
   resumenCantidadesRegistro(conPiezas),
-  "25 piezas · HA9036 Sombrero Tejano: Blanco Chico 1, Hueso Chico 24",
+  "25 piezas · HA9036: Blanco Chico 1, Hueso Chico 24",
 );
 const vueltaPiezas = revertirEnLista([conPiezas], conPiezas.id);
 assert.equal(vueltaPiezas?.borrador?.lineas.length, 2);
