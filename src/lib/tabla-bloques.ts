@@ -5,9 +5,11 @@ import {
 import {
   esquemaPorId,
   estiloPdfDeArticulo,
+  orientacionPdfDeArticulo,
   tallasDeEsquema,
 } from "@/lib/catalogos";
 import type { EstiloPdf } from "@/lib/pdf-estilo";
+import type { OrientacionPdf } from "@/lib/pdf-orientacion";
 import {
   tituloEtiqueta,
   tituloNombreArticulo,
@@ -45,6 +47,8 @@ export type BloquePrenda = {
   sucursalNombre: string;
   codigoProveedor?: string;
   estiloPdf?: EstiloPdf;
+  /** Carta vertical o horizontal. Vacío = horizontal. */
+  orientacionPdf?: OrientacionPdf;
   /** Ruta o data URL. Solo si el esquema pide la foto junto a la clave. */
   foto?: string;
   tallas: string[];
@@ -162,6 +166,17 @@ function fotoDeCelda(
   if (esquema?.fotoEnPdf !== true) return undefined;
   const foto = prod?.foto?.trim();
   return foto || undefined;
+}
+
+function orientacionPdfDeCelda(
+  c: Pick<CeldaPlana, "productoId" | "sku">,
+  ctx?: ContextoTallas,
+): OrientacionPdf {
+  if (!ctx) return "horizontal";
+  const prod = ctx.productos.find(
+    (p) => p.id === c.productoId || p.sku === c.sku,
+  );
+  return orientacionPdfDeArticulo(prod, ctx.catalogos);
 }
 
 function estiloPdfDeCelda(
@@ -305,6 +320,7 @@ export function bloquesDesdeCeldas(
           sucursalNombre: c.sucursalNombre ?? "",
           codigoProveedor: codigoProveedorDe(c, ctx),
           estiloPdf: estiloPdfDeCelda(c, ctx),
+          orientacionPdf: orientacionPdfDeCelda(c, ctx),
           foto: fotoDeCelda(c, ctx),
         },
         tallas: [],

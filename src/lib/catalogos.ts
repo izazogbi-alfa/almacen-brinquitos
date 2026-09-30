@@ -7,6 +7,7 @@ import {
   tituloEtiqueta,
 } from "@/lib/titulo-etiqueta";
 import { elegirEstiloPdf, parseEstiloPdf } from "@/lib/pdf-estilo";
+import { elegirOrientacionPdf, parseOrientacionPdf } from "@/lib/pdf-orientacion";
 import type { Catalogos, EsquemaCatalogo, Producto } from "@/lib/types";
 
 /** Solo para detectar la semilla de fábrica; no se asigna a artículos ni se restaura al arrancar. */
@@ -118,6 +119,9 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
             tallas: listaTallas(Array.isArray(e.tallas) ? e.tallas : []),
             ...(estiloPdf ? { estiloPdf } : {}),
             ...(e.fotoEnPdf === true ? { fotoEnPdf: true as const } : {}),
+            ...(elegirOrientacionPdf(e.orientacionPdf)
+              ? { orientacionPdf: "vertical" as const }
+              : {}),
           };
         })
         .filter((e) => !esEsquemaDeFabrica(e))
@@ -200,6 +204,9 @@ export function clonarEsquemaCatalogo(
     tallas: [...origen.tallas],
     ...(estiloPdf ? { estiloPdf } : {}),
     ...(origen.fotoEnPdf === true ? { fotoEnPdf: true as const } : {}),
+    ...(elegirOrientacionPdf(origen.orientacionPdf)
+      ? { orientacionPdf: "vertical" as const }
+      : {}),
   };
 }
 
@@ -218,6 +225,14 @@ export function estiloPdfDeArticulo(
 ) {
   const esquema = esquemaPorId(catalogos, producto?.esquemaConteo);
   return parseEstiloPdf(esquema?.estiloPdf);
+}
+
+export function orientacionPdfDeArticulo(
+  producto: Pick<Producto, "esquemaConteo"> | undefined,
+  catalogos: Catalogos,
+) {
+  const esquema = esquemaPorId(catalogos, producto?.esquemaConteo);
+  return parseOrientacionPdf(esquema?.orientacionPdf);
 }
 
 function esIdEsquemaFabrica(id: string) {

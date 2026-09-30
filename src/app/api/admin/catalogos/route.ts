@@ -5,6 +5,7 @@ import { normalizarCatalogos } from "@/lib/catalogos";
 import { fuentesAlGuardarCatalogos } from "@/lib/persist-merge";
 import { parseLista } from "@/lib/listas";
 import { elegirEstiloPdf, MENSAJE_ESTILO_PDF_OBLIGATORIO } from "@/lib/pdf-estilo";
+import { elegirOrientacionPdf } from "@/lib/pdf-orientacion";
 import type { Catalogos, EsquemaCatalogo } from "@/lib/types";
 import { exigirCsrf, exigirModulo } from "@/server/auth";
 import { guardarCatalogosEnStore, hidratarCatalogos } from "@/server/store";
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
                 : parseLista(String(e.tallas ?? "")),
               ...(estiloPdf ? { estiloPdf } : {}),
               ...(e.fotoEnPdf === true ? { fotoEnPdf: true as const } : {}),
+              ...(elegirOrientacionPdf(e.orientacionPdf)
+                ? { orientacionPdf: "vertical" as const }
+                : {}),
             };
           });
     const ids = new Set<string>();

@@ -214,6 +214,30 @@ export function EditorEsquema({
             }}
           />
         </div>
+        <p className="pt-2 text-sm font-medium">Hoja del PDF</p>
+        <p className="text-sm text-muted-foreground">
+          Carta vertical o carta horizontal. Vale para el compacto y el
+          detallado, en existencias, pedidos y recepción. La foto junto a la
+          clave no pasa de 30 mm × 30 mm. Si no eliges, queda horizontal.
+        </p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <BotonEstiloPdf
+            activo={esquema.orientacionPdf !== "vertical"}
+            titulo="Horizontal"
+            detalle="La hoja acostada. Así salen los esquemas de ahora."
+            onClick={() =>
+              onChange({ ...esquema, orientacionPdf: undefined })
+            }
+          />
+          <BotonEstiloPdf
+            activo={esquema.orientacionPdf === "vertical"}
+            titulo="Vertical"
+            detalle="La hoja parada. Caben más claves cuando hay pocas tallas."
+            onClick={() =>
+              onChange({ ...esquema, orientacionPdf: "vertical" })
+            }
+          />
+        </div>
       </div>
       <div className="space-y-2 rounded-lg p-2">
         <p className="text-sm font-medium">Imagen junto a la clave</p>

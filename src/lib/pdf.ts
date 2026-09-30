@@ -25,6 +25,10 @@ import {
   textoParaAncho,
 } from "@/lib/pdf-celda";
 import type { EstiloPdf } from "@/lib/pdf-estilo";
+import {
+  parseOrientacionPdf,
+  type OrientacionPdf,
+} from "@/lib/pdf-orientacion";
 import { esDataUrlImagen, FOTO_CLAVE_MM, incrustarFotosEnBloques } from "@/lib/pdf-foto";
 import { tituloTalla } from "@/lib/titulo-etiqueta";
 
@@ -40,6 +44,8 @@ export type EncabezadoInforme = {
   /** Existencias: franja verde solo con la Clave, sin nombre ni esquema. */
   claveSolo?: boolean;
   estiloPdf?: EstiloPdf;
+  /** Carta vertical o horizontal. Vacío = horizontal. */
+  orientacionPdf?: OrientacionPdf;
   /** Pedidos: columna Cód. proveedor junto al color. */
   columnaCodProveedor?: boolean;
 };
@@ -53,6 +59,7 @@ export function encabezadoInforme(
     quien?: string;
     claveSolo?: boolean;
     estiloPdf?: EstiloPdf;
+    orientacionPdf?: OrientacionPdf;
     columnaCodProveedor?: boolean;
   },
 ): EncabezadoInforme {
@@ -66,6 +73,7 @@ export function encabezadoInforme(
     quien: extra.quien,
     claveSolo: extra.claveSolo ?? esPdfExistencias(extra.tituloDoc),
     estiloPdf: extra.estiloPdf ?? "compacto",
+    orientacionPdf: parseOrientacionPdf(extra.orientacionPdf),
     columnaCodProveedor:
       extra.columnaCodProveedor ?? /pedido/i.test(extra.tituloDoc),
   };
@@ -87,8 +95,23 @@ function ink(doc: jsPDF, rgb: readonly [number, number, number]) {
   doc.setTextColor(rgb[0], rgb[1], rgb[2]);
 }
 
-function nuevoDoc() {
+function nuevoDoc(orientacion: OrientacionPdf = "horizontal") {
+  if (orientacion === "vertical") {
+    return new jsPDF({
+      unit: "mm",
+      format: "letter",
+      orientation: "portrait",
+    });
+  }
   return new jsPDF(PDF_JSPDF);
+}
+
+function orientacionDelPdf(
+  bloques: BloquePrenda[],
+  encabezado?: Partial<EncabezadoInforme>,
+): OrientacionPdf {
+  const marcada = bloques.find((b) => b.orientacionPdf)?.orientacionPdf;
+  return parseOrientacionPdf(marcada ?? encabezado?.orientacionPdf);
 }
 
 export function descargarPdf(
@@ -508,7 +531,7 @@ export function construirPdfBloques(
   bloques: BloquePrenda[],
   encabezado?: Partial<EncabezadoInforme>,
 ) {
-  const doc = nuevoDoc();
+  const doc = nuevoDoc(orientacionDelPdf(bloques, encabezado));
   const cabe: EncabezadoInforme = {
     tituloDoc: encabezado?.tituloDoc ?? titulo,
     empresa: encabezado?.empresa,

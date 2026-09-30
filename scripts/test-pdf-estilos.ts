@@ -12,7 +12,8 @@ import {
   ANCHO_COD_PROVEEDOR_MM,
   layoutCajasTalla,
 } from "../src/lib/pdf-layout.ts";
-import { estiloPdfDeArticulo, normalizarCatalogos } from "../src/lib/catalogos.ts";
+import { estiloPdfDeArticulo, normalizarCatalogos, orientacionPdfDeArticulo } from "../src/lib/catalogos.ts";
+import { FOTO_CLAVE_MM } from "../src/lib/pdf-foto.ts";
 import { bloquesDesdeCeldas } from "../src/lib/tabla-bloques.ts";
 import type { BloquePrenda } from "../src/lib/tabla-bloques.ts";
 import type { Producto } from "../src/lib/types.ts";
@@ -68,6 +69,8 @@ const producto: Producto = {
   esquemaConteo: "esq-d",
 };
 assert.equal(estiloPdfDeArticulo(producto, catalogos), "detallado");
+assert.equal(orientacionPdfDeArticulo(producto, catalogos), "horizontal");
+assert.equal(FOTO_CLAVE_MM, 30);
 
 const bloques = bloquesDesdeCeldas(
   [
@@ -85,7 +88,28 @@ const bloques = bloquesDesdeCeldas(
   { productos: [producto], catalogos },
 );
 assert.equal(bloques[0].estiloPdf, "detallado");
+assert.equal(bloques[0].orientacionPdf, "horizontal");
 assert.equal(bloques[0].foto, undefined);
+
+const catalogoVertical = normalizarCatalogos({
+  ...catalogos,
+  esquemas: [{ ...catalogos.esquemas[0], orientacionPdf: "vertical" }],
+});
+const bloquesVertical = bloquesDesdeCeldas(
+  [
+    {
+      productoId: "p-330",
+      sku: "330",
+      nombre: "Playera básica",
+      color: "blanco",
+      talla: "2",
+      cantidad: 1,
+    },
+  ],
+  { productos: [producto], catalogos: catalogoVertical },
+);
+assert.equal(bloquesVertical[0].orientacionPdf, "vertical");
+assert.equal(catalogoVertical.esquemas[0].orientacionPdf, "vertical");
 
 const conFoto = normalizarCatalogos({
   ...catalogos,
@@ -168,6 +192,19 @@ const pedido = construirPdfBloques(
   },
 );
 assert.equal(pedido.getNumberOfPages(), 1);
+
+const vertical = construirPdfBloques(
+  "Existencias",
+  [],
+  [{ ...bloque, orientacionPdf: "vertical", estiloPdf: "compacto" }],
+  { tituloDoc: "Existencias", orientacionPdf: "horizontal" },
+);
+assert.ok(
+  vertical.internal.pageSize.getWidth() < vertical.internal.pageSize.getHeight(),
+);
+assert.ok(
+  compacto.internal.pageSize.getWidth() > compacto.internal.pageSize.getHeight(),
+);
 
 console.log("ok pdf-estilos", {
   compactoPages: compacto.getNumberOfPages(),

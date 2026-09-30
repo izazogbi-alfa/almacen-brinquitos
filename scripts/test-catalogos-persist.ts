@@ -76,6 +76,29 @@ const compactoElegido = normalizarCatalogos({
   especificaciones: [],
 });
 assert.equal(compactoElegido.esquemas[0].estiloPdf, "compacto");
+const verticalEsq = normalizarCatalogos({
+  esquemas: [{ ...custom, orientacionPdf: "vertical" }],
+  colores: ["rosa"],
+  tallas: ["2"],
+  especificaciones: [],
+});
+assert.equal(verticalEsq.esquemas[0].orientacionPdf, "vertical");
+const horizontalEsq = normalizarCatalogos({
+  esquemas: [{ ...custom, orientacionPdf: "horizontal" }],
+  colores: ["rosa"],
+  tallas: ["2"],
+  especificaciones: [],
+});
+assert.equal(horizontalEsq.esquemas[0].orientacionPdf, undefined);
+const cookiesVertical = cookiesCatalogos({
+  catalogos: verticalEsq,
+  savedAt,
+});
+const mapVertical = new Map(cookiesVertical.map((c) => [c.name, c.value]));
+const roundVertical = catalogosDesdeCookies(
+  (name) => mapVertical.get(name) || undefined,
+);
+assert.equal(roundVertical?.catalogos.esquemas[0].orientacionPdf, "vertical");
 
 assert.equal(esquemaPorId(catalogos, undefined), undefined);
 assert.equal(esquemaPorId(catalogos, "nino"), undefined);

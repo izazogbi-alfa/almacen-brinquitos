@@ -1,5 +1,6 @@
 import type { FormaCaptura } from "./forma-captura";
 import type { EstiloPdf } from "./pdf-estilo";
+import type { OrientacionPdf } from "./pdf-orientacion";
 
 export type EstadoPedido =
   | "borrador"
@@ -29,6 +30,8 @@ export type EsquemaCatalogo = {
   estiloPdf?: EstiloPdf;
   /** PDF: foto 30 mm junto a la clave verde. Vacío = sin imagen. */
   fotoEnPdf?: boolean;
+  /** PDF: carta vertical. Vacío = horizontal. */
+  orientacionPdf?: OrientacionPdf;
 };
 
 export type Catalogos = {
