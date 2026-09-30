@@ -1,4 +1,8 @@
-import { tituloNombreArticulo } from "@/lib/titulo-etiqueta";
+import {
+  tituloEtiqueta,
+  tituloNombreArticulo,
+  tituloTalla,
+} from "@/lib/titulo-etiqueta";
 
 export const SESION_INACTIVIDAD_MS = 10 * 60 * 1000;
 
@@ -21,6 +25,46 @@ export function nombresUnicosDeBorrador(borrador?: BorradorSesion): string[] {
     if (nombre) out.push(nombre);
   }
   return out;
+}
+
+/**
+ * Piezas capturadas, por artículo, para las filas de pendientes y terminadas.
+ * Solo cuenta celdas con cantidad. Si el borrador no trae números, usa el total guardado.
+ */
+export function resumenCantidadesRegistro(sesion: SesionCaptura): string | null {
+  const grupos = new Map<string, { titulo: string; partes: string[] }>();
+  let total = 0;
+  for (const ln of sesion.borrador?.lineas ?? []) {
+    const nombre = truncarNombreEnCurso(ln.nombre);
+    const titulo = [ln.sku.trim(), nombre].filter(Boolean).join(" ");
+    const key = ln.productoId || titulo || ln.key;
+    for (const par of ln.pares ?? []) {
+      const cant = Number(par.cantidad);
+      if (!Number.isFinite(cant) || cant === 0) continue;
+      total += cant;
+      const talla = par.talla.trim();
+      const medida =
+        talla && talla !== "Cant." ? tituloTalla(talla) : "";
+      const color =
+        ln.color.trim() && ln.color.trim().toLowerCase() !== "único"
+          ? tituloEtiqueta(ln.color)
+          : "";
+      const donde = [color, medida].filter(Boolean).join(" ");
+      const texto = donde ? `${donde} ${cant}` : String(cant);
+      const grupo = grupos.get(key) ?? { titulo: titulo || "Artículo", partes: [] };
+      grupo.partes.push(texto);
+      grupos.set(key, grupo);
+    }
+  }
+  if (grupos.size === 0) {
+    const n = piezasDeSesion(sesion);
+    if (n > 0) return `${n} piezas`;
+    return null;
+  }
+  const detalle = [...grupos.values()].map(
+    (g) => `${g.titulo}: ${g.partes.join(", ")}`,
+  );
+  return `${total} piezas · ${detalle.join(" · ")}`;
 }
 
 /** Resumen corto para filas pendientes: dos nombres truncados y +N si hay más. */
@@ -226,6 +270,7 @@ export function textoBusquedaPendiente(sesion: SesionCaptura) {
     sucursalDeSesion(sesion),
     sesion.borrador?.proveedor,
     articulos,
+    resumenCantidadesRegistro(sesion),
   ]
     .filter(Boolean)
     .join(" ")

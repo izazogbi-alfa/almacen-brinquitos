@@ -19,6 +19,7 @@ import {
 } from "@/lib/secciones-pendientes";
 import {
   coincideBusquedaPendiente,
+  resumenCantidadesRegistro,
   resumenEnCursoArticulos,
   rutaDeModuloSesion,
   sesionesPendientes,
@@ -151,12 +152,11 @@ function ListaPendientesModulo({
                     const sucursal = nombreSucursal(sesion);
                     const cuando = sesion.cerradaEn ?? sesion.ultimaActividad;
                     const estado = archivo ? "Terminado" : "En curso";
-                    const resumenArticulos = archivo
-                      ? null
-                      : resumenEnCursoArticulos(sesion);
+                    const resumenArticulos = resumenEnCursoArticulos(sesion);
+                    const resumenCantidad = resumenCantidadesRegistro(sesion);
                     const meta = (
                       <>
-                        <span className="block w-full min-w-0 truncate text-xs text-teal-800">
+                        <span className="block w-full min-w-0 text-xs text-teal-800">
                           <span className="font-semibold uppercase tracking-wide">
                             {estado}
                           </span>
@@ -169,6 +169,11 @@ function ListaPendientesModulo({
                             </>
                           ) : null}
                         </span>
+                        {resumenCantidad ? (
+                          <span className="mt-1 block w-full text-sm font-medium leading-snug text-foreground">
+                            {resumenCantidad}
+                          </span>
+                        ) : null}
                         <span className="mt-1 text-sm font-medium">
                           {cuando ? formatoFechaHora(cuando) : "Sin fecha"}
                           {sucursal ? ` · ${sucursal}` : ""}
@@ -247,6 +252,7 @@ function ListaPendientesModulo({
           await revertirSesionTerminada(aRevertir.id, password);
           toast.success("Ya está en pendientes. Toca la fila para continuar.");
           setARevertir(null);
+          router.push(seccionPendienteDe(modulo).href);
         }}
       />
       <DialogQuitarConClave

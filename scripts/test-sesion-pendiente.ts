@@ -7,6 +7,7 @@ import {
   etiquetaBotonPendiente,
   esSesionTerminada,
   ORDEN_MODULOS_PENDIENTES,
+  resumenCantidadesRegistro,
   sesionesPendientes,
   sesionesTerminadas,
   sesionPendienteDe,
@@ -375,5 +376,41 @@ const soloBorrador: SesionCaptura = {
 asegurarTrabajoSesion(soloBorrador);
 assert.ok(soloBorrador.conteos >= 1);
 assert.equal(sesionTieneTrabajo(soloBorrador), true);
+
+const conPiezas = abrirYCerrarTerminada();
+conPiezas.borrador = {
+  lineas: [
+    {
+      key: "a",
+      productoId: "p1",
+      sku: "HA9036",
+      nombre: "Sombrero Tejano",
+      color: "Blanco",
+      sucursalId: "s1",
+      sucursalNombre: "La Gloria",
+      pares: [
+        { talla: "Chico", cantidad: 1 },
+        { talla: "Mediano", cantidad: 0 },
+      ],
+    },
+    {
+      key: "b",
+      productoId: "p1",
+      sku: "HA9036",
+      nombre: "Sombrero Tejano",
+      color: "Hueso",
+      sucursalId: "s1",
+      sucursalNombre: "La Gloria",
+      pares: [{ talla: "Chico", cantidad: 24 }],
+    },
+  ],
+};
+assert.equal(
+  resumenCantidadesRegistro(conPiezas),
+  "25 piezas · HA9036 Sombrero Tejano: Blanco Chico 1, Hueso Chico 24",
+);
+const vueltaPiezas = revertirEnLista([conPiezas], conPiezas.id);
+assert.equal(vueltaPiezas?.borrador?.lineas.length, 2);
+assert.match(resumenCantidadesRegistro(vueltaPiezas!) ?? "", /25 piezas/);
 
 console.log("ok sesion-pendiente");
