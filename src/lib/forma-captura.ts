@@ -17,12 +17,12 @@ export function etiquetaFormaCaptura(forma: FormaCaptura): string {
 
 export function ayudaFormaCaptura(forma: FormaCaptura): string {
   if (forma === "color") {
-    return "Toca un color. Enter recorre las tallas. En la hoja solo están Regresar color y Saltar color.";
+    return "Toca un color. Enter recorre las tallas. En la hoja: Regresar color, Saltar color, Pendiente guardar y Terminar guardar.";
   }
   if (forma === "especificacion") {
-    return "Toca una especificación. Enter recorre las tallas. En la hoja solo están Regresar especificación y Saltar especificación.";
+    return "Toca una especificación. Enter recorre las tallas. En la hoja: Regresar especificación, Saltar especificación, Pendiente guardar y Terminar guardar.";
   }
-  return "Toca una talla. Enter recorre los colores. En la hoja solo están Regresar talla y Saltar talla.";
+  return "Toca una talla. Enter recorre los colores. En la hoja: Regresar talla, Saltar talla, Pendiente guardar y Terminar guardar.";
 }
 
 /** La lista que hay que marcar para que esa forma se pueda capturar. */

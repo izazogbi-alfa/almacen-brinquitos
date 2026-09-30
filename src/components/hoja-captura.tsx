@@ -127,7 +127,7 @@ export function HojaCaptura({
             Cerrar
           </Button>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           <Button
             type="button"
             variant="outline"
