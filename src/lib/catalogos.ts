@@ -117,6 +117,7 @@ export function normalizarCatalogos(raw?: Catalogos | null): Catalogos {
             nombre: tituloEtiqueta(e.nombre?.trim() || "Esquema"),
             tallas: listaTallas(Array.isArray(e.tallas) ? e.tallas : []),
             ...(estiloPdf ? { estiloPdf } : {}),
+            ...(e.fotoEnPdf === true ? { fotoEnPdf: true as const } : {}),
           };
         })
         .filter((e) => !esEsquemaDeFabrica(e))
@@ -198,6 +199,7 @@ export function clonarEsquemaCatalogo(
     nombre,
     tallas: [...origen.tallas],
     ...(estiloPdf ? { estiloPdf } : {}),
+    ...(origen.fotoEnPdf === true ? { fotoEnPdf: true as const } : {}),
   };
 }
 

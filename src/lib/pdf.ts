@@ -25,6 +25,7 @@ import {
   textoParaAncho,
 } from "@/lib/pdf-celda";
 import type { EstiloPdf } from "@/lib/pdf-estilo";
+import { esDataUrlImagen, FOTO_CLAVE_MM, incrustarFotosEnBloques } from "@/lib/pdf-foto";
 import { tituloTalla } from "@/lib/titulo-etiqueta";
 
 export { esPdfExistencias } from "@/lib/pdf-clave";
@@ -139,6 +140,37 @@ export function construirPdfLineas(
 const ALTO_FILA = 8;
 const ALTO_FILA_DATOS_DETALLE = 12;
 const ALTO_CLAVE = 12;
+
+function formatoImagen(dataUrl: string): "PNG" | "JPEG" | "WEBP" {
+  if (dataUrl.includes("image/png")) return "PNG";
+  if (dataUrl.includes("image/webp")) return "WEBP";
+  return "JPEG";
+}
+
+function dibujarFotoClave(doc: jsPDF, dataUrl: string, x: number, y: number) {
+  try {
+    fill(doc, [255, 255, 255]);
+    stroke(doc, PDF_COLORES.borde);
+    doc.rect(x, y, FOTO_CLAVE_MM, FOTO_CLAVE_MM, "FD");
+    const props = doc.getImageProperties(dataUrl);
+    const escala = Math.min(
+      FOTO_CLAVE_MM / props.width,
+      FOTO_CLAVE_MM / props.height,
+    );
+    const dw = props.width * escala;
+    const dh = props.height * escala;
+    doc.addImage(
+      dataUrl,
+      formatoImagen(dataUrl),
+      x + (FOTO_CLAVE_MM - dw) / 2,
+      y + (FOTO_CLAVE_MM - dh) / 2,
+      dw,
+      dh,
+    );
+  } catch {
+    /* la clave verde se queda aunque la foto no cargue */
+  }
+}
 
 function asegurarEspacio(
   doc: jsPDF,
@@ -277,29 +309,58 @@ function dibujarBloque(
   const altoTabla = ALTO_FILA + altoDatos * bloque.filas.length + ALTO_FILA;
   const identidad = plano(lineaClaveNombre(bloque.sku, bloque.nombre));
 
-  y = asegurarEspacio(doc, y, ALTO_CLAVE + 10 + altoTabla, encabezado);
+  const soloClave = Boolean(encabezado.claveSolo);
+  const foto = esDataUrlImagen(bloque.foto) ? bloque.foto : undefined;
+  const conFoto = Boolean(foto);
+  const altoBanda = conFoto ? FOTO_CLAVE_MM : soloClave ? 10 : ALTO_CLAVE;
+  const anchoBarra = conFoto
+    ? Math.max(20, anchoTabla - FOTO_CLAVE_MM - 1.5)
+    : anchoTabla;
+  y = asegurarEspacio(doc, y, altoBanda + 10 + altoTabla, encabezado);
   fill(doc, PDF_COLORES.claveFondo);
   stroke(doc, PDF_COLORES.borde);
-  const soloClave = Boolean(encabezado.claveSolo);
-  const altoBanda = soloClave ? 10 : ALTO_CLAVE;
-  doc.rect(PDF_MARGEN_MM, y - 4, anchoTabla, altoBanda, "FD");
+  const yBarra = y - 4;
+  doc.rect(PDF_MARGEN_MM, yBarra, anchoBarra, altoBanda, "FD");
   ink(doc, PDF_COLORES.claveTexto);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(soloClave ? 13 : 11);
-  doc.text(plano(bloque.sku), PDF_MARGEN_MM + 2, y + 2, {
-    maxWidth: Math.max(8, anchoTabla - 4),
+  const yClave = conFoto
+    ? yBarra +
+      (soloClave || !bloque.sucursalNombre?.trim() ? altoBanda / 2 + 1.5 : 12)
+    : y + 2;
+  doc.text(plano(bloque.sku), PDF_MARGEN_MM + 2, yClave, {
+    maxWidth: Math.max(8, anchoBarra - 4),
   });
-  y += 6;
-  if (!soloClave && bloque.sucursalNombre?.trim()) {
+  if (conFoto && !soloClave && bloque.sucursalNombre?.trim()) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     ink(doc, PDF_COLORES.subClave);
-    doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, y + 1, {
-      maxWidth: Math.max(8, anchoTabla - 4),
+    doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, yClave + 5, {
+      maxWidth: Math.max(8, anchoBarra - 4),
     });
-    y += 5;
+    ink(doc, PDF_COLORES.claveTexto);
   }
-  y += 4;
+  if (foto) {
+    dibujarFotoClave(
+      doc,
+      foto,
+      PDF_MARGEN_MM + anchoBarra + 1.5,
+      yBarra,
+    );
+    y = yBarra + altoBanda + 4;
+  } else {
+    y += 6;
+    if (!soloClave && bloque.sucursalNombre?.trim()) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      ink(doc, PDF_COLORES.subClave);
+      doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, y + 1, {
+        maxWidth: Math.max(8, anchoTabla - 4),
+      });
+      y += 5;
+    }
+    y += 4;
+  }
 
   if (!detallado && identidad) {
     ink(doc, [15, 23, 42]);
@@ -499,21 +560,23 @@ export function construirPdfBloques(
   return doc;
 }
 
-export function descargarPdfBloques(
+export async function descargarPdfBloques(
   archivo: string,
   titulo: string,
   notas: string[],
   bloques: BloquePrenda[],
   encabezado?: Partial<EncabezadoInforme>,
 ) {
-  construirPdfBloques(titulo, notas, bloques, encabezado).save(archivo);
+  const listos = await incrustarFotosEnBloques(bloques);
+  construirPdfBloques(titulo, notas, listos, encabezado).save(archivo);
 }
 
-export function blobPdfBloques(
+export async function blobPdfBloques(
   titulo: string,
   notas: string[],
   bloques: BloquePrenda[],
   encabezado?: Partial<EncabezadoInforme>,
 ) {
-  return construirPdfBloques(titulo, notas, bloques, encabezado).output("blob");
+  const listos = await incrustarFotosEnBloques(bloques);
+  return construirPdfBloques(titulo, notas, listos, encabezado).output("blob");
 }

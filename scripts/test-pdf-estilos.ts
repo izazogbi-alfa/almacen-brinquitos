@@ -85,6 +85,56 @@ const bloques = bloquesDesdeCeldas(
   { productos: [producto], catalogos },
 );
 assert.equal(bloques[0].estiloPdf, "detallado");
+assert.equal(bloques[0].foto, undefined);
+
+const conFoto = normalizarCatalogos({
+  ...catalogos,
+  esquemas: [{ ...catalogos.esquemas[0], fotoEnPdf: true }],
+});
+assert.equal(conFoto.esquemas[0].fotoEnPdf, true);
+const sinBandera = normalizarCatalogos({
+  esquemas: [{ ...catalogos.esquemas[0], fotoEnPdf: false }],
+  colores: catalogos.colores,
+  tallas: catalogos.tallas,
+  especificaciones: [],
+});
+assert.equal(sinBandera.esquemas[0].fotoEnPdf, undefined);
+const bloquesFoto = bloquesDesdeCeldas(
+  [
+    {
+      productoId: "p-330",
+      sku: "330",
+      nombre: "Playera básica",
+      color: "blanco",
+      talla: "2",
+      cantidad: 1,
+    },
+  ],
+  {
+    productos: [{ ...producto, foto: "/productos/catalogo/330.jpg" }],
+    catalogos: conFoto,
+  },
+);
+assert.equal(bloquesFoto[0].foto, "/productos/catalogo/330.jpg");
+
+const PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const conImagen = construirPdfBloques(
+  "Existencias",
+  [],
+  [{ ...bloques[0], foto: PNG }],
+  { tituloDoc: "Existencias", claveSolo: true },
+);
+const sinImagen = construirPdfBloques(
+  "Existencias",
+  [],
+  [{ ...bloques[0], foto: undefined }],
+  { tituloDoc: "Existencias", claveSolo: true },
+);
+assert.ok(
+  conImagen.output("arraybuffer").byteLength >
+    sinImagen.output("arraybuffer").byteLength,
+);
 
 const bloque: BloquePrenda = {
   ...bloques[0],

@@ -57,13 +57,20 @@ export function descargarPdfDeRegistro(
   ctx: { catalogos: Catalogos; productos: Producto[] },
 ) {
   const { opts, bloques, encabezado } = armar(sesion, ctx);
-  descargarPdfBloques(
+  return descargarPdfBloques(
     opts.archivo,
     opts.tituloDoc,
     opts.notas,
     bloques,
     encabezado,
   );
+}
+
+export function datosPdfDeRegistro(
+  sesion: SesionCaptura,
+  ctx: { catalogos: Catalogos; productos: Producto[] },
+) {
+  return armar(sesion, ctx);
 }
 
 export function blobPdfDeRegistro(

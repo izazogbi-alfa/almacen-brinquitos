@@ -215,6 +215,28 @@ export function EditorEsquema({
           />
         </div>
       </div>
+      <div className="space-y-2 rounded-lg p-2">
+        <p className="text-sm font-medium">Imagen junto a la clave</p>
+        <p className="text-sm text-muted-foreground">
+          Elige si la foto del artículo sale a un lado de la clave verde, en
+          existencias, pedidos y recepción. Mide 30 mm × 30 mm. Si el artículo
+          no tiene foto, la franja verde queda sola.
+        </p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <BotonEstiloPdf
+            activo={esquema.fotoEnPdf !== true}
+            titulo="Sin imagen"
+            detalle="Solo la clave verde, como hasta ahora."
+            onClick={() => onChange({ ...esquema, fotoEnPdf: false })}
+          />
+          <BotonEstiloPdf
+            activo={esquema.fotoEnPdf === true}
+            titulo="Con imagen"
+            detalle="Foto de 30 mm × 30 mm a la derecha de la clave."
+            onClick={() => onChange({ ...esquema, fotoEnPdf: true })}
+          />
+        </div>
+      </div>
       <p className="text-sm text-muted-foreground">
         Tallas de este esquema. Vacío = se cuenta solo con color y cantidad.
         Ordénalas arrastrando las fichas.

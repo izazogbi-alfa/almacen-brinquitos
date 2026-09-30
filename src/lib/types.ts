@@ -27,6 +27,8 @@ export type EsquemaCatalogo = {
   tallas: string[];
   /** PDF: compacto o detallado. Vacío = Iza aún no eligió; Guardar lo pide. */
   estiloPdf?: EstiloPdf;
+  /** PDF: foto 30 mm junto a la clave verde. Vacío = sin imagen. */
+  fotoEnPdf?: boolean;
 };
 
 export type Catalogos = {

@@ -6,7 +6,7 @@ import { puedeAccederRegistro } from "@/server/registro-access";
 import { hidratarCatalogos } from "@/server/store";
 import { urlPdfRegistro } from "@/server/blob-media";
 import { logoParaPdf } from "@/server/blob-media";
-import { construirPdfDeRegistro } from "@/lib/pdf-registro";
+import { documentoPdfDeRegistro } from "@/server/pdf-registros";
 import { registroTieneLineas, mensajeRegistroSinLineas } from "@/lib/pdf-registro";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ export async function GET(
     return NextResponse.json({ error: mensajeRegistroSinLineas() }, { status: 400 });
   }
   const logoDataUrl = await logoParaPdf(store.catalogos.logoDataUrl);
-  const doc = construirPdfDeRegistro(sesion, {
+  const doc = await documentoPdfDeRegistro(sesion, {
     catalogos: { ...store.catalogos, logoDataUrl },
     productos: store.productos,
   });

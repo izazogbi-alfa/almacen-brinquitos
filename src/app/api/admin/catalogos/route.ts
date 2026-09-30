@@ -44,6 +44,7 @@ export async function POST(request: Request) {
                 ? e.tallas.map((t) => t.trim()).filter(Boolean)
                 : parseLista(String(e.tallas ?? "")),
               ...(estiloPdf ? { estiloPdf } : {}),
+              ...(e.fotoEnPdf === true ? { fotoEnPdf: true as const } : {}),
             };
           });
     const ids = new Set<string>();

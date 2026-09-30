@@ -95,12 +95,25 @@ function BloqueInforme({
   const detallado = parseEstiloPdf(bloque.estiloPdf) === "detallado";
   return (
     <section className="overflow-hidden rounded-lg border border-teal-600">
-      <div className="bg-teal-700 px-3 py-2 text-white">
-        <p className="font-heading text-lg font-semibold tracking-wide">
-          {bloque.sku}
-        </p>
-        {claveSolo ? null : bloque.sucursalNombre ? (
-          <p className="text-sm text-teal-100">{bloque.sucursalNombre}</p>
+      <div className="flex items-stretch gap-[1.5mm]">
+        <div
+          className="flex min-w-0 flex-1 flex-col justify-center bg-teal-700 px-3 py-2 text-white"
+          style={bloque.foto ? { minHeight: "30mm" } : undefined}
+        >
+          <p className="font-heading text-lg font-semibold tracking-wide">
+            {bloque.sku}
+          </p>
+          {claveSolo ? null : bloque.sucursalNombre ? (
+            <p className="text-sm text-teal-100">{bloque.sucursalNombre}</p>
+          ) : null}
+        </div>
+        {bloque.foto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={bloque.foto}
+            alt=""
+            className="h-[30mm] w-[30mm] shrink-0 bg-white object-contain"
+          />
         ) : null}
       </div>
       {!detallado ? (

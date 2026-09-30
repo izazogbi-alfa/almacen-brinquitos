@@ -2,7 +2,11 @@ import {
   coloresDeCaptura,
   tallasDeCaptura,
 } from "@/lib/asignacion-articulo";
-import { estiloPdfDeArticulo, tallasDeEsquema } from "@/lib/catalogos";
+import {
+  esquemaPorId,
+  estiloPdfDeArticulo,
+  tallasDeEsquema,
+} from "@/lib/catalogos";
 import type { EstiloPdf } from "@/lib/pdf-estilo";
 import {
   tituloEtiqueta,
@@ -41,6 +45,8 @@ export type BloquePrenda = {
   sucursalNombre: string;
   codigoProveedor?: string;
   estiloPdf?: EstiloPdf;
+  /** Ruta o data URL. Solo si el esquema pide la foto junto a la clave. */
+  foto?: string;
   tallas: string[];
   filas: FilaColorBloque[];
 };
@@ -142,6 +148,20 @@ function codigoProveedorDe(
   );
   const raw = prod?.codigoProveedor?.trim();
   return raw || undefined;
+}
+
+function fotoDeCelda(
+  c: Pick<CeldaPlana, "productoId" | "sku">,
+  ctx?: ContextoTallas,
+): string | undefined {
+  if (!ctx) return undefined;
+  const prod = ctx.productos.find(
+    (p) => p.id === c.productoId || p.sku === c.sku,
+  );
+  const esquema = esquemaPorId(ctx.catalogos, prod?.esquemaConteo);
+  if (esquema?.fotoEnPdf !== true) return undefined;
+  const foto = prod?.foto?.trim();
+  return foto || undefined;
 }
 
 function estiloPdfDeCelda(
@@ -285,6 +305,7 @@ export function bloquesDesdeCeldas(
           sucursalNombre: c.sucursalNombre ?? "",
           codigoProveedor: codigoProveedorDe(c, ctx),
           estiloPdf: estiloPdfDeCelda(c, ctx),
+          foto: fotoDeCelda(c, ctx),
         },
         tallas: [],
         ordenEsquema:
