@@ -329,74 +329,76 @@ function dibujarBloque(
   const conProveedor = pideProveedor && colProveedor >= 8;
   const totales = totalesDeBloque({ ...bloque, tallas });
   const altoDatos = detallado ? ALTO_FILA_DATOS_DETALLE : ALTO_FILA;
-  const altoTabla = ALTO_FILA + altoDatos * bloque.filas.length + ALTO_FILA;
   const identidad = plano(lineaClaveNombre(bloque.sku, bloque.nombre));
 
   const soloClave = Boolean(encabezado.claveSolo);
   const foto = esDataUrlImagen(bloque.foto) ? bloque.foto : undefined;
   const conFoto = Boolean(foto);
-  const altoBanda = conFoto ? FOTO_CLAVE_MM : soloClave ? 10 : ALTO_CLAVE;
-  const anchoBarra = conFoto
-    ? Math.max(20, anchoTabla - FOTO_CLAVE_MM - 1.5)
-    : anchoTabla;
-  y = asegurarEspacio(doc, y, altoBanda + 10 + altoTabla, encabezado);
-  fill(doc, PDF_COLORES.claveFondo);
-  stroke(doc, PDF_COLORES.borde);
-  const yBarra = y - 4;
-  doc.rect(PDF_MARGEN_MM, yBarra, anchoBarra, altoBanda, "FD");
-  ink(doc, PDF_COLORES.claveTexto);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(soloClave ? 13 : 11);
-  const yClave = conFoto
-    ? yBarra +
-      (soloClave || !bloque.sucursalNombre?.trim() ? altoBanda / 2 + 1.5 : 12)
-    : y + 2;
-  doc.text(plano(bloque.sku), PDF_MARGEN_MM + 2, yClave, {
-    maxWidth: Math.max(8, anchoBarra - 4),
-  });
-  if (conFoto && !soloClave && bloque.sucursalNombre?.trim()) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    ink(doc, PDF_COLORES.subClave);
-    doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, yClave + 5, {
+  const fuenteTalla = colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
+  const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
+
+  function dibujarBarra(conImagen: boolean) {
+    const usaFoto = conImagen && Boolean(foto);
+    const altoBanda = usaFoto ? FOTO_CLAVE_MM : soloClave ? 10 : ALTO_CLAVE;
+    const anchoBarra = usaFoto
+      ? Math.max(20, anchoTabla - FOTO_CLAVE_MM - 1.5)
+      : anchoTabla;
+    fill(doc, PDF_COLORES.claveFondo);
+    stroke(doc, PDF_COLORES.borde);
+    const yBarra = y - 4;
+    doc.rect(PDF_MARGEN_MM, yBarra, anchoBarra, altoBanda, "FD");
+    ink(doc, PDF_COLORES.claveTexto);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(soloClave ? 13 : 11);
+    const yClave = usaFoto
+      ? yBarra +
+        (soloClave || !bloque.sucursalNombre?.trim()
+          ? altoBanda / 2 + 1.5
+          : 12)
+      : y + 2;
+    doc.text(plano(bloque.sku), PDF_MARGEN_MM + 2, yClave, {
       maxWidth: Math.max(8, anchoBarra - 4),
     });
-    ink(doc, PDF_COLORES.claveTexto);
-  }
-  if (foto) {
-    dibujarFotoClave(
-      doc,
-      foto,
-      PDF_MARGEN_MM + anchoBarra + 1.5,
-      yBarra,
-    );
-    y = yBarra + altoBanda + 4;
-  } else {
-    y += 6;
-    if (!soloClave && bloque.sucursalNombre?.trim()) {
+    if (usaFoto && !soloClave && bloque.sucursalNombre?.trim()) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       ink(doc, PDF_COLORES.subClave);
-      doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, y + 1, {
-        maxWidth: Math.max(8, anchoTabla - 4),
+      doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, yClave + 5, {
+        maxWidth: Math.max(8, anchoBarra - 4),
+      });
+      ink(doc, PDF_COLORES.claveTexto);
+    }
+    if (usaFoto && foto) {
+      dibujarFotoClave(
+        doc,
+        foto,
+        PDF_MARGEN_MM + anchoBarra + 1.5,
+        yBarra,
+      );
+      y = yBarra + altoBanda + 4;
+    } else {
+      y += 6;
+      if (!soloClave && bloque.sucursalNombre?.trim()) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        ink(doc, PDF_COLORES.subClave);
+        doc.text(plano(bloque.sucursalNombre), PDF_MARGEN_MM + 2, y + 1, {
+          maxWidth: Math.max(8, anchoTabla - 4),
+        });
+        y += 5;
+      }
+      y += 4;
+    }
+    if (!detallado && identidad) {
+      ink(doc, [15, 23, 42]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(identidad, PDF_MARGEN_MM, y, {
+        maxWidth: Math.max(8, anchoTabla),
       });
       y += 5;
     }
-    y += 4;
   }
-
-  if (!detallado && identidad) {
-    ink(doc, [15, 23, 42]);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text(identidad, PDF_MARGEN_MM, y, {
-      maxWidth: Math.max(8, anchoTabla),
-    });
-    y += 5;
-  }
-
-  const fuenteTalla = colTalla < 12 ? 6 : colTalla < 18 ? 7 : 8;
-  const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
 
   function celdasTalla(
     valores: string[],
@@ -419,6 +421,7 @@ function dibujarBloque(
     });
   }
 
+  function dibujarEncabezadoColumnas() {
   pintarCaja(doc, PDF_MARGEN_MM, y, colColor, ALTO_FILA, PDF_COLORES.headerFondo);
   ink(doc, PDF_COLORES.headerTexto);
   doc.setFont("helvetica", "bold");
@@ -446,8 +449,28 @@ function dibujarBloque(
     true,
   );
   y += ALTO_FILA;
+  }
+
+  function saltarSiNoCabe(alto: number) {
+    const limite = doc.internal.pageSize.getHeight() - 10;
+    if (y + alto <= limite) return;
+    doc.addPage();
+    y = dibujarEncabezadoPagina(doc, encabezado);
+    dibujarBarra(false);
+    dibujarEncabezadoColumnas();
+  }
+
+  const altoArranque =
+    (conFoto ? FOTO_CLAVE_MM : soloClave ? 10 : ALTO_CLAVE) +
+    16 +
+    ALTO_FILA +
+    altoDatos;
+  y = asegurarEspacio(doc, y, altoArranque, encabezado);
+  dibujarBarra(true);
+  dibujarEncabezadoColumnas();
 
   bloque.filas.forEach((fila, ri) => {
+    saltarSiNoCabe(altoDatos);
     dibujarCeldaColor(
       doc,
       PDF_MARGEN_MM,
@@ -493,6 +516,7 @@ function dibujarBloque(
     y += altoDatos;
   });
 
+  saltarSiNoCabe(ALTO_FILA + 8);
   pintarCaja(doc, PDF_MARGEN_MM, y, colColor, ALTO_FILA, PDF_COLORES.totalFondo);
   ink(doc, PDF_COLORES.totalTexto);
   doc.setFont("helvetica", "bold");

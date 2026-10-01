@@ -206,9 +206,92 @@ assert.ok(
   compacto.internal.pageSize.getWidth() > compacto.internal.pageSize.getHeight(),
 );
 
+const coloresLargos = [
+  "Blanco",
+  "Hueso",
+  "Rosa",
+  "Gris",
+  "Arena",
+  "Mostaza",
+  "Vino",
+  "Negro",
+  "Palo de Rosa",
+  "Fiusha",
+  "Turquesa",
+  "Lila",
+  "Coral",
+  "Rojo",
+  "Menta",
+  "Morada",
+  "Jade",
+  "Petroleo",
+  "Gris Oxford",
+  "Bugambilia",
+  "Aqua",
+  "Azul Rey",
+  "Mango",
+  "Marino",
+  "Cafe",
+  "Botella",
+  "Celeste",
+  "Oro",
+  "Plata",
+  "Champagne",
+  "Verde Bandera",
+  "Verde Limon",
+  "Verde Musgo",
+  "Rojo Quemado",
+  "Morado",
+  "Lila Fuerte",
+  "Naranja",
+  "Azul Fuerte",
+  "Cobre",
+  "Cafe Claro",
+];
+function bloqueColores(sku: string, colores: string[]): BloquePrenda {
+  return {
+    key: sku,
+    productoId: sku,
+    sku,
+    nombre: "Mono tuxedo",
+    sucursalId: "",
+    sucursalNombre: "",
+    estiloPdf: "compacto",
+    orientacionPdf: "vertical",
+    foto: PNG,
+    tallas: [],
+    filas: colores.map((color, i) => ({
+      keys: [`${sku}-${i}`],
+      color,
+      porTalla: { "Cant.": i + 1 },
+    })),
+  };
+}
+const muchosColores = construirPdfBloques(
+  "Existencias",
+  [],
+  [
+    bloqueColores("SM9111", coloresLargos),
+    bloqueColores("SM9113", ["Blanco", "Plata", "Cafe Claro"]),
+  ],
+  { tituloDoc: "Existencias", claveSolo: true, estiloPdf: "compacto" },
+);
+assert.ok(muchosColores.getNumberOfPages() >= 2);
+assert.ok(
+  muchosColores.internal.pageSize.getWidth() <
+    muchosColores.internal.pageSize.getHeight(),
+);
+const textoMuchos = muchosColores.internal.pages.join("\n");
+assert.ok(textoMuchos.includes("SM9111"));
+assert.ok(textoMuchos.includes("SM9113"));
+assert.ok(textoMuchos.includes("Blanco"));
+assert.ok(textoMuchos.includes("Cafe Claro"));
+assert.ok(textoMuchos.includes("Verde Musgo"));
+
 console.log("ok pdf-estilos", {
   compactoPages: compacto.getNumberOfPages(),
   detalladoPages: det.getNumberOfPages(),
+  muchosColoresPages: muchosColores.getNumberOfPages(),
   colorDetallado: detalladoLay.colColor,
   colProveedor: pedidoLay.colProveedor,
 });
