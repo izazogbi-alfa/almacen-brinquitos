@@ -57,7 +57,7 @@ En el menú de abajo, **Registros** está siempre (aunque no haya capturas). Es 
 
 ## Recepción
 
-Misma hoja de captura (la forma viene del artículo, teclado y Enter), título **Entrada de mercancía**, color verde. La cantidad empieza en **0** (no 1). **Pendiente guardar** y **Terminar guardar** salen en **Registros**. La hoja (vertical u horizontal) y el corte salen del esquema. Tallas en una fila, encabezado de informe. La foto del PDF mide 30 mm × 30 mm.
+Misma hoja de captura (la forma viene del artículo, teclado y Enter), título **Entrada de mercancía**, color verde. La cantidad empieza en **0** (no 1). **Enter** con 0 no anota esa celda y pasa al siguiente color o talla, para llegar a Negro si el artículo también lo tiene. **Pendiente guardar** y **Terminar guardar** salen en **Registros**. La hoja (vertical u horizontal) y el corte salen del esquema. Tallas en una fila, encabezado de informe. La foto del PDF mide 30 mm × 30 mm.
 
 ## Pedidos
 

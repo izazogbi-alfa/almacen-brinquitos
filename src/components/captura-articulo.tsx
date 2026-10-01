@@ -693,7 +693,8 @@ export function CapturaArticulo({
   function avanzarEnter() {
     const n = Number(cantidad);
     if (!Number.isFinite(n) || n < 0) return;
-    if (modo !== "contar" && n <= 0) return;
+    // Recepción y pedidos arrancan en 0. Enter con 0 no anota esa celda
+    // y sí pasa al siguiente color o talla. Existencias sí guarda el 0.
     if (formaActiva === "talla") {
       const next = siguienteColorEnLista(colores, colorActivo);
       if (next) {
