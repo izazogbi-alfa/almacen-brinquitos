@@ -163,6 +163,8 @@ export function construirPdfLineas(
 const ALTO_FILA = 8;
 const ALTO_FILA_DATOS_DETALLE = 12;
 const ALTO_CLAVE = 12;
+/** Pedidos: «Cód.» y «proveedor» en dos líneas, sin tapar el primer color. */
+const ALTO_ENCABEZADO_PROVEEDOR = 11;
 
 function formatoImagen(dataUrl: string): "PNG" | "JPEG" | "WEBP" {
   if (dataUrl.includes("image/png")) return "PNG";
@@ -327,6 +329,7 @@ function dibujarBloque(
   );
   const { colColor, colTalla, colProveedor, anchoTabla } = layout;
   const conProveedor = pideProveedor && colProveedor >= 8;
+  const altoEncabezado = conProveedor ? ALTO_ENCABEZADO_PROVEEDOR : ALTO_FILA;
   const totales = totalesDeBloque({ ...bloque, tallas });
   const altoDatos = detallado ? ALTO_FILA_DATOS_DETALLE : ALTO_FILA;
   const identidad = plano(lineaClaveNombre(bloque.sku, bloque.nombre));
@@ -422,33 +425,44 @@ function dibujarBloque(
   }
 
   function dibujarEncabezadoColumnas() {
-  pintarCaja(doc, PDF_MARGEN_MM, y, colColor, ALTO_FILA, PDF_COLORES.headerFondo);
-  ink(doc, PDF_COLORES.headerTexto);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("Color", PDF_MARGEN_MM + 1.4, y + 5.4);
-  if (conProveedor) {
     pintarCaja(
       doc,
-      PDF_MARGEN_MM + colColor,
+      PDF_MARGEN_MM,
       y,
-      colProveedor,
-      ALTO_FILA,
+      colColor,
+      altoEncabezado,
       PDF_COLORES.headerFondo,
     );
-    doc.text("Cod. proveedor", PDF_MARGEN_MM + colColor + colProveedor / 2, y + 5.4, {
-      align: "center",
-      maxWidth: Math.max(4, colProveedor - 1.5),
-    });
-  }
-  celdasTalla(
-    headersTalla,
-    ALTO_FILA,
-    () => PDF_COLORES.tallaHeaderFondo,
-    PDF_COLORES.tallaHeaderTexto,
-    true,
-  );
-  y += ALTO_FILA;
+    ink(doc, PDF_COLORES.headerTexto);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("Color", PDF_MARGEN_MM + 1.4, y + altoEncabezado / 2 + 1.1);
+    if (conProveedor) {
+      pintarCaja(
+        doc,
+        PDF_MARGEN_MM + colColor,
+        y,
+        colProveedor,
+        altoEncabezado,
+        PDF_COLORES.headerFondo,
+      );
+      const xCod = PDF_MARGEN_MM + colColor + colProveedor / 2;
+      const anchoCod = Math.max(4, colProveedor - 1.6);
+      doc.setFontSize(fuenteParaAncho(doc, "proveedor", anchoCod, 7, 6));
+      doc.text("Cod.", xCod, y + 4.1, { align: "center", maxWidth: anchoCod });
+      doc.text("proveedor", xCod, y + 8.2, {
+        align: "center",
+        maxWidth: anchoCod,
+      });
+    }
+    celdasTalla(
+      headersTalla,
+      altoEncabezado,
+      () => PDF_COLORES.tallaHeaderFondo,
+      PDF_COLORES.tallaHeaderTexto,
+      true,
+    );
+    y += altoEncabezado;
   }
 
   function saltarSiNoCabe(alto: number) {
@@ -463,7 +477,7 @@ function dibujarBloque(
   const altoArranque =
     (conFoto ? FOTO_CLAVE_MM : soloClave ? 10 : ALTO_CLAVE) +
     16 +
-    ALTO_FILA +
+    altoEncabezado +
     altoDatos;
   y = asegurarEspacio(doc, y, altoArranque, encabezado);
   dibujarBarra(true);

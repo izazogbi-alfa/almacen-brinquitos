@@ -288,10 +288,67 @@ assert.ok(textoMuchos.includes("Blanco"));
 assert.ok(textoMuchos.includes("Cafe Claro"));
 assert.ok(textoMuchos.includes("Verde Musgo"));
 
+function textoDe(doc: { internal: { pages: unknown[] } }) {
+  return doc.internal.pages.join("\n");
+}
+
+const recepcionLarga = construirPdfBloques(
+  "Entrada de mercancía",
+  [],
+  [
+    {
+      ...bloqueColores("XP2001", coloresLargos),
+      sucursalNombre: "La Gloria",
+      tallas: ["Chico", "Mediano", "Grande"],
+      filas: coloresLargos.map((color, i) => ({
+        keys: [`XP2001-${i}`],
+        color,
+        porTalla: { Chico: i, Mediano: i + 1, Grande: 1 },
+      })),
+    },
+  ],
+  {
+    tituloDoc: "Entrada de mercancía",
+    claveSolo: false,
+    estiloPdf: "compacto",
+  },
+);
+assert.ok(recepcionLarga.getNumberOfPages() >= 2);
+assert.ok(textoDe(recepcionLarga).includes("Cafe Claro"));
+assert.ok(textoDe(recepcionLarga).includes("XP2001"));
+assert.ok(textoDe(recepcionLarga).includes("La Gloria"));
+
+const pedidoLargo = construirPdfBloques(
+  "Pedido PD-9",
+  ["Proveedor: Tela Iza"],
+  [
+    {
+      ...bloqueColores("RN5907", coloresLargos),
+      codigoProveedor: "PROV-8841",
+      sucursalNombre: "Centro",
+    },
+  ],
+  {
+    tituloDoc: "Pedido PD-9",
+    claveSolo: false,
+    columnaCodProveedor: true,
+    estiloPdf: "compacto",
+  },
+);
+assert.ok(pedidoLargo.getNumberOfPages() >= 2);
+const textoPedido = textoDe(pedidoLargo);
+assert.ok(textoPedido.includes("RN5907"));
+assert.ok(textoPedido.includes("Cafe Claro"));
+assert.ok(textoPedido.includes("PROV-8841"));
+assert.ok(textoPedido.includes("proveedor"));
+assert.ok(textoPedido.includes("Tela Iza"));
+
 console.log("ok pdf-estilos", {
   compactoPages: compacto.getNumberOfPages(),
   detalladoPages: det.getNumberOfPages(),
   muchosColoresPages: muchosColores.getNumberOfPages(),
+  recepcionPages: recepcionLarga.getNumberOfPages(),
+  pedidoPages: pedidoLargo.getNumberOfPages(),
   colorDetallado: detalladoLay.colColor,
   colProveedor: pedidoLay.colProveedor,
 });
