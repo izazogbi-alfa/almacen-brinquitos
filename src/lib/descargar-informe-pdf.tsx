@@ -30,89 +30,243 @@ function medidaHoja(orientacion: "vertical" | "horizontal") {
     : { ancho: 279.4, alto: 215.9 };
 }
 
-function esLineaDeCorte(canvas: HTMLCanvasElement, y: number) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx || y < 1 || y >= canvas.height - 1) return false;
-  const paso = 6;
-  const fila = ctx.getImageData(0, y, canvas.width, 1).data;
-  let claros = 0;
-  let muestras = 0;
-  for (let x = 0; x < canvas.width; x += paso) {
-    const i = x * 4;
-    const r = fila[i] ?? 0;
-    const g = fila[i + 1] ?? 0;
-    const b = fila[i + 2] ?? 0;
-    if (r > 236 && g > 236 && b > 236) claros += 1;
-    muestras += 1;
-  }
-  return muestras > 0 && claros / muestras > 0.92;
-}
+type MedidaBloque = {
+  tieneFoto: boolean;
+  altoClave: number;
+  altoClaveSinFoto: number;
+  filas: number[];
+  altoCierre: number;
+  gapAntes: number;
+};
 
-function corteEnHueco(
-  canvas: HTMLCanvasElement,
-  ideal: number,
-  minimo: number,
-) {
-  const retroceso = Math.min(90, ideal - minimo);
-  for (let dy = 0; dy <= retroceso; dy += 1) {
-    const y = ideal - dy;
-    if (y <= minimo) break;
-    if (esLineaDeCorte(canvas, y)) return y;
-  }
-  return ideal;
-}
+type Trozo = {
+  index: number;
+  desde: number;
+  hasta: number;
+  foto: boolean;
+  totales: boolean;
+};
 
-/** Cortes entre filas, en píxeles CSS del informe. */
-function marcasDeCorte(host: HTMLElement) {
-  const caja = host.getBoundingClientRect();
-  const marcas = [
-    ...host.querySelectorAll<HTMLElement>("[data-pdf-corte]"),
-  ].map((el) => el.getBoundingClientRect().bottom - caja.top);
-  return [...new Set(marcas.map((y) => Math.round(y)))]
-    .filter((y) => y > 1 && y < caja.height - 1)
-    .sort((a, b) => a - b);
-}
+type PaginaInforme = {
+  portada: boolean;
+  trozos: Trozo[];
+};
 
-function corteEntreFilas(
-  marcas: number[],
+function altoTrozo(
+  m: MedidaBloque,
   desde: number,
-  ideal: number,
-  alto: number,
+  hasta: number,
+  foto: boolean,
+  totales: boolean,
 ) {
-  if (ideal >= alto - 0.5) return alto;
-  const minimo = desde + 24;
-  let mejor = -1;
-  for (const marca of marcas) {
-    if (marca <= minimo) continue;
-    if (marca > ideal + 0.5) break;
-    mejor = marca;
-  }
-  return mejor > desde ? mejor : ideal;
+  const clave =
+    foto && m.tieneFoto
+      ? m.altoClave
+      : m.tieneFoto
+        ? m.altoClaveSinFoto
+        : m.altoClave;
+  let alto = clave;
+  for (let i = desde; i < hasta; i += 1) alto += m.filas[i] ?? 0;
+  if (totales) alto += m.altoCierre;
+  return alto;
 }
 
-async function lienzoDelInforme(
-  informe: {
-    titulo: string;
-    empresa?: string;
-    sucursal?: string;
-    fecha?: string;
-    quien?: string;
-    notas: string[];
-    bloques: BloquePrenda[];
-    claveSolo: boolean;
-    columnaCodProveedor?: boolean;
+/** Cada prenda entra completa. Si no cabe, sigue en la hoja siguiente. */
+export function empaquetarBloques(
+  medidas: MedidaBloque[],
+  opts: {
+    preamble: number;
+    padTop: number;
+    padBottom: number;
+    altoPagina: number;
   },
-) {
-  const host = document.createElement("div");
-  host.style.position = "fixed";
-  host.style.left = "0";
-  host.style.top = "0";
-  host.style.zIndex = "-1";
-  host.style.width = "max-content";
-  host.style.background = "#f8fafc";
-  host.style.pointerEvents = "none";
-  document.body.appendChild(host);
-  const root = createRoot(host);
+): PaginaInforme[] {
+  const paginas: PaginaInforme[] = [];
+  let pagina: PaginaInforme = { portada: true, trozos: [] };
+  let usado = opts.preamble;
+
+  function cabe(extra: number) {
+    return usado + extra + opts.padBottom <= opts.altoPagina + 0.5;
+  }
+
+  function cerrar() {
+    if (pagina.portada || pagina.trozos.length > 0) paginas.push(pagina);
+    pagina = { portada: false, trozos: [] };
+    usado = opts.padTop;
+  }
+
+  if (medidas.length === 0) {
+    paginas.push(pagina);
+    return paginas;
+  }
+
+  for (let i = 0; i < medidas.length; i += 1) {
+    const m = medidas[i]!;
+    let desde = 0;
+    let totalesListos = false;
+    let guard = 0;
+    while (!totalesListos && guard < 80) {
+      guard += 1;
+      const foto = desde === 0 && m.tieneFoto;
+      const n = m.filas.length;
+      const gap = pagina.trozos.length > 0 ? m.gapAntes || 8 : 0;
+      if (n === 0) {
+        const solo = altoTrozo(m, 0, 0, foto, true);
+        if (!cabe(gap + solo) && pagina.trozos.length > 0) {
+          cerrar();
+          continue;
+        }
+        pagina.trozos.push({ index: i, desde: 0, hasta: 0, foto, totales: true });
+        usado += gap + solo;
+        totalesListos = true;
+        break;
+      }
+      const todo = altoTrozo(m, desde, n, foto, true);
+      if (cabe(gap + todo)) {
+        pagina.trozos.push({ index: i, desde, hasta: n, foto, totales: true });
+        usado += gap + todo;
+        totalesListos = true;
+        break;
+      }
+      const cabeEnBlanco =
+        todo + opts.padTop + opts.padBottom <= opts.altoPagina + 0.5;
+      if (pagina.trozos.length > 0 && cabeEnBlanco) {
+        cerrar();
+        continue;
+      }
+      let hasta = desde;
+      for (let j = desde; j < n; j += 1) {
+        const h = altoTrozo(m, desde, j + 1, foto, false);
+        if (cabe(gap + h)) hasta = j + 1;
+        else break;
+      }
+      if (hasta === desde) {
+        if (pagina.trozos.length > 0) {
+          cerrar();
+          continue;
+        }
+        hasta = Math.min(n, desde + 1);
+      }
+      const esFin = hasta >= n;
+      const conTotales =
+        esFin && cabe(gap + altoTrozo(m, desde, hasta, foto, true));
+      const h = altoTrozo(m, desde, hasta, foto, conTotales);
+      pagina.trozos.push({
+        index: i,
+        desde,
+        hasta,
+        foto,
+        totales: conTotales,
+      });
+      usado += gap + h;
+      desde = hasta;
+      if (conTotales) totalesListos = true;
+      else cerrar();
+    }
+  }
+  if (pagina.portada || pagina.trozos.length > 0) paginas.push(pagina);
+  return paginas;
+}
+
+function medirBloques(host: HTMLElement) {
+  const article = host.querySelector("article");
+  const estilo = article ? getComputedStyle(article) : null;
+  const padTop = estilo ? Number.parseFloat(estilo.paddingTop) || 0 : 0;
+  const padBottom = estilo ? Number.parseFloat(estilo.paddingBottom) || 0 : 0;
+  const secciones = [...host.querySelectorAll<HTMLElement>("section")];
+  const caja = host.getBoundingClientRect();
+  const preamble = secciones[0]
+    ? secciones[0].getBoundingClientRect().top - caja.top
+    : caja.height;
+  const bloques: MedidaBloque[] = secciones.map((section, i) => {
+    const sb = section.getBoundingClientRect();
+    const filasEl = [...section.querySelectorAll<HTMLElement>("[data-pdf-fila]")];
+    const primera = filasEl[0]?.getBoundingClientRect();
+    const altoClave = primera ? Math.max(0, primera.top - sb.top) : sb.height;
+    const barra = section.querySelector<HTMLElement>("[data-pdf-clave]");
+    const altoBarra = barra?.getBoundingClientRect().height ?? 0;
+    const textos = barra ? [...barra.querySelectorAll("p")] : [];
+    const altoTextos = textos.reduce(
+      (suma, p) => suma + p.getBoundingClientRect().height,
+      0,
+    );
+    const tieneFoto = Boolean(section.querySelector("img"));
+    const altoClaveSinFoto = tieneFoto
+      ? Math.max(24, altoTextos + 16 + Math.max(0, altoClave - altoBarra))
+      : altoClave;
+    const ultima = filasEl[filasEl.length - 1]?.getBoundingClientRect();
+    const altoCierre = ultima ? Math.max(0, sb.bottom - ultima.bottom) : 0;
+    const anterior = secciones[i - 1];
+    const gapAntes = anterior
+      ? Math.max(0, sb.top - anterior.getBoundingClientRect().bottom)
+      : 0;
+    return {
+      tieneFoto,
+      altoClave,
+      altoClaveSinFoto,
+      filas: filasEl.map((el) => el.getBoundingClientRect().height),
+      altoCierre,
+      gapAntes,
+    };
+  });
+  return {
+    preamble,
+    padTop,
+    padBottom,
+    bloques,
+    anchoCss: caja.width,
+    altoCss: caja.height,
+  };
+}
+
+type DatosInforme = {
+  titulo: string;
+  empresa?: string;
+  sucursal?: string;
+  fecha?: string;
+  quien?: string;
+  notas: string[];
+  bloques: BloquePrenda[];
+  claveSolo: boolean;
+  columnaCodProveedor?: boolean;
+  ocultarPortada?: boolean;
+  partes?: Trozo[];
+  anchoMinMm: number;
+};
+
+async function esperarInforme(host: HTMLElement) {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+  if (!host.querySelector("article")) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  }
+  if (document.fonts?.ready) await document.fonts.ready;
+  const imagenes = [...host.querySelectorAll("img")];
+  await Promise.all(
+    imagenes.map(
+      (img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            }),
+    ),
+  );
+}
+
+function pintarInforme(root: ReturnType<typeof createRoot>, informe: DatosInforme) {
+  const trozos = informe.partes;
+  const bloques = trozos
+    ? trozos.map((t) => informe.bloques[t.index]!).filter(Boolean)
+    : informe.bloques;
+  const partes = trozos?.map((t) => ({
+    desde: t.desde,
+    hasta: t.hasta,
+    foto: t.foto,
+    totales: t.totales,
+  }));
   root.render(
     <InformeRegistro
       titulo={informe.titulo}
@@ -121,45 +275,49 @@ async function lienzoDelInforme(
       fecha={informe.fecha}
       quien={informe.quien}
       notas={informe.notas}
-      bloques={informe.bloques}
+      bloques={bloques}
       claveSolo={informe.claveSolo}
       columnaCodProveedor={informe.columnaCodProveedor}
+      ocultarPortada={informe.ocultarPortada}
+      partes={partes}
       completo
     />,
   );
+}
+
+async function conInforme<T>(
+  informe: DatosInforme,
+  usar: (host: HTMLElement) => Promise<T>,
+) {
+  const host = document.createElement("div");
+  host.style.position = "fixed";
+  host.style.left = "0";
+  host.style.top = "0";
+  host.style.zIndex = "-1";
+  host.style.width = "max-content";
+  host.style.minWidth = `${informe.anchoMinMm}mm`;
+  host.style.background = "#f8fafc";
+  host.style.pointerEvents = "none";
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  pintarInforme(root, informe);
   try {
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
-    if (!host.querySelector("[data-pdf-corte]")) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 80));
-    }
-    if (document.fonts?.ready) await document.fonts.ready;
-    const imagenes = [...host.querySelectorAll("img")];
-    await Promise.all(
-      imagenes.map(
-        (img) =>
-          img.complete
-            ? Promise.resolve()
-            : new Promise<void>((resolve) => {
-                img.onload = () => resolve();
-                img.onerror = () => resolve();
-              }),
-      ),
-    );
-    const anchoCss = host.getBoundingClientRect().width;
-    const altoCss = host.getBoundingClientRect().height;
-    const marcasCss = marcasDeCorte(host);
-    const canvas = await domToCanvas(host, {
-      scale: ESCALA,
-      backgroundColor: "#f8fafc",
-      type: "image/png",
-    });
-    return { canvas, anchoCss, altoCss, marcasCss };
+    await esperarInforme(host);
+    return await usar(host);
   } finally {
     root.unmount();
     host.remove();
   }
+}
+
+async function canvasDe(informe: DatosInforme) {
+  return conInforme(informe, (host) =>
+    domToCanvas(host, {
+      scale: ESCALA,
+      backgroundColor: "#f8fafc",
+      type: "image/png",
+    }),
+  );
 }
 
 /** Archivo PDF con la misma hoja que se ve en Ver PDF. */
@@ -180,7 +338,9 @@ export async function descargarInformePdf(opts: {
   const bloques = conFoto.map((bloque, i) =>
     bloque.foto ? bloque : opts.bloques[i]!,
   );
-  const { canvas, anchoCss, altoCss, marcasCss } = await lienzoDelInforme({
+  const anchoUtil = hoja.ancho - MARGEN_MM * 2;
+  const altoUtil = hoja.alto - MARGEN_MM * 2;
+  const base: DatosInforme = {
     titulo: opts.encabezado.tituloDoc || opts.titulo,
     empresa: opts.encabezado.empresa,
     sucursal: opts.encabezado.sucursal,
@@ -190,58 +350,52 @@ export async function descargarInformePdf(opts: {
     bloques,
     claveSolo: Boolean(opts.encabezado.claveSolo),
     columnaCodProveedor: opts.encabezado.columnaCodProveedor,
-  });
-  if (canvas.width < 2 || canvas.height < 2 || anchoCss < 2 || altoCss < 2) {
+    anchoMinMm: anchoUtil,
+  };
+  const medidas = await conInforme(base, async (host) => medirBloques(host));
+  if (medidas.anchoCss < 2 || medidas.altoCss < 2) {
     throw new Error("No se pudo armar el PDF. Inténtalo otra vez.");
   }
-  const anchoUtil = hoja.ancho - MARGEN_MM * 2;
-  const altoUtil = hoja.alto - MARGEN_MM * 2;
-  const anchoMm = anchoCss / PX_POR_MM;
+  const anchoMm = medidas.anchoCss / PX_POR_MM;
   const escalaHoja = Math.min(1, anchoUtil / anchoMm);
-  const anchoDibujo = anchoMm * escalaHoja;
-  const altoPaginaCss = Math.max(40, (altoUtil / escalaHoja) * PX_POR_MM);
-  const ratio = canvas.height / altoCss;
+  const altoPaginaCss = Math.max(80, (altoUtil / escalaHoja) * PX_POR_MM);
+  const paginas = empaquetarBloques(medidas.bloques, {
+    preamble: medidas.preamble,
+    padTop: medidas.padTop,
+    padBottom: medidas.padBottom,
+    altoPagina: altoPaginaCss,
+  }).slice(0, 40);
   const doc = new jsPDF({
     unit: "mm",
     format: "letter",
     orientation: orientacion === "vertical" ? "portrait" : "landscape",
   });
-  let yCss = 0;
-  let pagina = 0;
-  while (yCss < altoCss - 0.5) {
-    const ideal = Math.min(altoCss, yCss + altoPaginaCss);
-    let finCss = corteEntreFilas(marcasCss, yCss, ideal, altoCss);
-    if (finCss <= yCss + 1) {
-      const idealPx = Math.min(canvas.height, Math.round(ideal * ratio));
-      const desdePx = Math.round(yCss * ratio);
-      finCss =
-        corteEnHueco(canvas, idealPx, desdePx + 40) / Math.max(ratio, 0.01);
+  for (let i = 0; i < paginas.length; i += 1) {
+    const pagina = paginas[i]!;
+    const canvas = await canvasDe({
+      ...base,
+      ocultarPortada: !pagina.portada,
+      partes: pagina.trozos,
+    });
+    if (canvas.width < 2 || canvas.height < 2) {
+      throw new Error("No se pudo armar el PDF. Inténtalo otra vez.");
     }
-    if (finCss <= yCss + 1) finCss = Math.min(altoCss, yCss + altoPaginaCss);
-    if (finCss <= yCss) break;
-    const y0 = Math.max(0, Math.round(yCss * ratio));
-    const y1 = Math.min(canvas.height, Math.round(finCss * ratio));
-    const altoPx = Math.max(1, y1 - y0);
-    const recorte = document.createElement("canvas");
-    recorte.width = canvas.width;
-    recorte.height = altoPx;
-    const ctx = recorte.getContext("2d");
-    if (!ctx) break;
-    ctx.fillStyle = "#f8fafc";
-    ctx.fillRect(0, 0, recorte.width, recorte.height);
-    ctx.drawImage(canvas, 0, y0, canvas.width, altoPx, 0, 0, canvas.width, altoPx);
-    if (pagina > 0) doc.addPage();
+    const anchoNatural = canvas.width / ESCALA / PX_POR_MM;
+    const altoNatural = canvas.height / ESCALA / PX_POR_MM;
+    const escala = Math.min(
+      escalaHoja,
+      anchoUtil / Math.max(anchoNatural, 1),
+      altoUtil / Math.max(altoNatural, 1),
+    );
+    if (i > 0) doc.addPage();
     doc.addImage(
-      recorte.toDataURL("image/jpeg", 0.92),
+      canvas.toDataURL("image/jpeg", 0.92),
       "JPEG",
       MARGEN_MM,
       MARGEN_MM,
-      anchoDibujo,
-      (altoPx / ratio / PX_POR_MM) * escalaHoja,
+      anchoNatural * escala,
+      altoNatural * escala,
     );
-    yCss = finCss;
-    pagina += 1;
-    if (pagina > 40) break;
   }
   doc.save(opts.archivo);
 }

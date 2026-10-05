@@ -12,6 +12,8 @@ import { parseEstiloPdf } from "@/lib/pdf-estilo";
 import { tituloTalla } from "@/lib/titulo-etiqueta";
 import { cn } from "@/lib/utils";
 
+const FOTO_INFORME_MM = 25;
+
 export function InformeRegistro({
   titulo,
   empresa,
@@ -23,6 +25,8 @@ export function InformeRegistro({
   claveSolo,
   columnaCodProveedor,
   completo = false,
+  ocultarPortada = false,
+  partes,
 }: {
   titulo: string;
   empresa?: string;
@@ -33,19 +37,27 @@ export function InformeRegistro({
   bloques: BloquePrenda[];
   claveSolo: boolean;
   columnaCodProveedor?: boolean;
-  /** Al armar el archivo: la tabla crece a lo ancho, como en Ver PDF. */
+  /** Al armar el archivo: la hoja usa el ancho de la carta y aprieta el espacio vacío. */
   completo?: boolean;
+  /** Hojas de continuación: sin el título del pedido. */
+  ocultarPortada?: boolean;
+  /** Recorte de cada bloque. Si falta, se imprime completo. */
+  partes?: ParteBloque[];
 }) {
   return (
     <article
       className={cn(
-        "min-h-full bg-[#f8fafc] p-4 sm:p-6",
-        completo && "w-max",
+        "min-h-full bg-[#f8fafc]",
+        completo ? "w-full p-3" : "p-4 sm:p-6",
       )}
     >
+      {ocultarPortada ? null : (
       <header
         data-pdf-corte=""
-        className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 pb-3"
+        className={cn(
+          "flex flex-wrap items-end justify-between gap-2 border-b border-slate-200",
+          completo ? "mb-2 pb-2" : "mb-4 pb-3",
+        )}
       >
         <div>
           <p className="font-heading text-xl font-semibold text-slate-900">
@@ -69,21 +81,23 @@ export function InformeRegistro({
           ) : null}
         </div>
       </header>
-      {notas.length > 0 ? (
-        <ul className="mb-4 space-y-1 text-sm text-slate-600">
+      )}
+      {!ocultarPortada && notas.length > 0 ? (
+        <ul className={cn("space-y-1 text-sm text-slate-600", completo ? "mb-2" : "mb-4")}>
           {notas.map((n) => (
             <li key={n}>{n}</li>
           ))}
         </ul>
       ) : null}
-      <div className="space-y-4">
-        {bloques.map((bloque) => (
+      <div className={completo ? "space-y-2" : "space-y-4"}>
+        {bloques.map((bloque, i) => (
           <BloqueInforme
-            key={bloque.key}
+            key={`${bloque.key}-${i}`}
             bloque={bloque}
             claveSolo={claveSolo}
             columnaCodProveedor={columnaCodProveedor}
             completo={completo}
+            parte={partes?.[i]}
           />
         ))}
       </div>
@@ -91,28 +105,43 @@ export function InformeRegistro({
   );
 }
 
+type ParteBloque = {
+  desde: number;
+  hasta: number;
+  foto: boolean;
+  totales: boolean;
+};
+
 function BloqueInforme({
   bloque,
   claveSolo,
   columnaCodProveedor,
   completo,
+  parte,
 }: {
   bloque: BloquePrenda;
   claveSolo: boolean;
   columnaCodProveedor?: boolean;
   completo: boolean;
+  parte?: ParteBloque;
 }) {
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
   const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
   const totales = totalesDeBloque({ ...bloque, tallas });
   const identidad = lineaClaveNombre(bloque.sku, bloque.nombre);
   const detallado = parseEstiloPdf(bloque.estiloPdf) === "detallado";
+  const desde = parte?.desde ?? 0;
+  const hasta = parte?.hasta ?? bloque.filas.length;
+  const filas = bloque.filas.slice(desde, hasta);
+  const mostrarFoto = parte ? parte.foto : Boolean(bloque.foto);
+  const mostrarTotales = parte ? parte.totales : true;
+  const py = completo ? "py-1.5" : "py-2";
   return (
-    <section className="overflow-hidden rounded-lg border border-teal-600">
-      <div data-pdf-corte="" className="flex items-stretch gap-[1.5mm]">
+    <section data-pdf-bloque="" className="overflow-hidden rounded-lg border border-teal-600">
+      <div data-pdf-clave="" className="flex items-stretch gap-[1.5mm]">
         <div
           className="flex min-w-0 flex-1 flex-col justify-center bg-teal-700 px-3 py-2 text-white"
-          style={bloque.foto ? { minHeight: "30mm" } : undefined}
+          style={mostrarFoto && bloque.foto ? { minHeight: `${FOTO_INFORME_MM}mm` } : undefined}
         >
           <p className="font-heading text-lg font-semibold tracking-wide">
             {bloque.sku}
@@ -121,19 +150,19 @@ function BloqueInforme({
             <p className="text-sm text-teal-100">{bloque.sucursalNombre}</p>
           ) : null}
         </div>
-        {bloque.foto ? (
+        {mostrarFoto && bloque.foto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={bloque.foto}
             alt=""
-            className="h-[30mm] w-[30mm] shrink-0 bg-white object-contain"
+            className="h-[25mm] w-[25mm] shrink-0 bg-white object-contain"
           />
         ) : null}
       </div>
       {!detallado ? (
         <p
           data-pdf-corte=""
-          className="border-b bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+          className={cn("border-b bg-white px-3 text-sm font-semibold text-slate-900", py)}
         >
           {identidad}
         </p>
@@ -142,28 +171,29 @@ function BloqueInforme({
         <table
           className={cn(
             "border-collapse text-sm",
-            completo ? "w-max" : "w-full min-w-max",
+            completo ? "w-full" : "w-full min-w-max",
           )}
         >
           <thead>
             <tr>
               <th
                 className={cn(
-                  "sticky left-0 z-10 bg-teal-800 px-2 py-2 text-left font-semibold text-white",
+                  "sticky left-0 z-10 bg-teal-800 px-2 text-left font-semibold text-white",
+                  py,
                   detallado && "max-w-[55mm]",
                 )}
               >
                 Color
               </th>
               {columnaCodProveedor ? (
-                <th className="bg-teal-800 px-2 py-2 text-center font-semibold whitespace-nowrap text-white">
+                <th className={cn("bg-teal-800 px-2 text-center font-semibold whitespace-nowrap text-white", py)}>
                   Cód. proveedor
                 </th>
               ) : null}
               {headersTalla.map((h, i) => (
                 <th
                   key={`${tallas[i]}-${h}`}
-                  className="min-w-12 bg-amber-600 px-2 py-2 text-center font-semibold text-white"
+                  className={cn("min-w-12 bg-amber-600 px-2 text-center font-semibold text-white", py)}
                 >
                   {h}
                 </th>
@@ -171,8 +201,8 @@ function BloqueInforme({
             </tr>
           </thead>
           <tbody>
-            {bloque.filas.map((fila, i) => (
-              <tr key={fila.keys.join("-")} data-pdf-corte="">
+            {filas.map((fila, i) => (
+              <tr key={fila.keys.join("-")} data-pdf-fila="">
                 <td
                   className={cn(
                     "sticky left-0 z-10 bg-orange-50 px-2 py-1.5",
@@ -197,7 +227,8 @@ function BloqueInforme({
                   <td
                     key={`${fila.keys[0]}-${t}`}
                     className={cn(
-                      "px-2 py-2 text-center tabular-nums",
+                      "px-2 text-center tabular-nums",
+                      py,
                       i % 2 === 0 ? "bg-teal-50" : "bg-white",
                     )}
                   >
@@ -206,31 +237,38 @@ function BloqueInforme({
                 ))}
               </tr>
             ))}
-            <tr data-pdf-corte="">
-              <td className="sticky left-0 z-10 bg-teal-900 px-2 py-2 font-semibold text-white">
+            {mostrarTotales ? (
+            <tr data-pdf-cierre="">
+              <td className={cn("sticky left-0 z-10 bg-teal-900 px-2 font-semibold text-white", py)}>
                 Total
               </td>
               {columnaCodProveedor ? (
-                <td className="bg-teal-900 px-2 py-2" />
+                <td className="bg-teal-900 px-2" />
               ) : null}
               {tallas.map((t) => (
                 <td
                   key={`tot-${t}`}
-                  className="bg-teal-900 px-2 py-2 text-center font-semibold tabular-nums text-white"
+                  className={cn(
+                    "bg-teal-900 px-2 text-center font-semibold tabular-nums text-white",
+                    py,
+                  )}
                 >
                   {cantidadPdf(totales.porTalla[t])}
                 </td>
               ))}
             </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
+      {mostrarTotales ? (
       <p
-        data-pdf-corte=""
-        className="bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+        data-pdf-cierre=""
+        className={cn("bg-white px-3 text-sm font-semibold text-slate-700", py)}
       >
         Total piezas: {totales.piezas}
       </p>
+      ) : null}
     </section>
   );
 }
