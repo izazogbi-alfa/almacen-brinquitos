@@ -15,8 +15,8 @@ import {
 import { EmptyView } from "@/components/status-views";
 import { useInventory } from "@/lib/inventory-context";
 import { notasPdfInforme } from "@/lib/pdf-clave";
+import { descargarVistaDeRegistro } from "@/lib/descargar-informe-pdf";
 import {
-  descargarPdfDeRegistro,
   lineasDeRegistro,
   mensajeRegistroSinLineas,
   opcionesPdfRegistro,
@@ -94,17 +94,19 @@ export function AccionesPdfRegistro({ sesion }: { sesion: SesionCaptura }) {
     setViendo(true);
   }
 
-  function descargar() {
+  async function descargar() {
     if (sinLineas()) return;
+    const id = toast.loading("Preparando el PDF…");
     try {
-      descargarPdfDeRegistro(sesion, { catalogos, productos });
+      await descargarVistaDeRegistro(sesion, { catalogos, productos });
+      toast.success("PDF listo", { id });
     } catch (err) {
       const msg =
         err instanceof Error
           ? err.message
           : "No se pudo armar el PDF. Inténtalo otra vez.";
       setAviso(msg);
-      toast.error(msg);
+      toast.error(msg, { id });
     }
   }
 
@@ -201,15 +203,19 @@ function VisorPdfRegistro({
               type="button"
               className="h-11"
               onClick={() => {
-                try {
-                  descargarPdfDeRegistro(sesion, { catalogos, productos });
-                } catch (err) {
-                  toast.error(
-                    err instanceof Error
-                      ? err.message
-                      : "No se pudo descargar.",
-                  );
-                }
+                const id = toast.loading("Preparando el PDF…");
+                void descargarVistaDeRegistro(sesion, { catalogos, productos })
+                  .then(() => {
+                    toast.success("PDF listo", { id });
+                  })
+                  .catch((err: unknown) => {
+                    toast.error(
+                      err instanceof Error
+                        ? err.message
+                        : "No se pudo descargar.",
+                      { id },
+                    );
+                  });
               }}
             >
               <FileDown className="mr-2 size-4" />

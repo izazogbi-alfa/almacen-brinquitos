@@ -1,9 +1,11 @@
 "use client";
 
 import { FileDown, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyView } from "@/components/status-views";
-import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
+import { descargarInformePdf } from "@/lib/descargar-informe-pdf";
+import { encabezadoInforme } from "@/lib/pdf";
 import { useInventory } from "@/lib/inventory-context";
 import { formatoFecha } from "@/lib/format";
 import {
@@ -49,22 +51,31 @@ export function TablaPrendas({
   const conPdf = mostrarPdf;
   const esPedido = pdfModulo === "pedidos";
 
-  function pdf() {
+  async function pdf() {
     const sucursal = lineas.find((l) => l.sucursalNombre)?.sucursalNombre;
-    descargarPdfBloques(
-      pdfArchivo,
-      pdfTitulo,
-      pdfNotas ?? [],
-      bloques,
-      encabezadoInforme(catalogos, {
-        tituloDoc: pdfTitulo.replace(/^Brinquitos\s*·\s*/i, "") || pdfTitulo,
-        sucursal,
-        fecha: formatoFecha(new Date().toISOString()),
-        quien: user?.nombre,
-        claveSolo: pdfClaveSolo,
-        columnaCodProveedor: esPedido,
-      }),
-    );
+    const id = toast.loading("Preparando el PDF…");
+    try {
+      await descargarInformePdf({
+        archivo: pdfArchivo,
+        titulo: pdfTitulo,
+        notas: pdfNotas ?? [],
+        bloques,
+        encabezado: encabezadoInforme(catalogos, {
+          tituloDoc: pdfTitulo.replace(/^Brinquitos\s*·\s*/i, "") || pdfTitulo,
+          sucursal,
+          fecha: formatoFecha(new Date().toISOString()),
+          quien: user?.nombre,
+          claveSolo: pdfClaveSolo,
+          columnaCodProveedor: esPedido,
+        }),
+      });
+      toast.success("PDF listo", { id });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo armar el PDF.",
+        { id },
+      );
+    }
   }
 
   if (lineas.length === 0) {

@@ -15,7 +15,8 @@ import {
 } from "@/components/estado-sesion";
 import { formatoFecha } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
+import { descargarInformePdf } from "@/lib/descargar-informe-pdf";
+import { encabezadoInforme } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
 import { bloquesDesdeCeldas } from "@/lib/tabla-bloques";
 import { sesionAbiertaDe, sesionVisibleHoy } from "@/lib/sesion-captura";
@@ -46,7 +47,7 @@ function RecepcionContent() {
     );
   }
 
-  function pdf() {
+  async function pdf() {
     const cuando = sesion?.cerradaEn || sesion?.ultimaActividad;
     const filas = deSesion.map((m) => {
       const prod = productos.find((p) => p.id === m.productoId);
@@ -61,19 +62,28 @@ function RecepcionContent() {
         cantidad: m.cantidad,
       };
     });
-    descargarPdfBloques(
-      `entrada-${sesion?.id ?? "sesion"}.pdf`,
-      "Entrada de mercancía",
-      [],
-      bloquesDesdeCeldas(filas, { productos, catalogos }),
-      encabezadoInforme(catalogos, {
-        tituloDoc: "Entrada de mercancía",
-        sucursal: filas.find((f) => f.sucursalNombre)?.sucursalNombre,
-        fecha: formatoFecha(cuando ?? new Date().toISOString()),
-        quien: user?.nombre,
-        claveSolo: false,
-      }),
-    );
+    const id = toast.loading("Preparando el PDF…");
+    try {
+      await descargarInformePdf({
+        archivo: `entrada-${sesion?.id ?? "sesion"}.pdf`,
+        titulo: "Entrada de mercancía",
+        notas: [],
+        bloques: bloquesDesdeCeldas(filas, { productos, catalogos }),
+        encabezado: encabezadoInforme(catalogos, {
+          tituloDoc: "Entrada de mercancía",
+          sucursal: filas.find((f) => f.sucursalNombre)?.sucursalNombre,
+          fecha: formatoFecha(cuando ?? new Date().toISOString()),
+          quien: user?.nombre,
+          claveSolo: false,
+        }),
+      });
+      toast.success("PDF listo", { id });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo armar el PDF.",
+        { id },
+      );
+    }
   }
 
   return (

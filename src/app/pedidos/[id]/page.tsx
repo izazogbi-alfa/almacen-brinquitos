@@ -10,7 +10,8 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { TablaPrendas } from "@/components/tabla-prendas";
 import { etiquetaEstado, formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
+import { descargarInformePdf } from "@/lib/descargar-informe-pdf";
+import { encabezadoInforme } from "@/lib/pdf";
 import { puede, puedeAutorizarPedidos } from "@/lib/modulos";
 import {
   bloquesDesdeCeldas,
@@ -66,20 +67,29 @@ function DetallePedidoContent() {
   const sucursalPedido = actual.lineas.find((l) => l.sucursalNombre)?.sucursalNombre;
   const quienPedido = actual.userName?.trim() || user?.nombre;
 
-  function pdf() {
-    descargarPdfBloques(
-      `${actual.folio}.pdf`,
-      actual.folio,
-      notasPdf,
-      bloquesDesdeCeldas(celdas, { productos, catalogos }),
-      encabezadoInforme(catalogos, {
-        tituloDoc: `Pedido ${actual.folio}`,
-        sucursal: sucursalPedido,
-        fecha: formatoFecha(actual.fecha),
-        quien: quienPedido,
-        columnaCodProveedor: true,
-      }),
-    );
+  async function pdf() {
+    const id = toast.loading("Preparando el PDF…");
+    try {
+      await descargarInformePdf({
+        archivo: `${actual.folio}.pdf`,
+        titulo: actual.folio,
+        notas: notasPdf,
+        bloques: bloquesDesdeCeldas(celdas, { productos, catalogos }),
+        encabezado: encabezadoInforme(catalogos, {
+          tituloDoc: `Pedido ${actual.folio}`,
+          sucursal: sucursalPedido,
+          fecha: formatoFecha(actual.fecha),
+          quien: quienPedido,
+          columnaCodProveedor: true,
+        }),
+      });
+      toast.success("PDF listo", { id });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo armar el PDF.",
+        { id },
+      );
+    }
   }
 
   return (
@@ -138,7 +148,7 @@ function DetallePedidoContent() {
             try {
               await autorizarPedido(pedido.id);
               toast.success("Pedido autorizado");
-              pdf();
+              await pdf();
             } catch (err) {
               toast.error(
                 err instanceof Error ? err.message : "No se pudo autorizar.",

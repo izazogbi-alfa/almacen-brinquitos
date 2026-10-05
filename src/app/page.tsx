@@ -16,7 +16,8 @@ import {
 } from "@/components/estado-sesion";
 import { formatoFecha, formatoFechaHora } from "@/lib/format";
 import { useInventory } from "@/lib/inventory-context";
-import { descargarPdfBloques, encabezadoInforme } from "@/lib/pdf";
+import { descargarInformePdf } from "@/lib/descargar-informe-pdf";
+import { encabezadoInforme } from "@/lib/pdf";
 import { puede } from "@/lib/modulos";
 import {
   bloquesDesdeCeldas,
@@ -69,22 +70,31 @@ function ExistenciasContent() {
     });
   }
 
-  function pdfDeSesion() {
+  async function pdfDeSesion() {
     const cuando = sesion?.cerradaEn || sesion?.ultimaActividad;
     const sucursal = celdasDeSesion().find((c) => c.sucursalNombre)?.sucursalNombre;
-    descargarPdfBloques(
-      `existencias-${sesion?.id ?? "sesion"}.pdf`,
-      "Existencias",
-      [],
-      bloquesDesdeCeldas(celdasDeSesion(), { productos, catalogos }),
-      encabezadoInforme(catalogos, {
-        tituloDoc: "Existencias",
-        sucursal,
-        fecha: formatoFecha(cuando ?? new Date().toISOString()),
-        quien: user?.nombre,
-        claveSolo: true,
-      }),
-    );
+    const id = toast.loading("Preparando el PDF…");
+    try {
+      await descargarInformePdf({
+        archivo: `existencias-${sesion?.id ?? "sesion"}.pdf`,
+        titulo: "Existencias",
+        notas: [],
+        bloques: bloquesDesdeCeldas(celdasDeSesion(), { productos, catalogos }),
+        encabezado: encabezadoInforme(catalogos, {
+          tituloDoc: "Existencias",
+          sucursal,
+          fecha: formatoFecha(cuando ?? new Date().toISOString()),
+          quien: user?.nombre,
+          claveSolo: true,
+        }),
+      });
+      toast.success("PDF listo", { id });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo armar el PDF.",
+        { id },
+      );
+    }
   }
 
   return (

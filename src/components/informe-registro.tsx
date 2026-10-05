@@ -22,6 +22,7 @@ export function InformeRegistro({
   bloques,
   claveSolo,
   columnaCodProveedor,
+  completo = false,
 }: {
   titulo: string;
   empresa?: string;
@@ -32,10 +33,20 @@ export function InformeRegistro({
   bloques: BloquePrenda[];
   claveSolo: boolean;
   columnaCodProveedor?: boolean;
+  /** Al armar el archivo: la tabla crece a lo ancho, como en Ver PDF. */
+  completo?: boolean;
 }) {
   return (
-    <article className="min-h-full bg-[#f8fafc] p-4 sm:p-6">
-      <header className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 pb-3">
+    <article
+      className={cn(
+        "min-h-full bg-[#f8fafc] p-4 sm:p-6",
+        completo && "w-max",
+      )}
+    >
+      <header
+        data-pdf-corte=""
+        className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 pb-3"
+      >
         <div>
           <p className="font-heading text-xl font-semibold text-slate-900">
             {empresa || "Brinquitos"}
@@ -72,6 +83,7 @@ export function InformeRegistro({
             bloque={bloque}
             claveSolo={claveSolo}
             columnaCodProveedor={columnaCodProveedor}
+            completo={completo}
           />
         ))}
       </div>
@@ -83,10 +95,12 @@ function BloqueInforme({
   bloque,
   claveSolo,
   columnaCodProveedor,
+  completo,
 }: {
   bloque: BloquePrenda;
   claveSolo: boolean;
   columnaCodProveedor?: boolean;
+  completo: boolean;
 }) {
   const tallas = bloque.tallas.length ? bloque.tallas : ["Cant."];
   const headersTalla = encabezadosColumnaTalla(tallas, tituloTalla);
@@ -95,7 +109,7 @@ function BloqueInforme({
   const detallado = parseEstiloPdf(bloque.estiloPdf) === "detallado";
   return (
     <section className="overflow-hidden rounded-lg border border-teal-600">
-      <div className="flex items-stretch gap-[1.5mm]">
+      <div data-pdf-corte="" className="flex items-stretch gap-[1.5mm]">
         <div
           className="flex min-w-0 flex-1 flex-col justify-center bg-teal-700 px-3 py-2 text-white"
           style={bloque.foto ? { minHeight: "30mm" } : undefined}
@@ -117,12 +131,20 @@ function BloqueInforme({
         ) : null}
       </div>
       {!detallado ? (
-        <p className="border-b bg-white px-3 py-2 text-sm font-semibold text-slate-900">
+        <p
+          data-pdf-corte=""
+          className="border-b bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+        >
           {identidad}
         </p>
       ) : null}
-      <div className="overflow-x-auto bg-white">
-        <table className="w-full min-w-max border-collapse text-sm">
+      <div className={completo ? "bg-white" : "overflow-x-auto bg-white"}>
+        <table
+          className={cn(
+            "border-collapse text-sm",
+            completo ? "w-max" : "w-full min-w-max",
+          )}
+        >
           <thead>
             <tr>
               <th
@@ -150,7 +172,7 @@ function BloqueInforme({
           </thead>
           <tbody>
             {bloque.filas.map((fila, i) => (
-              <tr key={fila.keys.join("-")}>
+              <tr key={fila.keys.join("-")} data-pdf-corte="">
                 <td
                   className={cn(
                     "sticky left-0 z-10 bg-orange-50 px-2 py-1.5",
@@ -184,7 +206,7 @@ function BloqueInforme({
                 ))}
               </tr>
             ))}
-            <tr>
+            <tr data-pdf-corte="">
               <td className="sticky left-0 z-10 bg-teal-900 px-2 py-2 font-semibold text-white">
                 Total
               </td>
@@ -203,7 +225,10 @@ function BloqueInforme({
           </tbody>
         </table>
       </div>
-      <p className="bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+      <p
+        data-pdf-corte=""
+        className="bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+      >
         Total piezas: {totales.piezas}
       </p>
     </section>
