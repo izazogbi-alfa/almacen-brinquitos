@@ -320,15 +320,39 @@ function textoCorto(valor: unknown, max = 120) {
   return t.slice(0, max);
 }
 
+function mismaLineaCaptura(
+  a: Pick<LineaBorrador, "productoId" | "color" | "especificacion" | "sucursalId">,
+  b: Pick<LineaBorrador, "productoId" | "color" | "especificacion" | "sucursalId">,
+) {
+  return (
+    a.productoId === b.productoId &&
+    a.sucursalId === b.sucursalId &&
+    a.color.toLocaleLowerCase("es") === b.color.toLocaleLowerCase("es") &&
+    (a.especificacion ?? "") === (b.especificacion ?? "")
+  );
+}
+
+function unirPares(previos: ParBorrador[], nuevos: ParBorrador[]) {
+  const pares = [...previos];
+  for (const par of nuevos) {
+    const i = pares.findIndex((p) => p.talla === par.talla);
+    if (i >= 0) pares[i] = par;
+    else pares.push(par);
+  }
+  return pares;
+}
+
 export function sanitizarBorrador(raw: unknown): BorradorSesion | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const o = raw as Record<string, unknown>;
-  const crudas = Array.isArray(o.lineas) ? o.lineas.slice(0, 200) : [];
+  // Antes de juntar color+tallas. Una XC1092 manda una fila por celda si el
+  // cliente aún no las agrupó; 200 cortaba los últimos colores.
+  const crudas = Array.isArray(o.lineas) ? o.lineas.slice(0, 5000) : [];
   const lineas: LineaBorrador[] = [];
   for (const item of crudas) {
     if (!item || typeof item !== "object") continue;
     const ln = item as Record<string, unknown>;
-    const paresIn = Array.isArray(ln.pares) ? ln.pares.slice(0, 80) : [];
+    const paresIn = Array.isArray(ln.pares) ? ln.pares.slice(0, 200) : [];
     const pares: ParBorrador[] = [];
     for (const p of paresIn) {
       if (!p || typeof p !== "object") continue;
@@ -340,7 +364,7 @@ export function sanitizarBorrador(raw: unknown): BorradorSesion | undefined {
         cantidad,
       });
     }
-    lineas.push({
+    const linea: LineaBorrador = {
       key: String(ln.key ?? "").slice(0, 80) || `ln-${lineas.length}`,
       productoId: String(ln.productoId ?? "").slice(0, 80),
       sku: String(ln.sku ?? "").slice(0, 40),
@@ -350,13 +374,106 @@ export function sanitizarBorrador(raw: unknown): BorradorSesion | undefined {
       sucursalId: String(ln.sucursalId ?? "").slice(0, 40),
       sucursalNombre: String(ln.sucursalNombre ?? "").slice(0, 80),
       pares,
-    });
+    };
+    const previa = lineas.find((x) => mismaLineaCaptura(x, linea));
+    if (previa) {
+      previa.pares = unirPares(previa.pares, linea.pares);
+      continue;
+    }
+    lineas.push(linea);
   }
   return {
     sucursalId: textoCorto(o.sucursalId, 40),
     proveedor: textoCorto(o.proveedor, 80),
     notasPedido: textoCorto(o.notasPedido, 200),
-    lineas,
+    lineas: lineas.slice(0, 800),
+  };
+}
+
+type MovimientoDeRegistro = {
+  tipo: string;
+  sesionId?: string;
+  productoId?: string;
+  productoNombre?: string;
+  talla?: string;
+  color?: string;
+  sucursalId?: string;
+  sucursalNombre?: string;
+  cantidad: number;
+  existenciaDespues?: number;
+};
+
+/**
+ * Si el registro se cortó (una fila por celda y tope de 200), recupera
+ * las tallas desde los movimientos de esa misma captura.
+ * Existencias usa la cantidad contada. Recepción usa las piezas de entrada.
+ */
+export function completarRegistroConMovimientos(
+  sesion: SesionCaptura,
+  movimientos: MovimientoDeRegistro[],
+  productos: { id: string; sku: string; nombre: string }[],
+): SesionCaptura {
+  const tipo =
+    sesion.modulo === "existencias"
+      ? "conteo"
+      : sesion.modulo === "recepcion"
+        ? "recepcion"
+        : null;
+  if (!tipo) return sesion;
+  const propios = movimientos.filter(
+    (m) => m.sesionId === sesion.id && m.tipo === tipo,
+  );
+  if (propios.length === 0) return sesion;
+  const paresActuales = (sesion.borrador?.lineas ?? []).reduce(
+    (n, ln) => n + ln.pares.length,
+    0,
+  );
+  if (propios.length <= paresActuales) return sesion;
+
+  const mapa = new Map<string, LineaBorrador>();
+  const orden: string[] = [];
+  for (const m of propios) {
+    const cantidad =
+      sesion.modulo === "existencias" ? m.existenciaDespues : m.cantidad;
+    if (cantidad == null || !Number.isFinite(cantidad) || cantidad < 0) continue;
+    if (sesion.modulo === "recepcion" && cantidad <= 0) continue;
+    const color = (m.color || "Único").slice(0, 40);
+    const sucursalId = (m.sucursalId || "").slice(0, 40);
+    const productoId = (m.productoId || "").slice(0, 80);
+    const clave = `${productoId}::${sucursalId}::${color.toLocaleLowerCase("es")}`;
+    let ln = mapa.get(clave);
+    if (!ln) {
+      const prod = productos.find((p) => p.id === productoId);
+      ln = {
+        key: `ln-${productoId}-${color}-${sucursalId}`.slice(0, 80),
+        productoId,
+        sku: (prod?.sku || "").slice(0, 40),
+        nombre: (prod?.nombre || m.productoNombre || "").slice(0, 120),
+        color,
+        sucursalId,
+        sucursalNombre: (m.sucursalNombre || "").slice(0, 80),
+        pares: [],
+      };
+      mapa.set(clave, ln);
+      orden.push(clave);
+    }
+    const talla = (m.talla || "").slice(0, 24);
+    if (ln.pares.some((p) => p.talla === talla)) continue;
+    ln.pares.push({ talla, cantidad });
+  }
+  const lineas = orden
+    .map((k) => mapa.get(k))
+    .filter((ln): ln is LineaBorrador => Boolean(ln && ln.pares.length > 0));
+  const paresNuevos = lineas.reduce((n, ln) => n + ln.pares.length, 0);
+  if (paresNuevos <= paresActuales) return sesion;
+  return {
+    ...sesion,
+    borrador: {
+      sucursalId: sesion.borrador?.sucursalId || lineas[0]?.sucursalId,
+      proveedor: sesion.borrador?.proveedor,
+      notasPedido: sesion.borrador?.notasPedido,
+      lineas,
+    },
   };
 }
 

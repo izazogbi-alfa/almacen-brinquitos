@@ -7,7 +7,9 @@ import {
   etiquetaBotonPendiente,
   esSesionTerminada,
   ORDEN_MODULOS_PENDIENTES,
+  completarRegistroConMovimientos,
   resumenCantidadesRegistro,
+  sanitizarBorrador,
   sesionesPendientes,
   sesionesTerminadas,
   sesionPendienteDe,
@@ -412,5 +414,78 @@ assert.equal(
 const vueltaPiezas = revertirEnLista([conPiezas], conPiezas.id);
 assert.equal(vueltaPiezas?.borrador?.lineas.length, 2);
 assert.match(resumenCantidadesRegistro(vueltaPiezas!) ?? "", /25 piezas/);
+
+const coloresXc = ["Blanco", "Rosa", "Azul", "Rojo", "Negro", "Beige", "Verde", "Amarillo", "Gris"];
+const tallasXc = ["1", "1X", ...Array.from({ length: 30 }, (_, i) => String((i + 1) * 2))];
+const sueltas = coloresXc.flatMap((color) =>
+  tallasXc.map((talla) => ({
+    key: `ln-p-XC1092-${color}--s-gloria`,
+    productoId: "p-XC1092",
+    sku: "XC1092",
+    nombre: "Camisa Baccus 2 al 18",
+    color,
+    sucursalId: "s-gloria",
+    sucursalNombre: "La Gloria",
+    pares: [{ talla, cantidad: 2 }],
+  })),
+);
+assert.equal(sueltas.length, 288);
+const junto = sanitizarBorrador({ sucursalId: "s-gloria", lineas: sueltas });
+assert.equal(junto?.lineas.length, coloresXc.length);
+for (const color of coloresXc) {
+  const ln = junto?.lineas.find((l) => l.color === color);
+  assert.ok(ln, color);
+  assert.equal(ln?.pares.length, tallasXc.length);
+  assert.deepEqual(
+    ln?.pares.map((p) => p.talla),
+    tallasXc,
+  );
+}
+assert.equal(junto?.lineas.at(-1)?.color, "Gris");
+assert.equal(junto?.lineas.at(-1)?.pares.at(-1)?.talla, "60");
+
+const cortada: SesionCaptura = {
+  ...base(),
+  id: "ss-xc",
+  conteos: 200,
+  borrador: {
+    sucursalId: "s-gloria",
+    lineas: sueltas.slice(0, 200).map((ln) => ({
+      ...ln,
+      especificacion: undefined,
+    })),
+  },
+};
+const movimientosXc = [...sueltas].reverse().map((ln, i) => ({
+  tipo: "conteo",
+  sesionId: "ss-xc",
+  productoId: ln.productoId,
+  productoNombre: ln.nombre,
+  talla: ln.pares[0].talla,
+  color: ln.color,
+  sucursalId: ln.sucursalId,
+  sucursalNombre: ln.sucursalNombre,
+  cantidad: 2,
+  existenciaDespues: 2,
+  id: `mv-${i}`,
+}));
+const reparada = completarRegistroConMovimientos(cortada, movimientosXc, [
+  { id: "p-XC1092", sku: "XC1092", nombre: "Camisa Baccus 2 al 18" },
+]);
+assert.equal(reparada.borrador?.lineas.length, 9);
+assert.equal(
+  reparada.borrador?.lineas.reduce((n, ln) => n + ln.pares.length, 0),
+  288,
+);
+assert.equal(reparada.borrador?.lineas[0]?.sku, "XC1092");
+assert.ok(
+  reparada.borrador?.lineas
+    .find((ln) => ln.color === "Gris")
+    ?.pares.some((p) => p.talla === "60"),
+);
+const completa = completarRegistroConMovimientos(reparada, movimientosXc, [
+  { id: "p-XC1092", sku: "XC1092", nombre: "Camisa Baccus 2 al 18" },
+]);
+assert.equal(completa, reparada);
 
 console.log("ok sesion-pendiente");

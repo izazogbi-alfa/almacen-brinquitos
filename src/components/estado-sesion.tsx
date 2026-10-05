@@ -152,6 +152,7 @@ export function useRegistroCaptura(
     async pendienteGuardar(lineas: LineaBorrador[]) {
       const borrador = payloadDe(lineas);
       recordarBorradorAlSalir(modulo, borrador);
+      cancelarBorradorSesion(modulo);
       await guardarRegistro(modulo, "pendiente", borrador);
       const archivo = seccionPendienteDe(modulo);
       toast.success(`Quedó en curso. Lo retomas en ${archivo.titulo}.`);
@@ -160,12 +161,23 @@ export function useRegistroCaptura(
     async terminarGuardar(lineas: LineaBorrador[]) {
       const borrador = payloadDe(lineas);
       recordarBorradorAlSalir(modulo, borrador);
+      cancelarBorradorSesion(modulo);
       await guardarRegistro(modulo, "terminada", borrador);
       const archivo = seccionTerminadaDe(modulo);
       toast.success(`Listo. Quedó en ${archivo.titulo}.`);
       router.push(archivo.href);
     },
   };
+}
+
+const temporizadorBorrador = new Map<ModuloSesion, number>();
+
+/** Evita que un borrador atrasado pise Terminar guardar o Pendiente guardar. */
+export function cancelarBorradorSesion(modulo: ModuloSesion) {
+  const id = temporizadorBorrador.get(modulo);
+  if (id == null) return;
+  window.clearTimeout(id);
+  temporizadorBorrador.delete(modulo);
 }
 
 export function useBorradorSesion(
@@ -192,7 +204,9 @@ export function useBorradorSesion(
     };
     recordarBorradorAlSalir(modulo, payload);
     window.clearTimeout(tRef.current);
-    tRef.current = window.setTimeout(() => {
+    window.clearTimeout(temporizadorBorrador.get(modulo));
+    const id = window.setTimeout(() => {
+      temporizadorBorrador.delete(modulo);
       const run = optsRef.current?.crearSiFalta
         ? latidoSesion(modulo, payload)
         : guardarBorradorSesion(modulo, payload);
@@ -200,6 +214,8 @@ export function useBorradorSesion(
         /* el siguiente cambio reintenta */
       });
     }, 450);
+    tRef.current = id;
+    temporizadorBorrador.set(modulo, id);
   };
 }
 

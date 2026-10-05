@@ -603,12 +603,14 @@ export function CapturaArticulo({
   function fusionarLineasConCeldas(celdas: CeldaBorrador[]): LineaTabla[] {
     if (!mostrado || !sucursal) return lineas;
     let next = [...lineas];
+    const spec = specLinea || "";
     for (const celda of celdas) {
+      const colorLinea = tituloEtiqueta(celda.color);
       const idx = next.findIndex(
         (x) =>
           x.productoId === mostrado.id &&
-          x.color === celda.color &&
-          x.especificacion === specLinea &&
+          x.color === colorLinea &&
+          (x.especificacion || "") === spec &&
           x.sucursalId === sucursal.id,
       );
       const par: ParTalla = { talla: celda.talla, cantidad: celda.cantidad };
@@ -622,11 +624,11 @@ export function CapturaArticulo({
         next = [
           ...next,
           {
-            key: `ln-${mostrado.id}-${celda.color}-${specLinea}-${sucursal.id}`,
+            key: `ln-${mostrado.id}-${colorLinea}-${specLinea}-${sucursal.id}`,
             productoId: mostrado.id,
             sku: mostrado.sku,
             nombre: tituloNombreArticulo(mostrado.nombre),
-            color: tituloEtiqueta(celda.color),
+            color: colorLinea,
             especificacion: specLinea || undefined,
             sucursalId: sucursal.id,
             sucursalNombre: sucursal.nombre,

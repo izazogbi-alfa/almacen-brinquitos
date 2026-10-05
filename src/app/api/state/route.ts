@@ -6,7 +6,10 @@ import { cookiesAsignaciones } from "@/server/asignaciones-persist";
 import { cookiesCatalogos } from "@/server/catalogos-persist";
 import { hidratarCatalogos, withStore } from "@/server/store";
 import { aplicarCierresPorInactividad } from "@/lib/sesion-store";
-import { sesionesParaCliente } from "@/lib/sesion-captura";
+import {
+  completarRegistroConMovimientos,
+  sesionesParaCliente,
+} from "@/lib/sesion-captura";
 import { filtrarSesionesVisibles } from "@/server/registro-access";
 import {
   movimientosVisiblesPara,
@@ -66,7 +69,9 @@ export async function GET() {
       store.movimientos.slice(0, 80),
     ),
     sesiones: sesionesParaCliente(
-      filtrarSesionesVisibles(user, store.sesiones),
+      filtrarSesionesVisibles(user, store.sesiones).map((s) =>
+        completarRegistroConMovimientos(s, store.movimientos, store.productos),
+      ),
     ),
     ultimoGuardado: store.ultimoGuardado,
     catalogos: store.catalogos,
