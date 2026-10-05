@@ -26,6 +26,53 @@ import {
 import type { SesionCaptura } from "@/lib/sesion-captura";
 import { bloquesDesdeLineasColor } from "@/lib/tabla-bloques";
 
+/** Solo en pendientes: abre el mismo informe que Ver PDF de los ya terminados. */
+export function BotonVerPdfRegistro({
+  sesion,
+  disabled,
+}: {
+  sesion: SesionCaptura;
+  disabled?: boolean;
+}) {
+  const [viendo, setViendo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  function ver() {
+    if (registroTieneLineas(sesion)) {
+      setAviso(null);
+      setViendo(true);
+      return;
+    }
+    const msg = mensajeRegistroSinLineas();
+    setAviso(msg);
+    toast.error(msg);
+  }
+
+  return (
+    <div className="mt-2 w-full space-y-2">
+      <Button
+        type="button"
+        className="h-12 w-full bg-emerald-600 text-white hover:bg-emerald-700"
+        disabled={disabled}
+        onClick={ver}
+      >
+        <FileSearch className="mr-2 size-4 shrink-0" />
+        Ver PDF
+      </Button>
+      {aviso ? (
+        <p className="text-sm font-medium text-destructive" role="alert">
+          {aviso}
+        </p>
+      ) : null}
+      <VisorPdfRegistro
+        abierto={viendo}
+        sesion={sesion}
+        onCerrar={() => setViendo(false)}
+      />
+    </div>
+  );
+}
+
 export function AccionesPdfRegistro({ sesion }: { sesion: SesionCaptura }) {
   const { catalogos, productos } = useInventory();
   const [viendo, setViendo] = useState(false);

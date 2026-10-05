@@ -9,7 +9,10 @@ import { AsyncGate, EmptyView } from "@/components/status-views";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AccionesPdfRegistro } from "@/components/visor-pdf-registro";
+import {
+  AccionesPdfRegistro,
+  BotonVerPdfRegistro,
+} from "@/components/visor-pdf-registro";
 import { useInventory } from "@/lib/inventory-context";
 import { formatoFechaHora, GRUPOS_REGISTRO, grupoRegistro } from "@/lib/format";
 import { puede } from "@/lib/modulos";
@@ -187,19 +190,25 @@ function ListaPendientesModulo({
                             <AccionesPdfRegistro sesion={sesion} />
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            disabled={abriendo !== null}
-                            onClick={() => void seguir(sesion)}
-                            className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border bg-card px-4 py-3 text-left shadow-sm active:bg-muted disabled:opacity-60"
-                          >
-                            {meta}
-                            <span className="mt-1 text-sm font-semibold text-teal-800">
-                              {abriendo === sesion.id
-                                ? "Abriendo…"
-                                : "Continuar este registro"}
-                            </span>
-                          </button>
+                          <div className="flex min-h-20 min-w-0 flex-1 flex-col items-start rounded-2xl border bg-card px-4 py-3 text-left shadow-sm">
+                            <button
+                              type="button"
+                              disabled={abriendo !== null}
+                              onClick={() => void seguir(sesion)}
+                              className="flex w-full min-w-0 flex-col items-start text-left active:bg-muted disabled:opacity-60"
+                            >
+                              {meta}
+                              <span className="mt-1 text-sm font-semibold text-teal-800">
+                                {abriendo === sesion.id
+                                  ? "Abriendo…"
+                                  : "Continuar este registro"}
+                              </span>
+                            </button>
+                            <BotonVerPdfRegistro
+                              sesion={sesion}
+                              disabled={abriendo !== null}
+                            />
+                          </div>
                         )}
                         <div className="grid shrink-0 grid-cols-1 gap-2 sm:w-40">
                           {archivo && esAdmin ? (
