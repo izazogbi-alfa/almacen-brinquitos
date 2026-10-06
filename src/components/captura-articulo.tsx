@@ -141,7 +141,7 @@ export function CapturaArticulo({
   const [color, setColor] = useState("");
   const [talla, setTalla] = useState("");
   const [especificacion, setEspecificacion] = useState("");
-  const [cantidad, setCantidad] = useState("1");
+  const [cantidad, setCantidad] = useState(modo === "pedido" ? "0" : "1");
   const [borrador, setBorrador] = useState<CeldaBorrador[]>([]);
   const [lineas, setLineas] = useState<LineaTabla[]>(lineasIniciales ?? []);
   const cantidadRef = useRef<HTMLInputElement>(null);
@@ -323,7 +323,7 @@ export function CapturaArticulo({
     setBorrador([]);
     if (modo === "contar" && sucId) {
       setCantidad(String(cantidadEn(producto, sucId, t0, c0)));
-    } else if (modo === "entrada") {
+    } else if (modo === "entrada" || modo === "pedido") {
       setCantidad("0");
     } else {
       setCantidad("1");
@@ -536,7 +536,7 @@ export function CapturaArticulo({
     if (producto && sucursalId && modo === "contar") {
       return String(cantidadEn(producto, sucursalId, t, c));
     }
-    if (modo === "entrada") return "0";
+    if (modo === "entrada" || modo === "pedido") return "0";
     return "1";
   }
 
