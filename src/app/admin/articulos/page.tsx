@@ -81,6 +81,11 @@ function ArticulosAdmin() {
   );
   const productoFicha = ficha && ficha !== "nuevo" ? ficha : null;
   const formVisible = ficha !== null;
+  const nombreAnterior = productoFicha?.nombre.trim() ?? "";
+  const autorizaNombre =
+    Boolean(productoFicha) &&
+    nombre.trim() !== nombreAnterior &&
+    nombre.trim().length > 0;
 
   if (!puede(user, "articulos")) {
     return (
@@ -172,7 +177,11 @@ function ArticulosAdmin() {
         password,
       });
       toast.success(
-        ficha === "nuevo" ? "Artículo dado de alta" : "Clave y nombre guardados",
+        ficha === "nuevo"
+          ? "Artículo dado de alta"
+          : autorizaNombre
+            ? "Nombre autorizado y guardado"
+            : "Clave y nombre guardados",
       );
       cerrarFicha();
     } catch (err) {
@@ -371,6 +380,10 @@ function ArticulosAdmin() {
                 required
                 autoComplete="off"
               />
+              <p className="text-xs text-muted-foreground">
+                Puedes cambiar el nombre. Guardar ficha pide tu contraseña de
+                administradora para autorizarlo.
+              </p>
             </div>
 
             <FotosArticulo
@@ -472,8 +485,9 @@ function ArticulosAdmin() {
             <DialogHeader>
               <DialogTitle>Guardar artículo</DialogTitle>
               <DialogDescription>
-                Escribe tu contraseña de administradora para guardar Clave,
-                nombre e imágenes. El esquema se elige en Agregar esquemas, no aquí.
+                {autorizaNombre
+                  ? `Autoriza el cambio de nombre: de «${nombreAnterior}» a «${nombre.trim()}». Escribe tu contraseña de administradora. El esquema y las existencias se quedan.`
+                  : "Escribe tu contraseña de administradora para guardar Clave, nombre e imágenes. El esquema se elige en Agregar esquemas, no aquí."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">

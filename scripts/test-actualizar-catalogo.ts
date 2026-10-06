@@ -138,4 +138,34 @@ assert.equal(conEmpotrada.filas[0]?.foto, "https://cdn.example/emb.jpg");
 const dFoto = diffCatalogo(base, conEmpotrada.filas);
 assert.equal(dFoto.fotosCambian.length, 1);
 
+const conExtra: Producto[] = [
+  {
+    ...base[0],
+    fotos: ["/extra.jpg"],
+    especificaciones: ["algodon"],
+  },
+];
+const aplicadoExtra = aplicarFilasCatalogo(conExtra, [
+  { clave: "XC1", nombre: "Camisa nueva", foto: "https://cdn.example/b.jpg" },
+]);
+const extra = aplicadoExtra[0];
+assert.equal(extra?.nombre, "Camisa nueva");
+assert.equal(extra?.foto, "https://cdn.example/b.jpg");
+assert.deepEqual(extra?.fotos, ["/extra.jpg"]);
+assert.deepEqual(extra?.colores, ["rojo"]);
+assert.deepEqual(extra?.tallas, ["4", "6"]);
+assert.deepEqual(extra?.especificaciones, ["algodon"]);
+assert.equal(extra?.esquemaConteo, "esq-iza");
+assert.equal(extra?.existencia, 12);
+
+const soloNuevo = aplicarFilasCatalogo(base, [
+  { clave: "ZZ9", nombre: "Prenda nueva", foto: "/z.jpg" },
+]);
+const zz = soloNuevo.find((p) => p.sku === "ZZ9");
+assert.equal(zz?.esquemaConteo, undefined);
+assert.equal(zz?.existencia, 0);
+assert.equal(zz?.foto, "/z.jpg");
+assert.equal(soloNuevo.find((p) => p.sku === "KEEP")?.nombre, "Se queda");
+assert.equal(soloNuevo.find((p) => p.sku === "XC1")?.nombre, "Camisa vieja");
+
 console.log("ok actualizar-catalogo");
