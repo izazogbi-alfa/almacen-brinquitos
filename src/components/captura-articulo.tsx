@@ -142,6 +142,9 @@ export function CapturaArticulo({
   const [talla, setTalla] = useState("");
   const [especificacion, setEspecificacion] = useState("");
   const [cantidad, setCantidad] = useState(modo === "pedido" ? "0" : "1");
+  const [avisoUltimo, setAvisoUltimo] = useState(false);
+  const avisoUltimoRef = useRef(false);
+  const finEnCurso = useRef(false);
   const [borrador, setBorrador] = useState<CeldaBorrador[]>([]);
   const [lineas, setLineas] = useState<LineaTabla[]>(lineasIniciales ?? []);
   const cantidadRef = useRef<HTMLInputElement>(null);
@@ -230,7 +233,25 @@ export function CapturaArticulo({
     return elegidosIds.indexOf(productoId);
   }
 
+  function quitarAvisoUltimo() {
+    if (!avisoUltimoRef.current) return;
+    avisoUltimoRef.current = false;
+    setAvisoUltimo(false);
+  }
+
+  function mostrarAvisoUltimo() {
+    avisoUltimoRef.current = true;
+    setAvisoUltimo(true);
+  }
+
+  function haySiguienteArticulo() {
+    if (!enModoCaptura || elegidosIds.length <= 1) return false;
+    const idx = indiceDeArticulo(activoId ?? "");
+    return idx >= 0 && idx < elegidosIds.length - 1;
+  }
+
   async function abrirPrimerCeldaDe(producto: Producto) {
+    quitarAvisoUltimo();
     const { heads, paleta, specs } = datosDeProducto(producto);
     if (mostrandoCaptura) {
       await guardarEjeActual();
@@ -252,14 +273,15 @@ export function CapturaArticulo({
   async function avanzarAlSiguienteArticulo() {
     const idx = indiceDeArticulo(activoId ?? "");
     if (idx < 0 || idx >= elegidosIds.length - 1) {
-      setMostrandoCaptura(false);
+      mostrarAvisoUltimo();
       return;
     }
     const next = productos.find((p) => p.id === elegidosIds[idx + 1]);
     if (!next) {
-      setMostrandoCaptura(false);
+      mostrarAvisoUltimo();
       return;
     }
+    quitarAvisoUltimo();
     await abrirPrimerCeldaDe(next);
   }
 
@@ -497,6 +519,7 @@ export function CapturaArticulo({
   }
 
   function aplicarEspecificacion(s: string) {
+    quitarAvisoUltimo();
     const primera = encabezados[0] ?? "";
     const c0 = colores[0] ?? "Único";
     setEspecificacion(s);
@@ -545,6 +568,7 @@ export function CapturaArticulo({
   }
 
   function aplicarColor(c: string) {
+    quitarAvisoUltimo();
     const primera = encabezados[0] ?? "";
     setColor(c);
     setTalla(primera);
@@ -554,6 +578,7 @@ export function CapturaArticulo({
   }
 
   function aplicarTalla(t: string) {
+    quitarAvisoUltimo();
     const primero = colores[0] ?? "Único";
     setTalla(t);
     setColor(primero);
@@ -563,6 +588,7 @@ export function CapturaArticulo({
   }
 
   function cambiarTalla(t: string) {
+    quitarAvisoUltimo();
     if (t !== tallaActiva) {
       guardarCantidadActual();
     }
@@ -572,6 +598,7 @@ export function CapturaArticulo({
   }
 
   function cambiarColor(c: string) {
+    quitarAvisoUltimo();
     if (c !== colorActivo) {
       guardarCantidadActual();
     }
@@ -664,32 +691,39 @@ export function CapturaArticulo({
     return next;
   }
 
-  async function irAlSiguienteColorTrasGuardar() {
+  async function seguirOAvisar(hayMasEnArticulo: boolean, aplicar: () => void) {
+    if (!hayMasEnArticulo && !haySiguienteArticulo()) {
+      if (avisoUltimoRef.current || finEnCurso.current) return;
+      finEnCurso.current = true;
+      try {
+        await guardarEjeActual();
+      } finally {
+        finEnCurso.current = false;
+      }
+      mostrarAvisoUltimo();
+      return;
+    }
+    quitarAvisoUltimo();
     await guardarEjeActual();
+    if (hayMasEnArticulo) {
+      aplicar();
+      return;
+    }
+    await avanzarAlSiguienteArticulo();
+  }
+
+  async function irAlSiguienteColorTrasGuardar() {
     const next = siguienteColorEnLista(colores, colorActivo);
-    if (next) {
-      aplicarColor(next);
-      return;
-    }
-    if (enModoCaptura && elegidosIds.length > 1) {
-      await avanzarAlSiguienteArticulo();
-      return;
-    }
-    setMostrandoCaptura(false);
+    await seguirOAvisar(Boolean(next), () => {
+      if (next) aplicarColor(next);
+    });
   }
 
   async function irAlSiguienteTallaTrasGuardar() {
-    await guardarEjeActual();
     const next = siguienteTallaEnEsquema(encabezados, tallaActiva);
-    if (next) {
-      aplicarTalla(next);
-      return;
-    }
-    if (enModoCaptura && elegidosIds.length > 1) {
-      await avanzarAlSiguienteArticulo();
-      return;
-    }
-    setMostrandoCaptura(false);
+    await seguirOAvisar(Boolean(next), () => {
+      if (next) aplicarTalla(next);
+    });
   }
 
   function avanzarEnter() {
@@ -724,17 +758,10 @@ export function CapturaArticulo({
   }
 
   async function irAlSiguienteEspecificacionTrasGuardar() {
-    await guardarEjeActual();
     const next = siguienteColorEnLista(especificaciones, especificacionActiva);
-    if (next) {
-      aplicarEspecificacion(next);
-      return;
-    }
-    if (enModoCaptura && elegidosIds.length > 1) {
-      await avanzarAlSiguienteArticulo();
-      return;
-    }
-    setMostrandoCaptura(false);
+    await seguirOAvisar(Boolean(next), () => {
+      if (next) aplicarEspecificacion(next);
+    });
   }
 
   function saltarEspecificacion() {
@@ -1259,11 +1286,18 @@ export function CapturaArticulo({
               eje={formaActiva}
               progresoArticulo={progresoArticulo}
               puedeRegresar={puedeRegresarEje}
-              onCantidad={setCantidad}
+              avisoUltimo={avisoUltimo}
+              onCantidad={(valor) => {
+                quitarAvisoUltimo();
+                setCantidad(valor);
+              }}
               onEnter={avanzarEnter}
               onSaltar={saltarEje}
               onRegresar={regresarEje}
-              onCerrar={() => setMostrandoCaptura(false)}
+              onCerrar={() => {
+                quitarAvisoUltimo();
+                setMostrandoCaptura(false);
+              }}
               onPendiente={() => void pendienteGuardar()}
               onTerminar={() => void terminarGuardar()}
             />

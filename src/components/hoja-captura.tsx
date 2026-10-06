@@ -38,6 +38,7 @@ export function HojaCaptura({
   onPendiente,
   onTerminar,
   progresoArticulo,
+  avisoUltimo = false,
 }: {
   color: string;
   talla: string;
@@ -57,6 +58,7 @@ export function HojaCaptura({
   onPendiente: () => void;
   onTerminar: () => void;
   progresoArticulo?: string;
+  avisoUltimo?: boolean;
 }) {
   const [pisar, setPisar] = useState(true);
   const [celda, setCelda] = useState(`${color}::${talla}`);
@@ -138,6 +140,11 @@ export function HojaCaptura({
             </div>
           )}
         </div>
+        {avisoUltimo ? (
+          <p className="mt-2 text-center text-sm font-medium leading-snug">
+            Ya es el último. Pulsa Pendiente guardar o Terminar guardar.
+          </p>
+        ) : null}
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <Button
             type="button"
