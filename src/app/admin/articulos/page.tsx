@@ -18,6 +18,7 @@ import { DialogAgregarEsquemas } from "@/components/agregar-esquemas";
 import { AsyncGate, EmptyView } from "@/components/status-views";
 import { DialogClonarAsignacion } from "@/components/clonar-asignacion";
 import { FotoProducto } from "@/components/foto-producto";
+import { FotosArticulo } from "@/components/fotos-articulo";
 import {
   estaElegido,
   opcionesTallaArticulo,
@@ -62,6 +63,8 @@ function ArticulosAdmin() {
   const [errorClave, setErrorClave] = useState("");
   const [clonar, setClonar] = useState(false);
   const [agregarEsquemas, setAgregarEsquemas] = useState(false);
+  const [foto, setFoto] = useState<string | undefined>();
+  const [fotos, setFotos] = useState<string[]>([]);
 
   const filtrados = useMemo(() => {
     return ordenarArticulos(filtrarArticulos(productos, q), orden);
@@ -106,6 +109,8 @@ function ArticulosAdmin() {
     setFicha(p);
     setNombre(p.nombre);
     setClave(p.sku);
+    setFoto(p.foto);
+    setFotos(p.fotos ?? []);
     aplicarDesdeProducto(p);
     setErrorClave("");
     setPassword("");
@@ -115,6 +120,8 @@ function ArticulosAdmin() {
     setFicha("nuevo");
     setNombre("");
     setClave("");
+    setFoto(undefined);
+    setFotos([]);
     setEsquemaId("");
     setTallas([]);
     setColores([]);
@@ -160,6 +167,8 @@ function ArticulosAdmin() {
         nombre,
         sku: clave,
         soloIdentidad: true,
+        foto: foto ?? "",
+        fotos,
         password,
       });
       toast.success(
@@ -278,9 +287,14 @@ function ArticulosAdmin() {
                         <p className="text-xs font-medium tracking-wide text-teal-800 uppercase">
                           Clave {p.sku}
                         </p>
-        <p className="font-medium leading-tight">
-          {tituloNombreArticulo(p.nombre)}
-        </p>
+                        <p className="font-medium leading-tight">
+                          {tituloNombreArticulo(p.nombre)}
+                        </p>
+                        {(p.fotos?.length ?? 0) > 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            {p.fotos?.length} imagen{p.fotos?.length === 1 ? "" : "es"} extra
+                          </p>
+                        ) : null}
                       </div>
                     </button>
                   </li>
@@ -358,6 +372,14 @@ function ArticulosAdmin() {
                 autoComplete="off"
               />
             </div>
+
+            <FotosArticulo
+              foto={foto}
+              fotos={fotos}
+              nombre={nombre}
+              onFoto={setFoto}
+              onFotos={setFotos}
+            />
 
             <aside className="space-y-2 rounded-xl bg-teal-50 p-4 text-teal-950 ring-1 ring-teal-200">
               <p className="text-sm font-semibold">
@@ -450,8 +472,8 @@ function ArticulosAdmin() {
             <DialogHeader>
               <DialogTitle>Guardar artículo</DialogTitle>
               <DialogDescription>
-                Escribe tu contraseña de administradora para guardar Clave y
-                nombre. El esquema se elige en Agregar esquemas, no aquí.
+                Escribe tu contraseña de administradora para guardar Clave,
+                nombre e imágenes. El esquema se elige en Agregar esquemas, no aquí.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">

@@ -67,6 +67,8 @@ export type Producto = {
   minimo: number;
   ubicacion: string;
   foto?: string;
+  /** Más fotos de la misma prenda. La principal sigue siendo `foto`. */
+  fotos?: string[];
   variantes?: Variante[];
   esquemaConteo?: EsquemaConteo;
   /** Cómo se recorre la hoja. Vacío en datos viejos = por talla. */

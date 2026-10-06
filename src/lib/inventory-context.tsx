@@ -124,6 +124,8 @@ type InventoryValue = {
     especificaciones?: string[];
     formaCaptura?: FormaCaptura;
     soloIdentidad?: boolean;
+    foto?: string;
+    fotos?: string[];
     password: string;
   }) => Promise<Producto>;
   clonarAsignacion: (input: {
@@ -653,6 +655,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       especificaciones?: string[];
       formaCaptura?: FormaCaptura;
       soloIdentidad?: boolean;
+      foto?: string;
+      fotos?: string[];
       password: string;
     }) => {
       const res = await fetch("/api/admin/articulos", {

@@ -16,6 +16,7 @@ import {
   withStore,
 } from "@/server/store";
 import type { Producto } from "@/lib/types";
+import { imagenesDeFicha } from "@/lib/fotos-articulo";
 import { nombreArticuloAlGuardar } from "@/lib/titulo-etiqueta";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,8 @@ export async function POST(request: Request) {
     formaCaptura?: unknown;
     soloIdentidad?: unknown;
     password?: unknown;
+    foto?: unknown;
+    fotos?: unknown;
   } | null;
 
   const clave = body?.sku?.trim() ?? "";
@@ -92,9 +95,21 @@ export async function POST(request: Request) {
   await hidratarCatalogos((name) => jar.get(name)?.value);
 
   const soloIdentidad = body?.soloIdentidad === true;
+  let imagenes: ReturnType<typeof imagenesDeFicha> | null = null;
   let snapshot: Producto[] | null = null;
 
+  function ponerImagenes(producto: Producto) {
+    if (!imagenes) return;
+    if (imagenes.foto) producto.foto = imagenes.foto;
+    else delete producto.foto;
+    if (imagenes.fotos.length) producto.fotos = imagenes.fotos;
+    else delete producto.fotos;
+  }
+
   try {
+    if (soloIdentidad && body && ("foto" in body || "fotos" in body)) {
+      imagenes = imagenesDeFicha(body);
+    }
     const producto = await withStore((store) => {
       if (!clave) throw new Error("Escribe la Clave.");
       const nombreTitulo = nombreArticuloAlGuardar(nombre);
@@ -154,6 +169,7 @@ export async function POST(request: Request) {
           tallas: soloIdentidad ? [] : tallas,
           especificaciones: soloIdentidad ? [] : especificaciones,
         };
+        ponerImagenes(creado);
         store.productos.push(creado);
         return creado;
       }
@@ -162,6 +178,7 @@ export async function POST(request: Request) {
       if (!prev) throw new Error("Artículo no encontrado.");
       prev.nombre = nombreTitulo;
       prev.sku = clave;
+      if (soloIdentidad) ponerImagenes(prev);
       if (!soloIdentidad) {
         if (!esquemaId) {
           throw new Error("Elige el esquema que mejor le queda a este artículo.");
