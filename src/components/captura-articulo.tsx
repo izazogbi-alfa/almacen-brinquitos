@@ -48,7 +48,9 @@ import type { Producto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   APP_CAPTURA_ACTION_BOTTOM,
+  APP_CAPTURA_ACTION_BOTTOM_MOVIL,
   APP_SCROLL_PAD_CON_CAPTURA,
+  APP_SCROLL_PAD_CON_CAPTURA_MOVIL,
 } from "@/lib/app-chrome";
 import {
   tituloEtiqueta,
@@ -951,12 +953,14 @@ export function CapturaArticulo({
           className={cn(
             elegidos.length > 0 &&
               !enModoCaptura &&
-              "pb-[var(--captura-action-scroll-pad)]",
+              "pb-[var(--captura-action-scroll-pad)] sm:pb-[var(--captura-action-scroll-pad-sm)]",
           )}
           style={
             elegidos.length > 0 && !enModoCaptura
               ? ({
                   ["--captura-action-scroll-pad" as string]:
+                    APP_SCROLL_PAD_CON_CAPTURA_MOVIL,
+                  ["--captura-action-scroll-pad-sm" as string]:
                     APP_SCROLL_PAD_CON_CAPTURA,
                 } as CSSProperties)
               : undefined
@@ -1255,8 +1259,15 @@ export function CapturaArticulo({
             <div
               role="region"
               aria-label="Capturar artículos marcados"
-              className="pointer-events-none fixed inset-x-0 z-[35] border-t bg-background/95 px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur-md"
-              style={{ bottom: APP_CAPTURA_ACTION_BOTTOM }}
+              className="pointer-events-none fixed inset-x-0 z-[35] border-t bg-background/95 px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur-md bottom-[var(--captura-action-bottom)] sm:bottom-[var(--captura-action-bottom-sm)]"
+              style={
+                {
+                  ["--captura-action-bottom" as string]:
+                    APP_CAPTURA_ACTION_BOTTOM_MOVIL,
+                  ["--captura-action-bottom-sm" as string]:
+                    APP_CAPTURA_ACTION_BOTTOM,
+                } as CSSProperties
+              }
             >
               <div className="pointer-events-auto mx-auto w-full max-w-3xl md:max-w-5xl">
                 <Button
