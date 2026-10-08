@@ -12,7 +12,6 @@ import { TablaPrendas } from "@/components/tabla-prendas";
 import type { LineaColorTabla } from "@/lib/tabla-bloques";
 import {
   SUCURSALES,
-  cantidadEn,
   sucursalPorId,
 } from "@/lib/sucursales";
 import {
@@ -143,7 +142,7 @@ export function CapturaArticulo({
   const [color, setColor] = useState("");
   const [talla, setTalla] = useState("");
   const [especificacion, setEspecificacion] = useState("");
-  const [cantidad, setCantidad] = useState(modo === "pedido" ? "0" : "1");
+  const [cantidad, setCantidad] = useState("0");
   const [avisoUltimo, setAvisoUltimo] = useState(false);
   const avisoUltimoRef = useRef(false);
   const finEnCurso = useRef(false);
@@ -266,7 +265,7 @@ export function CapturaArticulo({
     setEspecificacion(forma === "especificacion" ? (specs[0] ?? "") : "");
     setTalla(primeraTalla);
     setColor(primeroColor);
-    setCantidad(cantidadInicialDe(producto, primeraTalla, primeroColor));
+    setCantidad("0");
     setMostrandoCaptura(true);
     onInicioRegistro?.();
     enfocarCantidad();
@@ -306,19 +305,19 @@ export function CapturaArticulo({
       setEspecificacion("");
       setTalla(ultimaTalla);
       setColor(ultimoColor);
-      setCantidad(cantidadInicialDe(prev, ultimaTalla, ultimoColor));
+      setCantidad("0");
     } else if (forma === "especificacion") {
       const ultima = specs[specs.length - 1] ?? "";
       setEspecificacion(ultima);
       setTalla(ultimaTalla);
       setColor(paleta[0] ?? "Único");
-      setCantidad(cantidadInicialDe(prev, ultimaTalla, paleta[0] ?? "Único"));
+      setCantidad("0");
     } else {
       const ultimoColor = paleta[paleta.length - 1] ?? "Único";
       setEspecificacion("");
       setColor(ultimoColor);
       setTalla(ultimaTalla);
-      setCantidad(cantidadInicialDe(prev, ultimaTalla, ultimoColor));
+      setCantidad("0");
     }
     setMostrandoCaptura(true);
     enfocarCantidad();
@@ -331,7 +330,7 @@ export function CapturaArticulo({
     catalogos,
   );
 
-  function preparar(producto: Producto, sucId = sucursalId) {
+  function preparar(producto: Producto) {
     const esq = esquemaDeArticulo(producto, catalogos);
     const heads = esq
       ? tallasDeCaptura(producto, catalogos, esq.id)
@@ -345,19 +344,13 @@ export function CapturaArticulo({
     setTalla(t0);
     setEspecificacion(forma === "especificacion" ? (specs[0] ?? "") : "");
     setBorrador([]);
-    if (modo === "contar" && sucId) {
-      setCantidad(String(cantidadEn(producto, sucId, t0, c0)));
-    } else if (modo === "entrada" || modo === "pedido") {
-      setCantidad("0");
-    } else {
-      setCantidad("1");
-    }
+    setCantidad("0");
   }
 
   function elegirSucursal(id: string) {
     setSucursalId(id);
     localStorage.setItem(SUCURSAL_KEY, id);
-    if (mostrado) preparar(mostrado, id);
+    if (mostrado) preparar(mostrado);
   }
 
   function intentarMarcar(
@@ -528,7 +521,7 @@ export function CapturaArticulo({
     setTalla(primera);
     setColor(c0);
     setBorrador([]);
-    setCantidad(cantidadInicial(primera, c0));
+    setCantidad("0");
     enfocarCantidad();
   }
 
@@ -543,8 +536,7 @@ export function CapturaArticulo({
 
   function guardarCantidadActual() {
     const n = Number(cantidad);
-    if (!Number.isFinite(n) || n < 0) return;
-    if (modo !== "contar" && n <= 0) return;
+    if (!Number.isFinite(n) || n <= 0) return;
     if (!tallaActiva && encabezados.some((t) => t !== "")) return;
     setBorrador((prev) => {
       const resto = prev.filter(
@@ -557,25 +549,13 @@ export function CapturaArticulo({
     });
   }
 
-  function cantidadInicialDe(producto: Producto | null, t: string, c: string) {
-    if (producto && sucursalId && modo === "contar") {
-      return String(cantidadEn(producto, sucursalId, t, c));
-    }
-    if (modo === "entrada" || modo === "pedido") return "0";
-    return "1";
-  }
-
-  function cantidadInicial(t: string, c: string) {
-    return cantidadInicialDe(mostrado, t, c);
-  }
-
   function aplicarColor(c: string) {
     quitarAvisoUltimo();
     const primera = encabezados[0] ?? "";
     setColor(c);
     setTalla(primera);
     setBorrador([]);
-    setCantidad(cantidadInicial(primera, c));
+    setCantidad("0");
     enfocarCantidad();
   }
 
@@ -585,7 +565,7 @@ export function CapturaArticulo({
     setTalla(t);
     setColor(primero);
     setBorrador([]);
-    setCantidad(cantidadInicial(t, primero));
+    setCantidad("0");
     enfocarCantidad();
   }
 
@@ -595,7 +575,7 @@ export function CapturaArticulo({
       guardarCantidadActual();
     }
     setTalla(t);
-    setCantidad(cantidadInicial(t, colorActivo));
+    setCantidad("0");
     enfocarCantidad();
   }
 
@@ -605,14 +585,14 @@ export function CapturaArticulo({
       guardarCantidadActual();
     }
     setColor(c);
-    setCantidad(cantidadInicial(tallaActiva, c));
+    setCantidad("0");
     enfocarCantidad();
   }
 
   function celdasListas(): CeldaBorrador[] {
     const n = Number(cantidad);
     const vigente =
-      Number.isFinite(n) && n >= 0 && (modo === "contar" || n > 0)
+      Number.isFinite(n) && n > 0
         ? { talla: tallaActiva, color: colorActivo, cantidad: n }
         : null;
     const base = [...borrador];
@@ -731,8 +711,8 @@ export function CapturaArticulo({
   function avanzarEnter() {
     const n = Number(cantidad);
     if (!Number.isFinite(n) || n < 0) return;
-    // Recepción y pedidos arrancan en 0. Enter con 0 no anota esa celda
-    // y sí pasa al siguiente color o talla. Existencias sí guarda el 0.
+    // En los tres módulos la cantidad arranca en 0. Enter con 0 no anota
+    // esa celda y sí pasa al siguiente color o talla.
     if (formaActiva === "talla") {
       const next = siguienteColorEnLista(colores, colorActivo);
       if (next) {

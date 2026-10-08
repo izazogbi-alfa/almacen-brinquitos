@@ -329,7 +329,7 @@ function mismoTexto(a: string, b: string) {
 }
 
 export function diffCatalogo(
-  productos: Pick<Producto, "sku" | "nombre" | "foto">[],
+  productos: Pick<Producto, "sku" | "nombre" | "foto" | "nombreAutorizado">[],
   filas: FilaCatalogo[],
 ): DiffCatalogo {
   const actuales = new Map(
@@ -345,7 +345,8 @@ export function diffCatalogo(
       nuevos.push(fila);
       continue;
     }
-    const nombreCambia = !mismoTexto(prev.nombre, fila.nombre);
+    const nombreCambia =
+      !prev.nombreAutorizado && !mismoTexto(prev.nombre, fila.nombre);
     const fotoCambia = Boolean(fila.foto) && fila.foto !== (prev.foto ?? "");
     if (fotoCambia) fotosCambian.push(fila);
     if (nombreCambia || fotoCambia) actualizar.push(fila);
@@ -402,9 +403,11 @@ export function aplicarFilasCatalogo(
     const prev = next[i];
     next[i] = {
       ...prev,
-      nombre: fila.nombre.trim()
-        ? nombreArticuloAlGuardar(fila.nombre)
-        : prev.nombre,
+      nombre: prev.nombreAutorizado
+        ? prev.nombre
+        : fila.nombre.trim()
+          ? nombreArticuloAlGuardar(fila.nombre)
+          : prev.nombre,
       foto: fila.foto ? fila.foto : prev.foto,
     };
   }

@@ -158,6 +158,7 @@ export async function POST(request: Request) {
           id,
           sku: clave,
           nombre: nombreTitulo,
+          nombreAutorizado: true,
           categoria: "",
           unidad: "pza",
           existencia: 0,
@@ -177,6 +178,7 @@ export async function POST(request: Request) {
       const prev = store.productos.find((p) => p.id === body.id);
       if (!prev) throw new Error("Artículo no encontrado.");
       prev.nombre = nombreTitulo;
+      prev.nombreAutorizado = true;
       prev.sku = clave;
       if (soloIdentidad) ponerImagenes(prev);
       if (!soloIdentidad) {

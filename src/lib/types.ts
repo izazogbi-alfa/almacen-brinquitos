@@ -61,6 +61,8 @@ export type Producto = {
   id: string;
   sku: string;
   nombre: string;
+  /** La ficha ya autorizó este nombre. El catálogo no lo sustituye. */
+  nombreAutorizado?: boolean;
   categoria: string;
   unidad: string;
   existencia: number;

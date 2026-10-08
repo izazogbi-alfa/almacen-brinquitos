@@ -168,4 +168,27 @@ assert.equal(zz?.foto, "/z.jpg");
 assert.equal(soloNuevo.find((p) => p.sku === "KEEP")?.nombre, "Se queda");
 assert.equal(soloNuevo.find((p) => p.sku === "XC1")?.nombre, "Camisa vieja");
 
+const autorizado: Producto[] = [{ ...base[0], nombreAutorizado: true }];
+const soloNombre = diffCatalogo(autorizado, [
+  { clave: "XC1", nombre: "Otro nombre" },
+]);
+assert.equal(soloNombre.actualizar.length, 0);
+assert.equal(soloNombre.sinCambio.length, 1);
+const diffAutorizado = diffCatalogo(autorizado, [
+  { clave: "XC1", nombre: "Otro nombre", foto: "https://cdn.example/b.jpg" },
+]);
+assert.equal(diffAutorizado.actualizar.length, 1);
+assert.equal(diffAutorizado.actualizar[0]?.nombre, "Otro nombre");
+assert.equal(
+  diffAutorizado.actualizar.some((f) => f.nombre === "Otro nombre" && f.foto),
+  true,
+);
+const aplicadoAutorizado = aplicarFilasCatalogo(autorizado, [
+  { clave: "XC1", nombre: "Otro nombre", foto: "https://cdn.example/b.jpg" },
+]);
+assert.equal(aplicadoAutorizado[0]?.nombre, "Camisa vieja");
+assert.equal(aplicadoAutorizado[0]?.nombreAutorizado, true);
+assert.equal(aplicadoAutorizado[0]?.foto, "https://cdn.example/b.jpg");
+assert.equal(aplicadoAutorizado[0]?.esquemaConteo, "esq-iza");
+
 console.log("ok actualizar-catalogo");
