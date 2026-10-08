@@ -16,6 +16,10 @@ import {
   withStore,
 } from "@/server/store";
 import type { Producto } from "@/lib/types";
+import {
+  codigoProveedorAlGuardar,
+  ponerCodigoProveedor,
+} from "@/lib/codigo-proveedor";
 import { imagenesDeFicha } from "@/lib/fotos-articulo";
 import { nombreArticuloAlGuardar } from "@/lib/titulo-etiqueta";
 
@@ -60,6 +64,7 @@ export async function POST(request: Request) {
     password?: unknown;
     foto?: unknown;
     fotos?: unknown;
+    codigoProveedor?: unknown;
   } | null;
 
   const clave = body?.sku?.trim() ?? "";
@@ -110,6 +115,10 @@ export async function POST(request: Request) {
     if (soloIdentidad && body && ("foto" in body || "fotos" in body)) {
       imagenes = imagenesDeFicha(body);
     }
+    const codigoProveedor =
+      soloIdentidad && body && "codigoProveedor" in body
+        ? codigoProveedorAlGuardar(body.codigoProveedor)
+        : undefined;
     const producto = await withStore((store) => {
       if (!clave) throw new Error("Escribe la Clave.");
       const nombreTitulo = nombreArticuloAlGuardar(nombre);
@@ -171,6 +180,9 @@ export async function POST(request: Request) {
           especificaciones: soloIdentidad ? [] : especificaciones,
         };
         ponerImagenes(creado);
+        if (codigoProveedor !== undefined) {
+          ponerCodigoProveedor(creado, codigoProveedor);
+        }
         store.productos.push(creado);
         return creado;
       }
@@ -180,7 +192,12 @@ export async function POST(request: Request) {
       prev.nombre = nombreTitulo;
       prev.nombreAutorizado = true;
       prev.sku = clave;
-      if (soloIdentidad) ponerImagenes(prev);
+      if (soloIdentidad) {
+        ponerImagenes(prev);
+        if (codigoProveedor !== undefined) {
+          ponerCodigoProveedor(prev, codigoProveedor);
+        }
+      }
       if (!soloIdentidad) {
         if (!esquemaId) {
           throw new Error("Elige el esquema que mejor le queda a este artículo.");

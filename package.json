@@ -17,7 +17,7 @@
     "test:persist": "npx --yes tsx scripts/test-catalogos-persist.ts && npx --yes tsx scripts/test-asignaciones-persist.ts && npx --yes tsx scripts/test-respaldos.ts && npx --yes tsx scripts/test-respaldos-persist.ts && npx --yes tsx scripts/test-usuarios-persist.ts && npx --yes tsx scripts/test-store-duradero.ts && npx --yes tsx scripts/test-persist-merge.ts",
     "test:permisos": "npx --yes tsx scripts/test-permisos-modulos.ts",
     "test:almacen": "npm run test:esquemas && npm run test:persist && npm run test:permisos && npm run test:catalogo",
-    "test:catalogo": "npx --yes tsx scripts/test-actualizar-catalogo.ts"
+    "test:catalogo": "npx --yes tsx scripts/test-actualizar-catalogo.ts && npx --yes tsx scripts/test-codigo-proveedor.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

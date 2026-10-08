@@ -52,6 +52,7 @@ function ArticulosAdmin() {
   const [ficha, setFicha] = useState<Producto | "nuevo" | null>(null);
   const [nombre, setNombre] = useState("");
   const [clave, setClave] = useState("");
+  const [codigoProveedor, setCodigoProveedor] = useState("");
   const [esquemaId, setEsquemaId] = useState("");
   const [colores, setColores] = useState<string[]>([]);
   const [tallas, setTallas] = useState<string[]>([]);
@@ -114,6 +115,7 @@ function ArticulosAdmin() {
     setFicha(p);
     setNombre(p.nombre);
     setClave(p.sku);
+    setCodigoProveedor(p.codigoProveedor ?? "");
     setFoto(p.foto);
     setFotos(p.fotos ?? []);
     aplicarDesdeProducto(p);
@@ -125,6 +127,7 @@ function ArticulosAdmin() {
     setFicha("nuevo");
     setNombre("");
     setClave("");
+    setCodigoProveedor("");
     setFoto(undefined);
     setFotos([]);
     setEsquemaId("");
@@ -174,6 +177,7 @@ function ArticulosAdmin() {
         soloIdentidad: true,
         foto: foto ?? "",
         fotos,
+        codigoProveedor,
         password,
       });
       toast.success(
@@ -181,7 +185,7 @@ function ArticulosAdmin() {
           ? "Artículo dado de alta"
           : autorizaNombre
             ? "Nombre autorizado y guardado"
-            : "Clave y nombre guardados",
+            : "Ficha guardada",
       );
       cerrarFicha();
     } catch (err) {
@@ -359,16 +363,36 @@ function ArticulosAdmin() {
                 recepción.
               </p>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="clave-articulo">Clave</Label>
-              <Input
-                id="clave-articulo"
-                className="h-11"
-                value={clave}
-                onChange={(e) => setClave(e.target.value)}
-                required
-                autoComplete="off"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="clave-articulo">Clave</Label>
+                <Input
+                  id="clave-articulo"
+                  className="h-11"
+                  value={clave}
+                  onChange={(e) => setClave(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="codigo-proveedor-articulo">
+                  Cód. de proveedor
+                </Label>
+                <Input
+                  id="codigo-proveedor-articulo"
+                  className="h-11"
+                  value={codigoProveedor}
+                  onChange={(e) => setCodigoProveedor(e.target.value)}
+                  maxLength={40}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Opcional. Solo en los artículos que tú elijas. Sale en el PDF
+                  de pedidos. Si lo dejas vacío, esa celda queda en blanco.
+                  Actualizar catálogo no lo cambia.
+                </p>
+              </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="nombre-articulo">Nombre</Label>
@@ -486,8 +510,8 @@ function ArticulosAdmin() {
               <DialogTitle>Guardar artículo</DialogTitle>
               <DialogDescription>
                 {autorizaNombre
-                  ? `Autoriza el cambio de nombre: de «${nombreAnterior}» a «${nombre.trim()}». Escribe tu contraseña de administradora. El esquema y las existencias se quedan.`
-                  : "Escribe tu contraseña de administradora para guardar Clave, nombre e imágenes. El esquema se elige en Agregar esquemas, no aquí."}
+                  ? `Autoriza el cambio de nombre: de «${nombreAnterior}» a «${nombre.trim()}». Escribe tu contraseña de administradora. El esquema y las existencias se quedan. El código de proveedor se guarda como lo dejaste en la ficha.`
+                  : "Escribe tu contraseña de administradora para guardar Clave, nombre, código de proveedor e imágenes. El esquema se elige en Agregar esquemas, no aquí."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">

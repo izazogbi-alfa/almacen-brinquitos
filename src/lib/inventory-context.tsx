@@ -126,6 +126,7 @@ type InventoryValue = {
     soloIdentidad?: boolean;
     foto?: string;
     fotos?: string[];
+    codigoProveedor?: string;
     password: string;
   }) => Promise<Producto>;
   clonarAsignacion: (input: {
@@ -657,6 +658,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       soloIdentidad?: boolean;
       foto?: string;
       fotos?: string[];
+      codigoProveedor?: string;
       password: string;
     }) => {
       const res = await fetch("/api/admin/articulos", {
